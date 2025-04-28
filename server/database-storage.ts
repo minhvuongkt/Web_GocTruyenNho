@@ -284,27 +284,36 @@ export class DatabaseStorage implements IStorage {
     };
   }
 
-  async getAllContent(page: number = 1, limit: number = 10, filter?: Partial<Content>): Promise<{ content: Content[], total: number }> {
+  async getAllContent(page: number = 1, limit: number = 10, filter?: Partial<Content>): Promise<{ content: any[], total: number }> {
     const offset = (page - 1) * limit;
     
-    // Build the base query
-    let query = db.select().from(content);
+    // Build the base query with joins for author and translation group
+    let baseQuery = db.select({
+      content: content,
+      author: authors,
+      translationGroup: translationGroups
+    })
+    .from(content)
+    .leftJoin(authors, eq(content.authorId, authors.id))
+    .leftJoin(translationGroups, eq(content.translationGroupId, translationGroups.id));
+    
+    // For count query, we only need to count the content records
     let countQuery = db.select({ count: count() }).from(content);
     
     // Apply filters if any
     if (filter) {
       if (filter.type) {
-        query = query.where(eq(content.type, filter.type));
+        baseQuery = baseQuery.where(eq(content.type, filter.type));
         countQuery = countQuery.where(eq(content.type, filter.type));
       }
       
       if (filter.authorId) {
-        query = query.where(eq(content.authorId, filter.authorId));
+        baseQuery = baseQuery.where(eq(content.authorId, filter.authorId));
         countQuery = countQuery.where(eq(content.authorId, filter.authorId));
       }
       
       if (filter.status) {
-        query = query.where(eq(content.status, filter.status));
+        baseQuery = baseQuery.where(eq(content.status, filter.status));
         countQuery = countQuery.where(eq(content.status, filter.status));
       }
     }
@@ -314,12 +323,33 @@ export class DatabaseStorage implements IStorage {
     const total = Number(countResult?.count || 0);
     
     // Complete the query with pagination and order
-    const contentList = await query
+    const contentData = await baseQuery
       .limit(limit)
       .offset(offset)
       .orderBy(desc(content.createdAt));
     
-    return { content: contentList, total };
+    // For each content, get its genres
+    const contentWithGenres = await Promise.all(contentData.map(async (item) => {
+      // Get genres for this content
+      const contentGenresList = await db
+        .select({
+          genre: genres
+        })
+        .from(contentGenres)
+        .leftJoin(genres, eq(contentGenres.genreId, genres.id))
+        .where(eq(contentGenres.contentId, item.content.id));
+      
+      const contentGenresArray = contentGenresList.map(cg => cg.genre);
+      
+      return {
+        ...item.content,
+        author: item.author,
+        translationGroup: item.translationGroup,
+        genres: contentGenresArray
+      };
+    }));
+    
+    return { content: contentWithGenres, total };
   }
 
   async updateContent(id: number, contentData: Partial<InsertContent>, genreIds?: number[]): Promise<Content | undefined> {

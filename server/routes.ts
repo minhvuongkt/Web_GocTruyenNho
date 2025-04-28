@@ -619,6 +619,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // User profile routes
+  app.patch("/api/user/profile", ensureAuthenticated, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const allowedFields = ['firstName', 'lastName', 'gender', 'darkMode', 'displayMode'];
+      
+      // Filter out any non-allowed fields
+      const updateData: Record<string, any> = {};
+      for (const field of allowedFields) {
+        if (req.body[field] !== undefined) {
+          updateData[field] = req.body[field];
+        }
+      }
+      
+      // Update user profile
+      const updatedUser = await storage.updateUser(userId, updateData);
+      if (!updatedUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // Remove password from response
+      const { password, ...userWithoutPassword } = updatedUser;
+      
+      res.json(userWithoutPassword);
+    } catch (error) {
+      res.status(400).json({ message: "Invalid data", error });
+    }
+  });
+
   // User management routes (admin only)
   app.get("/api/users", ensureAdmin, async (req, res) => {
     try {
@@ -643,6 +672,65 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Update user (admin only)
+  app.put("/api/users/:id", ensureAdmin, async (req, res) => {
+    try {
+      const userId = parseInt(req.params.id);
+      
+      // Get allowed fields from request body
+      const allowedFields = ['firstName', 'lastName', 'email', 'role', 'isActive', 'balance'];
+      
+      // Filter out any non-allowed fields
+      const updateData: Record<string, any> = {};
+      for (const field of allowedFields) {
+        if (req.body[field] !== undefined) {
+          updateData[field] = req.body[field];
+        }
+      }
+      
+      // Update user
+      const updatedUser = await storage.updateUser(userId, updateData);
+      if (!updatedUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // Remove password from response
+      const { password, ...userWithoutPassword } = updatedUser;
+      
+      res.json(userWithoutPassword);
+    } catch (error) {
+      res.status(400).json({ message: "Invalid data", error });
+    }
+  });
+  
+  // Disable/enable user (admin only)
+  app.put("/api/users/:id/status", ensureAdmin, async (req, res) => {
+    try {
+      const userId = parseInt(req.params.id);
+      
+      // Prevent deactivating yourself
+      if (req.user!.id === userId) {
+        return res.status(400).json({ message: "Cannot change your own status" });
+      }
+      
+      // Parse isActive from request body
+      const isActive = Boolean(req.body.isActive);
+      
+      // Update user status
+      const updatedUser = await storage.updateUser(userId, { isActive });
+      if (!updatedUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // Remove password from response
+      const { password, ...userWithoutPassword } = updatedUser;
+      
+      res.json(userWithoutPassword);
+    } catch (error) {
+      res.status(400).json({ message: "Invalid data", error });
+    }
+  });
+  
   app.delete("/api/users/:id", ensureAdmin, async (req, res) => {
     try {
       const userId = parseInt(req.params.id);

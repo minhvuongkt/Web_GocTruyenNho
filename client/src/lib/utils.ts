@@ -6,8 +6,15 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-export function formatDate(date: Date, formatString: string = 'PP'): string {
-  return format(date, formatString);
+export function formatDate(date: Date | string | number | null | undefined, formatString: string = 'PP'): string {
+  if (!date) return 'N/A';
+  try {
+    const dateObj = date instanceof Date ? date : new Date(date);
+    return format(dateObj, formatString);
+  } catch (error) {
+    console.error('Error formatting date:', error);
+    return 'Invalid date';
+  }
 }
 
 export function formatCurrency(amount: number, locale: string = 'vi-VN', currency: string = 'VND'): string {

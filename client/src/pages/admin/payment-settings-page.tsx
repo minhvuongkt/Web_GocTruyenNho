@@ -409,7 +409,7 @@ export function PaymentSettingsPage() {
                     </Button>
                   </div>
                   
-                  {priceConfig.discountTiers.map((tier, index) => (
+                  {priceConfig.discountTiers?.map((tier, index) => (
                     <div key={index} className="grid gap-4 grid-cols-12 items-end">
                       <div className="col-span-5 space-y-2">
                         <Label htmlFor={`amount-${index}`}>Từ (VND)</Label>
@@ -451,7 +451,7 @@ export function PaymentSettingsPage() {
                     Ví dụ: Với cấu hình hiện tại, khi người dùng nạp {priceConfig.minimumDeposit.toLocaleString()}đ sẽ nhận được{' '}
                     {(priceConfig.minimumDeposit * priceConfig.coinConversionRate).toLocaleString()} coin
                   </p>
-                  {priceConfig.discountTiers.length > 0 && (
+                  {priceConfig.discountTiers?.length > 0 && (
                     <div className="mt-2 space-y-1">
                       <p className="font-medium flex items-center">
                         <BadgePercent className="h-4 w-4 mr-1" />

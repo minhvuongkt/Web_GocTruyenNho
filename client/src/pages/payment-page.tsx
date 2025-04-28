@@ -123,6 +123,39 @@ export function PaymentPage() {
     }
   });
   
+  // State for payment confirmation cooldown
+  const [confirmCooldown, setConfirmCooldown] = useState(0);
+  const [paymentDate, setPaymentDate] = useState<Date | null>(null);
+  
+  // Timer for payment confirmation cooldown
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (confirmCooldown > 0) {
+      timer = setInterval(() => {
+        setConfirmCooldown(prev => Math.max(0, prev - 1));
+      }, 1000);
+    }
+    return () => {
+      if (timer) clearInterval(timer);
+    };
+  }, [confirmCooldown]);
+  
+  // Calculate remaining time text
+  const getRemainingTimeText = (): string => {
+    if (!paymentDate) return '';
+    
+    const now = new Date();
+    const created = new Date(paymentDate);
+    const diffMs = created.getTime() + 10 * 60 * 1000 - now.getTime(); // 10 minutes in milliseconds
+    
+    if (diffMs <= 0) return 'Đã hết thời gian';
+    
+    const minutes = Math.floor(diffMs / (60 * 1000));
+    const seconds = Math.floor((diffMs % (60 * 1000)) / 1000);
+    
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+  };
+
   // Create payment mutation
   const createPaymentMutation = useMutation({
     mutationFn: async () => {
@@ -145,23 +178,57 @@ export function PaymentPage() {
         description: "Vui lòng hoàn tất thanh toán để nạp tiền vào tài khoản.",
       });
 
-      // Set payment status
+      // Set payment status and date
       setPaymentStatus({
         processing: false,
         transactionId: data.transactionId,
       });
-
-      // Switch to history tab after a delay
-      setTimeout(() => {
-        queryClient.invalidateQueries({ queryKey: ["/api/payments"] });
-        setActiveTab("history");
-      }, 30000);
+      setPaymentDate(new Date());
+      
+      // Set initial cooldown to prevent spam clicking
+      setConfirmCooldown(30); // 30 seconds cooldown
     },
     onError: (error: Error) => {
       setPaymentStatus({ processing: false });
       toast({
         title: "Tạo giao dịch thất bại",
         description: error.message || "Đã xảy ra lỗi khi tạo giao dịch.",
+        variant: "destructive",
+      });
+    },
+  });
+  
+  // Confirm payment mutation
+  const confirmPaymentMutation = useMutation({
+    mutationFn: async () => {
+      if (!paymentStatus.transactionId) {
+        throw new Error("Không có giao dịch để xác nhận");
+      }
+      
+      const response = await apiRequest("PUT", `/api/payments/${paymentStatus.transactionId}/confirm`, {});
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Xác nhận thanh toán thành công",
+        description: "Chúng tôi sẽ kiểm tra và cập nhật số dư của bạn trong thời gian sớm nhất.",
+      });
+      
+      // Refresh payments and user data
+      queryClient.invalidateQueries({ queryKey: ["/api/payments"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+      
+      // Switch to history tab
+      setActiveTab("history");
+      
+      // Reset payment status
+      setPaymentStatus({ processing: false });
+      setPaymentDate(null);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Xác nhận thanh toán thất bại",
+        description: error.message || "Đã xảy ra lỗi khi xác nhận thanh toán.",
         variant: "destructive",
       });
     },
@@ -359,7 +426,7 @@ export function PaymentPage() {
                             amount={parseInt(amount)}
                             accountNo={bankDetails.accountNumber}
                             accountName={bankDetails.accountName}
-                            bankId="MB"
+                            bankId={vietQRConfig?.bankSettings?.bankId || "MB"}
                             addInfo={`NAPTIEN ${user?.username} ${paymentStatus.transactionId}`}
                           />
                         )}
@@ -403,12 +470,12 @@ export function PaymentPage() {
                             <div className="flex justify-between items-center">
                               <span className="text-muted-foreground">Nội dung CK:</span>
                               <div className="flex items-center">
-                                <span className="font-medium">NAPTIEN {user.username} {paymentStatus.transactionId}</span>
+                                <span className="font-medium">NAPTIEN admin {amount}</span>
                                 <Button
                                   variant="ghost"
                                   size="icon"
                                   className="h-7 w-7 ml-1"
-                                  onClick={() => handleCopyText(`NAPTIEN ${user.username} ${paymentStatus.transactionId}`, 'content')}
+                                  onClick={() => handleCopyText(`NAPTIEN admin ${amount}`, 'content')}
                                 >
                                   {copyStatus.content ? (
                                     <ClipboardCheck className="h-3.5 w-3.5 text-green-500" />

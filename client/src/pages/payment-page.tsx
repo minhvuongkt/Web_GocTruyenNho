@@ -1,12 +1,12 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { MainLayout } from "@/components/layouts/main-layout";
-import { QRCode } from "@/components/shared/qr-code";
-import { generateQRCode } from "@/utils/qrcode-generator";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import { generateVietQR, getBankAcqId } from "@/services/vietqr-api";
+import { QRCode } from "@/components/shared/qr-code";
 import {
   Card,
   CardContent,
@@ -79,6 +79,20 @@ export function PaymentPage() {
     enabled: activeTab === "history",
   });
 
+  // Fetch bank settings (could be part of user profile)
+  const { data: bankSettings } = useQuery({
+    queryKey: ["/api/payment-settings/pricing"],
+    queryFn: async () => {
+      try {
+        const res = await apiRequest("GET", "/api/payment-settings/pricing");
+        return res.json();
+      } catch (error) {
+        console.error("Failed to fetch payment settings", error);
+        return null;
+      }
+    }
+  });
+  
   // Create payment mutation
   const createPaymentMutation = useMutation({
     mutationFn: async () => {
@@ -101,25 +115,17 @@ export function PaymentPage() {
         description: "Vui lòng hoàn tất thanh toán để nạp tiền vào tài khoản.",
       });
 
-      // Generate QR code
-      const qrContent = generateQRCode({
-        bankNumber: bankDetails.accountNumber,
-        amount: parseInt(amount),
-        message: `NAPTIEN ${user?.username || ""} ${data.transactionId}`,
-      });
-
       // Set payment status
       setPaymentStatus({
         processing: false,
         transactionId: data.transactionId,
-        qrCode: qrContent,
       });
 
       // Switch to history tab after a delay
       setTimeout(() => {
         queryClient.invalidateQueries({ queryKey: ["/api/payments"] });
         setActiveTab("history");
-      }, 15000);
+      }, 30000);
     },
     onError: (error: Error) => {
       setPaymentStatus({ processing: false });
@@ -318,10 +324,15 @@ export function PaymentPage() {
                   ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div className="flex flex-col items-center justify-center border border-border rounded-md p-4">
-                        <QRCode value={paymentStatus.qrCode || ""} size={200} />
-                        <p className="text-center text-sm font-medium mt-3">
-                          Quét mã QR để thanh toán
-                        </p>
+                        {parseInt(amount) && paymentStatus.transactionId && (
+                          <QRCode 
+                            amount={parseInt(amount)}
+                            accountNo={bankDetails.accountNumber}
+                            accountName={bankDetails.accountName}
+                            bankId="MB"
+                            addInfo={`NAPTIEN ${user?.username} ${paymentStatus.transactionId}`}
+                          />
+                        )}
                       </div>
 
                       <div className="space-y-4">

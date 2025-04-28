@@ -1,113 +1,100 @@
 /**
- * VietQR API Service
- * This service integrates with the VietQR.io API to generate QR codes for bank transfers
- * Documentation: https://vietqr.io/portal/portalapi
+ * VietQR API Integration
+ * This service handles API calls to VietQR for generating payment QR codes
+ * See: https://vietqr.io/en/developer-docs
  */
 
-interface VietQRParams {
-  accountNo: string;
-  accountName: string;
-  acqId: string;
-  amount: number;
-  addInfo?: string;
-  template?: string;
-}
+import { apiRequest } from "@/lib/queryClient";
 
-interface VietQRResponse {
-  code: number;
-  desc: string;
-  data?: {
-    qrCode?: string;
-    qrDataURL?: string;
-  };
+// Bank ID mapping to VietQR acquirer ID
+const BANK_ID_MAPPING: Record<string, string> = {
+  'MB': 'BMBVNVX', // MB bank
+  'VCB': 'BFTVVNVX', // Vietcombank
+  'TCB': 'SHBVVNVX', // Techcombank
+  'VPB': 'VPBKVNVX', // VPBank
+  'VIB': 'VIBVVNVX', // VIB
+  'ACB': 'ASCBVNVX', // ACB
+  'TPB': 'TPBVVNVX', // TPBank
+};
+
+// Default bank if not specified
+const DEFAULT_BANK = 'MB';
+
+interface VietQRParams {
+  accountNo: string;     // Account number
+  accountName: string;   // Account holder name
+  acqId: string;         // Bank acquirer ID in VietQR format
+  amount: number;        // Payment amount
+  addInfo?: string;      // Additional payment info (transaction reference, etc)
+  template?: string;     // QR code template
 }
 
 /**
- * Generate a VietQR code using the VietQR.io API
- * @param params Parameters for creating the QR code
- * @returns QR code data
+ * Convert a simple bank code to VietQR acquirer ID format
+ */
+export function getBankAcqId(bankId: string): string {
+  // If the bank ID already looks like an acquirer ID, return as is
+  if (bankId.length > 5) return bankId;
+  
+  // Convert to uppercase and lookup in mapping
+  const upperBankId = bankId.toUpperCase();
+  return BANK_ID_MAPPING[upperBankId] || BANK_ID_MAPPING[DEFAULT_BANK];
+}
+
+/**
+ * Generate a VietQR payment QR code
+ * @param params QR code parameters
+ * @returns URL to the generated QR image
  */
 export async function generateVietQR(params: VietQRParams): Promise<string> {
   try {
-    // First fetch VietQR credentials from the server
-    const configResponse = await fetch('/api/payment-settings/vietqr-config');
-    if (!configResponse.ok) {
-      throw new Error('Không thể lấy thông tin cấu hình VietQR');
-    }
+    // First, get API credentials from our backend
+    const configResponse = await apiRequest('GET', '/api/payment-settings/vietqr-config');
+    const { clientId, apiKey } = await configResponse.json();
     
-    const config = await configResponse.json();
-    
-    // Check if VietQR is properly configured on the server
-    if (!config.clientId || !config.apiKey) {
-      throw new Error('Chưa cấu hình VietQR trên server');
+    if (!clientId || !apiKey) {
+      throw new Error('Missing VietQR API credentials');
     }
 
-    const response = await fetch('https://api.vietqr.io/v2/generate', {
+    // API endpoint for QR code generation
+    const apiUrl = 'https://api.vietqr.io/v2/generate';
+    
+    // Prepare request data
+    const requestData = {
+      clientId,
+      apiKey,
+      accountNo: params.accountNo,
+      accountName: params.accountName,
+      acqId: params.acqId,
+      amount: params.amount,
+      addInfo: params.addInfo || '',
+      format: 'text',
+      template: params.template || 'compact2'
+    };
+    
+    // Make API request to VietQR
+    const response = await fetch(apiUrl, {
       method: 'POST',
       headers: {
-        'x-client-id': config.clientId,
-        'x-api-key': config.apiKey,
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        accountNo: params.accountNo,
-        accountName: params.accountName,
-        acqId: params.acqId,
-        addInfo: params.addInfo || '',
-        amount: params.amount.toString(),
-        template: params.template || 'compact'
-      })
+      body: JSON.stringify(requestData),
     });
-
+    
+    const data = await response.json();
+    
     if (!response.ok) {
-      throw new Error(`Lỗi API VietQR: ${response.status} ${response.statusText}`);
+      console.error('VietQR API error:', data);
+      throw new Error(`VietQR API error: ${data.message || 'Unknown error'}`);
     }
-
-    const result: VietQRResponse = await response.json();
-
-    if (result.code !== 200) {
-      throw new Error(`Lỗi API VietQR: ${result.desc}`);
+    
+    if (!data.data?.qrDataURL) {
+      throw new Error('No QR data received from VietQR API');
     }
-
-    return result.data?.qrDataURL || '';
+    
+    return data.data.qrDataURL;
   } catch (error) {
-    console.error('Không thể tạo mã QR VietQR:', error);
+    console.error('Error generating VietQR code:', error);
     throw error;
   }
-}
-
-/**
- * Function to convert an acquisition ID (bank bin) to the acqId format expected by VietQR
- * For example: "VCB" -> "970436"
- * @param bankId The bank identifier
- * @returns The acquisition ID for the bank
- */
-export function getBankAcqId(bankId: string): string {
-  // Using common mapping for Vietnamese banks
-  const bankMapping: Record<string, string> = {
-    VCB: '970436', // Vietcombank
-    TCB: '970407', // Techcombank
-    MB: '970422',  // MB Bank
-    VIB: '970441', // VIB
-    VPB: '970432', // VPBank
-    ACB: '970416', // ACB
-    TPB: '970423', // TPBank
-    BIDV: '970418', // BIDV
-    DAB: '970406', // DongA Bank
-    STB: '970403', // Sacombank
-    VTB: '970433', // VietinBank
-    AGRI: '970405', // Agribank
-    OCEN: '970414', // OceanBank
-    SCB: '970429', // SCB
-    SHB: '970443', // SHB
-    ABB: '970425', // ABBank
-    MSB: '970426', // MSB
-    CAKE: '546034', // CAKE by VPBank
-    TIMO: '963388', // Timo
-    MOMO: '577689', // Ví MoMo
-    ZALO: '577689', // ZaloPay
-    VNPT: '971005'  // ViettelPay
-  };
-
-  return bankMapping[bankId] || bankId;
 }

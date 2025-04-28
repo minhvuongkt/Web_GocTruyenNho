@@ -1188,11 +1188,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Endpoint to provide VietQR configuration
   app.get("/api/payment-settings/vietqr-config", async (req, res) => {
     try {
+      // Verify if the API keys are available
+      if (!process.env.VIETQR_CLIENT_ID || !process.env.VIETQR_API_KEY) {
+        console.warn("VietQR credentials are missing");
+      }
+      
       res.json({
         clientId: process.env.VIETQR_CLIENT_ID || '',
         apiKey: process.env.VIETQR_API_KEY || ''
       });
     } catch (error) {
+      console.error("Error fetching VietQR configuration:", error);
       res.status(500).json({ message: "Error fetching VietQR configuration", error });
     }
   });

@@ -121,7 +121,7 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
                   <SelectValue placeholder="Tất cả các năm" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Tất cả các năm</SelectItem>
+                  <SelectItem value="all">Tất cả các năm</SelectItem>
                   {years.map(year => (
                     <SelectItem key={year} value={year}>{year}</SelectItem>
                   ))}

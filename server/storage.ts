@@ -16,8 +16,6 @@ import session from "express-session";
 import createMemoryStore from "memorystore";
 import { DatabaseStorage } from "./database-storage";
 
-const MemoryStore = createMemoryStore(session);
-
 export interface IStorage {
   // User management
   getUser(id: number): Promise<User | undefined>;

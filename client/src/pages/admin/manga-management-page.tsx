@@ -496,7 +496,7 @@ export function MangaManagementPage() {
                               </SelectItem>
                             ))
                           ) : (
-                            <SelectItem value="1">Không có tác giả</SelectItem>
+                            <SelectItem value="" disabled>Không có tác giả</SelectItem>
                           )}
                         </SelectContent>
                       </Select>
@@ -513,8 +513,7 @@ export function MangaManagementPage() {
                           <SelectValue placeholder="Chọn nhóm dịch" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="0">Không có</SelectItem>
-                          {/* Lấy dữ liệu từ API */}
+                          <SelectItem value="">Không có</SelectItem>
                           {translationGroups && translationGroups.length > 0 && 
                             translationGroups.map(group => (
                               <SelectItem key={group.id} value={group.id.toString()}>
@@ -557,19 +556,47 @@ export function MangaManagementPage() {
                     </div>
 
                     <div className="grid grid-cols-4 items-center gap-4">
-                      <Label htmlFor="coverImage" className="text-right">URL ảnh bìa</Label>
-                      <div className="col-span-3 flex gap-2">
-                        <Input
-                          id="coverImage"
-                          name="coverImage"
-                          placeholder="https://example.com/image.jpg"
-                          className="flex-1"
-                          value={newContent.coverImage || ""}
-                          onChange={handleInputChange}
-                        />
-                        <Button type="button" variant="outline" size="icon">
-                          <ImageIcon className="h-4 w-4" />
-                        </Button>
+                      <Label htmlFor="coverImageFile" className="text-right">Ảnh bìa</Label>
+                      <div className="col-span-3 flex flex-col gap-2">
+                        <div className="flex items-center gap-2">
+                          <Input
+                            id="coverImageFile"
+                            name="coverImageFile"
+                            type="file"
+                            className="flex-1"
+                            accept="image/jpeg,image/png,image/webp"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) {
+                                // Trong thực tế, đây là nơi bạn sẽ xử lý tải lên
+                                // Hiện tại chỉ giả lập với URL đặt tạm cho file
+                                const tempUrl = URL.createObjectURL(file);
+                                setNewContent(prev => ({
+                                  ...prev,
+                                  coverImage: tempUrl
+                                }));
+                              }
+                            }}
+                          />
+                        </div>
+                        {newContent.coverImage && (
+                          <div className="mt-2 border rounded p-2 w-36 relative group">
+                            <img 
+                              src={newContent.coverImage} 
+                              alt="Ảnh bìa" 
+                              className="w-full h-auto"
+                            />
+                            <Button
+                              type="button"
+                              variant="destructive"
+                              size="icon"
+                              className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                              onClick={() => setNewContent(prev => ({ ...prev, coverImage: '' }))}
+                            >
+                              <X className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        )}
                       </div>
                     </div>
 
@@ -623,7 +650,17 @@ export function MangaManagementPage() {
                     <Button variant="outline" type="button" onClick={() => setIsAddDialogOpen(false)}>
                       Hủy
                     </Button>
-                    <Button type="button" variant="outline" className="mr-2">
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      className="mr-2"
+                      onClick={() => {
+                        toast({
+                          title: "Xem trước",
+                          description: "Tính năng xem trước đang được phát triển",
+                        });
+                      }}
+                    >
                       Xem trước
                     </Button>
                     <Button type="submit" disabled={createContentMutation.isPending}>

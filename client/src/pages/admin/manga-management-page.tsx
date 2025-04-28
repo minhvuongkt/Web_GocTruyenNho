@@ -26,10 +26,12 @@ import {
   Info,
   LineChart,
   Bookmark,
+  BookOpen,
   Image as ImageIcon,
   CalendarDays,
   Tags,
-  Users
+  Users,
+  User
 } from "lucide-react";
 import { formatDate, getStatusLabel } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";

@@ -29,7 +29,7 @@ export function MangaCarousel({
   const { data: queryData, isLoading } = useQuery({
     queryKey: [queryKey],
     queryFn,
-    enabled: !propData
+    enabled: Boolean(!propData)
   });
   
   // Use provided data or query data

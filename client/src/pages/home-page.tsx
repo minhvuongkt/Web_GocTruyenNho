@@ -86,7 +86,7 @@ export function HomePage() {
       const data = await res.json();
       return data.content;
     },
-    enabled: currentType === 'all' || currentType === 'novel'
+    enabled: Boolean(currentType === 'all' || currentType === 'novel')
   });
   
   // Fetch content for search results
@@ -107,7 +107,7 @@ export function HomePage() {
       const res = await apiRequest('GET', `/api/content?${params.toString()}`);
       return res.json();
     },
-    enabled: isSearchPage
+    enabled: Boolean(isSearchPage)
   });
   
   // Effect to handle tab changes based on URL parameters

@@ -1,375 +1,356 @@
-import React, { useState, useEffect } from "react";
-import { useLocation } from "wouter";
-import { useQuery } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
-import { MainLayout } from "@/components/layouts/main-layout";
-import { ContentCard } from "@/components/content/content-card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
-import { 
-  Card, 
-  CardContent, 
-  CardDescription, 
-  CardFooter, 
-  CardHeader, 
-  CardTitle 
-} from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Label } from "@/components/ui/label";
-import {
-  ArrowRight,
-  BookOpen,
-  Filter,
-  Loader2,
-  Search,
-  X
-} from "lucide-react";
+import React, { useState, useEffect, useCallback } from 'react';
+import { useLocation } from 'wouter';
+import { useQuery } from '@tanstack/react-query';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { Input } from '@/components/ui/input';
+import { ContentCard } from '@/components/content/content-card';
+import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
+import { parseQueryString, buildQueryString, debounce } from '@/lib/utils';
+import { Search, Filter, X } from 'lucide-react';
 
-export function SearchPage() {
-  // Lấy tham số tìm kiếm từ URL (nếu có)
+type Content = {
+  id: number;
+  title: string;
+  type: 'manga' | 'novel';
+  status: 'ongoing' | 'completed' | 'hiatus';
+  createdAt: string;
+  thumbnail?: string;
+  views: number;
+};
+
+export default function SearchPage() {
   const [location, setLocation] = useLocation();
-  const urlParams = new URLSearchParams(window.location.search);
-  const queryParam = urlParams.get("q") || "";
-  const typeParam = urlParams.get("type") || "";
-  const statusParam = urlParams.get("status") || "";
-  const genreParam = urlParams.get("genre") || "";
-
-  // State cho tìm kiếm cơ bản
-  const [searchQuery, setSearchQuery] = useState(queryParam);
-
-  // State cho tìm kiếm nâng cao
-  const [advancedSearch, setAdvancedSearch] = useState({
-    title: queryParam,
-    type: typeParam,
-    status: statusParam,
-    genres: genreParam ? genreParam.split(",") : [],
-    sort: "newest",
+  const queryParams = parseQueryString(location.split('?')[1] || '');
+  
+  const [searchMode, setSearchMode] = useState<'basic' | 'advanced'>(
+    queryParams.advanced === 'true' ? 'advanced' : 'basic'
+  );
+  
+  // Basic search state
+  const [basicQuery, setBasicQuery] = useState(queryParams.query || '');
+  
+  // Advanced search state
+  const [advancedParams, setAdvancedParams] = useState({
+    title: queryParams.title || '',
+    type: queryParams.type || '',
+    status: queryParams.status || '',
+    sort: queryParams.sort || 'newest',
+    genres: queryParams.genres || ''
   });
-
-  // State để theo dõi tab đang active
-  const [activeTab, setActiveTab] = useState<string>("basic");
-
-  // Fetch thể loại
-  const { data: genres, isLoading: loadingGenres } = useQuery({
-    queryKey: ["/api/genres"],
+  
+  const [page, setPage] = useState(parseInt(queryParams.page || '1'));
+  const limit = 20;
+  
+  // Debounced search to avoid too many requests
+  const debouncedSearch = useCallback(
+    debounce((newParams: Record<string, any>) => {
+      const queryString = buildQueryString(newParams);
+      setLocation(`/search?${queryString}`);
+    }, 500),
+    [setLocation]
+  );
+  
+  // Basic search query
+  const basicSearchQuery = useQuery({
+    queryKey: ['search', basicQuery, page, limit],
     queryFn: async () => {
-      const response = await apiRequest("GET", "/api/genres");
-      return response.json();
+      if (!basicQuery) return { content: [], total: 0 };
+      
+      const res = await fetch(`/api/content/search?query=${encodeURIComponent(basicQuery)}&page=${page}&limit=${limit}`);
+      if (!res.ok) throw new Error('Search failed');
+      return res.json();
     },
+    enabled: searchMode === 'basic' && !!basicQuery
   });
-
-  // Fetch kết quả tìm kiếm
-  const { data: searchResults, isLoading: loadingResults } = useQuery({
-    queryKey: [
-      "/api/content/search", 
-      activeTab === "basic" ? { query: searchQuery } : advancedSearch
-    ],
+  
+  // Advanced search query
+  const advancedSearchQuery = useQuery({
+    queryKey: ['advancedSearch', advancedParams, page, limit],
     queryFn: async () => {
       const params = new URLSearchParams();
       
-      if (activeTab === "basic") {
-        if (!searchQuery.trim()) return { content: [], total: 0 };
-        params.append("query", searchQuery);
-      } else {
-        if (advancedSearch.title) params.append("title", advancedSearch.title);
-        if (advancedSearch.type) params.append("type", advancedSearch.type);
-        if (advancedSearch.status) params.append("status", advancedSearch.status);
-        if (advancedSearch.genres.length > 0) params.append("genres", advancedSearch.genres.join(","));
-        params.append("sort", advancedSearch.sort);
-      }
-
-      const response = await apiRequest("GET", `/api/content/search?${params.toString()}`);
-      return response.json();
-    },
-    enabled: activeTab === "basic" 
-      ? !!searchQuery.trim() 
-      : !!(advancedSearch.title || advancedSearch.type || advancedSearch.status || advancedSearch.genres.length > 0),
-  });
-
-  // Xử lý tìm kiếm cơ bản
-  const handleBasicSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    const params = new URLSearchParams();
-    if (searchQuery.trim()) {
-      params.append("q", searchQuery);
-      setLocation(`/search?${params.toString()}`);
-    }
-  };
-
-  // Xử lý tìm kiếm nâng cao
-  const handleAdvancedSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    const params = new URLSearchParams();
-    
-    if (advancedSearch.title) params.append("q", advancedSearch.title);
-    if (advancedSearch.type) params.append("type", advancedSearch.type);
-    if (advancedSearch.status) params.append("status", advancedSearch.status);
-    if (advancedSearch.genres.length > 0) params.append("genre", advancedSearch.genres.join(","));
-    
-    setLocation(`/search?${params.toString()}`);
-  };
-
-  // Xử lý toggle thể loại
-  const handleGenreToggle = (genreId: string) => {
-    setAdvancedSearch(prev => {
-      const genres = prev.genres.includes(genreId)
-        ? prev.genres.filter(id => id !== genreId)
-        : [...prev.genres, genreId];
+      if (advancedParams.title) params.append('title', advancedParams.title);
+      if (advancedParams.type) params.append('type', advancedParams.type);
+      if (advancedParams.status) params.append('status', advancedParams.status);
+      if (advancedParams.sort) params.append('sort', advancedParams.sort);
+      if (advancedParams.genres) params.append('genres', advancedParams.genres);
       
-      return { ...prev, genres };
-    });
+      params.append('page', page.toString());
+      params.append('limit', limit.toString());
+      
+      const res = await fetch(`/api/content/search/advanced?${params.toString()}`);
+      if (!res.ok) throw new Error('Advanced search failed');
+      return res.json();
+    },
+    enabled: searchMode === 'advanced' && (
+      !!advancedParams.title || 
+      !!advancedParams.type || 
+      !!advancedParams.status || 
+      !!advancedParams.genres
+    )
+  });
+  
+  // Update URL on parameter changes
+  useEffect(() => {
+    if (searchMode === 'basic' && basicQuery) {
+      debouncedSearch({
+        query: basicQuery,
+        page,
+        advanced: 'false'
+      });
+    } else if (searchMode === 'advanced') {
+      debouncedSearch({
+        ...advancedParams,
+        page,
+        advanced: 'true'
+      });
+    }
+  }, [basicQuery, advancedParams, page, searchMode, debouncedSearch]);
+  
+  // Handle tab change
+  const handleTabChange = (value: string) => {
+    setSearchMode(value as 'basic' | 'advanced');
+    setPage(1); // Reset page when switching tabs
   };
-
-  // Reset form tìm kiếm nâng cao
-  const resetAdvancedForm = () => {
-    setAdvancedSearch({
-      title: "",
-      type: "",
-      status: "",
-      genres: [],
-      sort: "newest",
-    });
+  
+  // Handle basic search input
+  const handleBasicSearchInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setBasicQuery(e.target.value);
+    setPage(1); // Reset page on new search
   };
-
+  
+  // Handle advanced search input
+  const handleAdvancedInputChange = (field: keyof typeof advancedParams, value: string) => {
+    setAdvancedParams(prev => ({
+      ...prev,
+      [field]: value
+    }));
+    setPage(1); // Reset page on parameter change
+  };
+  
+  // Handle search clear
+  const handleClearSearch = () => {
+    if (searchMode === 'basic') {
+      setBasicQuery('');
+    } else {
+      setAdvancedParams({
+        title: '',
+        type: '',
+        status: '',
+        sort: 'newest',
+        genres: ''
+      });
+    }
+    setPage(1);
+  };
+  
+  // Calculate pagination
+  const currentQuery = searchMode === 'basic' ? basicSearchQuery : advancedSearchQuery;
+  const totalPages = currentQuery.data ? Math.ceil(currentQuery.data.total / limit) : 0;
+  
+  const content = currentQuery.data?.content || [];
+  const isLoading = currentQuery.isLoading;
+  const isError = currentQuery.isError;
+  
   return (
-    <MainLayout>
-      <div className="container mx-auto px-4 py-8">
-        <h1 className="text-3xl font-bold mb-6">Tìm kiếm</h1>
+    <div className="container py-8">
+      <h1 className="text-3xl font-bold mb-6">Tìm Kiếm</h1>
+      
+      <Tabs value={searchMode} onValueChange={handleTabChange} className="w-full">
+        <TabsList className="grid w-full grid-cols-2 mb-6">
+          <TabsTrigger value="basic">Tìm Kiếm Cơ Bản</TabsTrigger>
+          <TabsTrigger value="advanced">Tìm Kiếm Nâng Cao</TabsTrigger>
+        </TabsList>
         
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-8">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="basic">Tìm kiếm cơ bản</TabsTrigger>
-            <TabsTrigger value="advanced">Tìm kiếm nâng cao</TabsTrigger>
-          </TabsList>
-          
-          {/* Tab tìm kiếm cơ bản */}
-          <TabsContent value="basic">
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle>Tìm kiếm cơ bản</CardTitle>
-                <CardDescription>
-                  Tìm kiếm theo tiêu đề, tác giả hoặc mô tả
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <form onSubmit={handleBasicSearch} className="flex space-x-2">
-                  <div className="flex-grow relative">
-                    <Search className="h-4 w-4 absolute left-3 top-3 text-muted-foreground" />
-                    <Input
-                      placeholder="Nhập từ khóa tìm kiếm..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="pl-9"
-                    />
-                  </div>
-                  <Button type="submit" disabled={!searchQuery.trim()}>
-                    Tìm kiếm
-                  </Button>
-                </form>
-              </CardContent>
-            </Card>
-          </TabsContent>
-          
-          {/* Tab tìm kiếm nâng cao */}
-          <TabsContent value="advanced">
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle>Tìm kiếm nâng cao</CardTitle>
-                <CardDescription>
-                  Tìm kiếm với nhiều tùy chọn lọc, sắp xếp
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <form onSubmit={handleAdvancedSearch} className="space-y-4">
-                  {/* Tiêu đề */}
-                  <div className="space-y-2">
-                    <Label htmlFor="title">Tiêu đề</Label>
-                    <Input
-                      id="title"
-                      placeholder="Nhập tiêu đề tìm kiếm..."
-                      value={advancedSearch.title}
-                      onChange={(e) => setAdvancedSearch({ ...advancedSearch, title: e.target.value })}
-                    />
-                  </div>
-                  
-                  {/* Loại truyện */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="type">Loại truyện</Label>
-                      <Select 
-                        value={advancedSearch.type} 
-                        onValueChange={(value) => setAdvancedSearch({ ...advancedSearch, type: value })}
-                      >
-                        <SelectTrigger id="type">
-                          <SelectValue placeholder="Tất cả loại truyện" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="">Tất cả</SelectItem>
-                          <SelectItem value="manga">Truyện tranh</SelectItem>
-                          <SelectItem value="novel">Tiểu thuyết</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    
-                    {/* Trạng thái */}
-                    <div className="space-y-2">
-                      <Label htmlFor="status">Trạng thái</Label>
-                      <Select 
-                        value={advancedSearch.status} 
-                        onValueChange={(value) => setAdvancedSearch({ ...advancedSearch, status: value })}
-                      >
-                        <SelectTrigger id="status">
-                          <SelectValue placeholder="Tất cả trạng thái" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="">Tất cả</SelectItem>
-                          <SelectItem value="ongoing">Đang tiến hành</SelectItem>
-                          <SelectItem value="completed">Hoàn thành</SelectItem>
-                          <SelectItem value="hiatus">Tạm ngưng</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                  
-                  {/* Thứ tự sắp xếp */}
-                  <div className="space-y-2">
-                    <Label htmlFor="sort">Sắp xếp theo</Label>
-                    <Select 
-                      value={advancedSearch.sort} 
-                      onValueChange={(value) => setAdvancedSearch({ ...advancedSearch, sort: value })}
-                    >
-                      <SelectTrigger id="sort">
-                        <SelectValue placeholder="Sắp xếp theo" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="newest">Mới nhất</SelectItem>
-                        <SelectItem value="oldest">Cũ nhất</SelectItem>
-                        <SelectItem value="az">A-Z</SelectItem>
-                        <SelectItem value="za">Z-A</SelectItem>
-                        <SelectItem value="popularity">Xem nhiều nhất</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
-                  {/* Thể loại */}
-                  <Accordion type="single" collapsible className="w-full">
-                    <AccordionItem value="genres">
-                      <AccordionTrigger className="text-sm font-medium">Thể loại</AccordionTrigger>
-                      <AccordionContent>
-                        {loadingGenres ? (
-                          <div className="flex justify-center py-4">
-                            <Loader2 className="h-6 w-6 animate-spin text-primary" />
-                          </div>
-                        ) : (
-                          <div className="grid grid-cols-2 md:grid-cols-3 gap-2 pt-2">
-                            {genres?.map((genre: any) => (
-                              <div key={genre.id} className="flex items-center space-x-2">
-                                <Checkbox 
-                                  id={`genre-${genre.id}`}
-                                  checked={advancedSearch.genres.includes(genre.id.toString())}
-                                  onCheckedChange={() => handleGenreToggle(genre.id.toString())}
-                                />
-                                <Label htmlFor={`genre-${genre.id}`} className="text-sm cursor-pointer">
-                                  {genre.name}
-                                </Label>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </AccordionContent>
-                    </AccordionItem>
-                  </Accordion>
-                  
-                  {/* Nút tìm kiếm và reset */}
-                  <div className="flex space-x-2 pt-2">
-                    <Button 
-                      type="submit" 
-                      className="flex-1"
-                      disabled={!advancedSearch.title && !advancedSearch.type && !advancedSearch.status && advancedSearch.genres.length === 0}
-                    >
-                      <Filter className="mr-2 h-4 w-4" />
-                      Tìm kiếm nâng cao
-                    </Button>
-                    
-                    <Button 
-                      type="button" 
-                      variant="outline"
-                      onClick={resetAdvancedForm}
-                      className="w-10 px-0"
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </form>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+        <TabsContent value="basic" className="space-y-4">
+          <div className="relative">
+            <Input
+              type="text"
+              placeholder="Nhập tên truyện cần tìm kiếm..."
+              value={basicQuery}
+              onChange={handleBasicSearchInput}
+              className="pr-16"
+            />
+            {basicQuery && (
+              <button 
+                className="absolute right-12 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                onClick={handleClearSearch}
+              >
+                <X className="h-5 w-5" />
+              </button>
+            )}
+            <Search className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500" />
+          </div>
+        </TabsContent>
         
-        {/* Hiển thị kết quả */}
-        <div className="mt-8">
-          <h2 className="text-xl font-bold mb-4">
-            {activeTab === "basic" 
-              ? searchQuery 
-                ? `Kết quả tìm kiếm cho "${searchQuery}"` 
-                : "Nhập từ khóa để tìm kiếm"
-              : "Kết quả tìm kiếm nâng cao"}
-          </h2>
-          
-          {loadingResults ? (
-            <div className="flex flex-col items-center justify-center py-12">
-              <Loader2 className="h-10 w-10 animate-spin text-primary mb-4" />
-              <p className="text-muted-foreground">Đang tìm kiếm...</p>
+        <TabsContent value="advanced" className="space-y-6">
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="title">Tên Truyện</Label>
+              <div className="relative">
+                <Input
+                  id="title"
+                  placeholder="Nhập tên truyện..."
+                  value={advancedParams.title}
+                  onChange={(e) => handleAdvancedInputChange('title', e.target.value)}
+                />
+                {advancedParams.title && (
+                  <button 
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                    onClick={() => handleAdvancedInputChange('title', '')}
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
             </div>
-          ) : searchResults?.content?.length > 0 ? (
+            
+            <div className="space-y-2">
+              <Label htmlFor="type">Loại Truyện</Label>
+              <Select 
+                value={advancedParams.type} 
+                onValueChange={(value) => handleAdvancedInputChange('type', value)}
+              >
+                <SelectTrigger id="type">
+                  <SelectValue placeholder="Tất cả loại truyện" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Tất cả</SelectItem>
+                  <SelectItem value="manga">Truyện Tranh</SelectItem>
+                  <SelectItem value="novel">Tiểu Thuyết</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="status">Trạng Thái</Label>
+              <Select 
+                value={advancedParams.status} 
+                onValueChange={(value) => handleAdvancedInputChange('status', value)}
+              >
+                <SelectTrigger id="status">
+                  <SelectValue placeholder="Tất cả trạng thái" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Tất cả</SelectItem>
+                  <SelectItem value="ongoing">Đang Ra</SelectItem>
+                  <SelectItem value="completed">Hoàn Thành</SelectItem>
+                  <SelectItem value="hiatus">Tạm Ngừng</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="sort">Sắp Xếp</Label>
+              <Select 
+                value={advancedParams.sort} 
+                onValueChange={(value) => handleAdvancedInputChange('sort', value)}
+              >
+                <SelectTrigger id="sort">
+                  <SelectValue placeholder="Sắp xếp theo" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="newest">Mới Nhất</SelectItem>
+                  <SelectItem value="oldest">Cũ Nhất</SelectItem>
+                  <SelectItem value="az">A-Z</SelectItem>
+                  <SelectItem value="za">Z-A</SelectItem>
+                  <SelectItem value="popularity">Lượt Xem</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          
+          <div className="flex justify-end space-x-2">
+            <Button variant="outline" onClick={handleClearSearch}>
+              <X className="mr-2 h-4 w-4" /> Xóa Bộ Lọc
+            </Button>
+            <Button>
+              <Filter className="mr-2 h-4 w-4" /> Áp Dụng Bộ Lọc
+            </Button>
+          </div>
+        </TabsContent>
+      </Tabs>
+      
+      {/* Results section */}
+      <div className="mt-8">
+        {isLoading ? (
+          <div className="flex justify-center items-center py-12">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+          </div>
+        ) : isError ? (
+          <div className="text-center py-12 text-red-500">
+            <p>Có lỗi xảy ra. Vui lòng thử lại.</p>
+          </div>
+        ) : content.length === 0 ? (
+          <div className="text-center py-12 text-gray-500">
+            <p>Không tìm thấy kết quả nào phù hợp.</p>
+          </div>
+        ) : (
+          <>
+            <div className="mb-4">
+              <p className="text-gray-500">
+                {currentQuery.data?.total || 0} kết quả được tìm thấy
+              </p>
+            </div>
+            
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-              {searchResults.content.map((content: any) => (
-                <ContentCard key={content.id} content={content} />
+              {content.map((item: Content) => (
+                <ContentCard key={item.id} content={item} />
               ))}
             </div>
-          ) : (
-            <div className="flex flex-col items-center justify-center py-12 text-center">
-              <BookOpen className="h-12 w-12 text-muted-foreground mb-4" />
-              <h3 className="text-lg font-medium mb-1">Không tìm thấy kết quả phù hợp</h3>
-              <p className="text-muted-foreground mb-6 max-w-md">
-                Thử tìm kiếm với từ khóa khác hoặc điều chỉnh bộ lọc tìm kiếm của bạn.
-              </p>
-              
-              {activeTab === "advanced" && (
-                <Button onClick={resetAdvancedForm} variant="outline">
-                  Đặt lại bộ lọc
+            
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="flex justify-center mt-8 space-x-1">
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => setPage(prev => Math.max(prev - 1, 1))}
+                  disabled={page === 1}
+                >
+                  Trước
                 </Button>
-              )}
-            </div>
-          )}
-          
-          {/* Phân trang */}
-          {searchResults?.content?.length > 0 && searchResults.total > searchResults.content.length && (
-            <div className="flex justify-center mt-8">
-              <Button variant="outline">
-                Xem thêm kết quả
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
-            </div>
-          )}
-        </div>
+                
+                {[...Array(Math.min(5, totalPages))].map((_, i) => {
+                  let pageNum: number;
+                  
+                  if (totalPages <= 5) {
+                    pageNum = i + 1;
+                  } else if (page <= 3) {
+                    pageNum = i + 1;
+                  } else if (page >= totalPages - 2) {
+                    pageNum = totalPages - 4 + i;
+                  } else {
+                    pageNum = page - 2 + i;
+                  }
+                  
+                  return (
+                    <Button
+                      key={i}
+                      variant={page === pageNum ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setPage(pageNum)}
+                    >
+                      {pageNum}
+                    </Button>
+                  );
+                })}
+                
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => setPage(prev => Math.min(prev + 1, totalPages))}
+                  disabled={page === totalPages}
+                >
+                  Sau
+                </Button>
+              </div>
+            )}
+          </>
+        )}
       </div>
-    </MainLayout>
+    </div>
   );
 }
-
-export default SearchPage;

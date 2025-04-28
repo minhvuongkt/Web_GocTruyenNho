@@ -1,21 +1,30 @@
 import { 
-  users, type User, type InsertUser, 
+  users, type User, type InsertUser,
   genres, type Genre, type InsertGenre,
   authors, type Author, type InsertAuthor,
   translationGroups, type TranslationGroup, type InsertTranslationGroup,
   content, type Content, type InsertContent,
+  contentGenres,
   chapters, type Chapter, type InsertChapter,
   chapterContent, type ChapterContent, type InsertChapterContent,
   comments, type Comment, type InsertComment,
   reports, type Report, type InsertReport,
+  userFavorites,
+  readingHistory,
+  unlockedChapters,
   payments, type Payment, type InsertPayment,
-  paymentSettings, type PaymentSettings, type InsertPaymentSettings,
   advertisements, type Advertisement, type InsertAdvertisement,
-  contentGenres, userFavorites, readingHistory, unlockedChapters
-} from "@shared/schema";
-import session from "express-session";
-import createMemoryStore from "memorystore";
-import { DatabaseStorage } from "./database-storage";
+  paymentSettings, type PaymentSettings, type InsertPaymentSettings
+} from '@shared/schema';
+import { db } from './db';
+import { eq, and, like, or, desc, asc, sql, gt, lt, not, inArray } from 'drizzle-orm';
+import session from 'express-session';
+import { hashPassword, comparePasswords } from './auth';
+import memorystore from 'memorystore';
+
+// Wrap memorystore with session to create a MemoryStore constructor
+type SessionStore = session.Store;
+const MemoryStore = memorystore(session);
 
 export interface IStorage {
   // User management
@@ -23,6 +32,7 @@ export interface IStorage {
   getUserByUsername(username: string): Promise<User | undefined>;
   getUserByEmail(email: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
+  updateUser(id: number, userData: Partial<User>): Promise<User | undefined>;
   updateUserBalance(id: number, amount: number): Promise<User | undefined>;
   getAllUsers(page?: number, limit?: number): Promise<{ users: User[], total: number }>;
   deleteUser(id: number): Promise<boolean>;
@@ -42,7 +52,7 @@ export interface IStorage {
   updateAuthor(id: number, author: Partial<InsertAuthor>): Promise<Author | undefined>;
   deleteAuthor(id: number): Promise<boolean>;
 
-  // Translation Group management
+  // Translation group management
   createTranslationGroup(group: InsertTranslationGroup): Promise<TranslationGroup>;
   getTranslationGroup(id: number): Promise<TranslationGroup | undefined>;
   getAllTranslationGroups(): Promise<TranslationGroup[]>;
@@ -50,42 +60,44 @@ export interface IStorage {
   deleteTranslationGroup(id: number): Promise<boolean>;
 
   // Content management
-  createContent(content: InsertContent, genreIds: number[]): Promise<Content>;
+  createContent(contentData: InsertContent, genreIds: number[]): Promise<Content>;
   getContent(id: number): Promise<Content | undefined>;
   getContentWithDetails(id: number): Promise<{ content: Content, genres: Genre[], author: Author, translationGroup?: TranslationGroup } | undefined>;
   getAllContent(page?: number, limit?: number, filter?: Partial<Content>): Promise<{ content: Content[], total: number }>;
   updateContent(id: number, contentData: Partial<InsertContent>, genreIds?: number[]): Promise<Content | undefined>;
   deleteContent(id: number): Promise<boolean>;
   incrementContentViews(id: number): Promise<boolean>;
+  searchContent(query: string, page?: number, limit?: number): Promise<{ content: Content[], total: number }>;
+  searchContentAdvanced(params: any, page?: number, limit?: number): Promise<{ content: Content[], total: number }>;
 
   // Chapter management
-  createChapter(chapter: InsertChapter): Promise<Chapter>;
+  createChapter(chapterData: InsertChapter): Promise<Chapter>;
   getChapter(id: number): Promise<Chapter | undefined>;
   getChaptersByContent(contentId: number): Promise<Chapter[]>;
-  updateChapter(id: number, chapter: Partial<InsertChapter>): Promise<Chapter | undefined>;
+  updateChapter(id: number, chapterData: Partial<InsertChapter>): Promise<Chapter | undefined>;
   deleteChapter(id: number): Promise<boolean>;
   incrementChapterViews(id: number): Promise<boolean>;
 
   // Chapter content management
-  createChapterContent(chapterContent: InsertChapterContent): Promise<ChapterContent>;
+  createChapterContent(chapterContentData: InsertChapterContent): Promise<ChapterContent>;
   getChapterContentByChapter(chapterId: number): Promise<ChapterContent[]>;
-  updateChapterContent(id: number, content: Partial<InsertChapterContent>): Promise<ChapterContent | undefined>;
+  updateChapterContent(id: number, contentData: Partial<InsertChapterContent>): Promise<ChapterContent | undefined>;
   deleteChapterContent(id: number): Promise<boolean>;
 
-  // Comments management
-  createComment(comment: InsertComment): Promise<Comment>;
+  // Comment management
+  createComment(commentData: InsertComment): Promise<Comment>;
   getComment(id: number): Promise<Comment | undefined>;
   getCommentsByContent(contentId: number): Promise<Comment[]>;
   getCommentsByChapter(chapterId: number): Promise<Comment[]>;
   deleteComment(id: number): Promise<boolean>;
 
-  // Reports management
-  createReport(report: InsertReport): Promise<Report>;
+  // Report management
+  createReport(reportData: InsertReport): Promise<Report>;
   getReport(id: number): Promise<Report | undefined>;
   getAllReports(page?: number, limit?: number): Promise<{ reports: Report[], total: number }>;
   deleteReport(id: number): Promise<boolean>;
 
-  // User activity
+  // User content interaction
   toggleFavorite(userId: number, contentId: number): Promise<boolean>;
   getFavorites(userId: number): Promise<Content[]>;
   addReadingHistory(userId: number, contentId: number, chapterId: number): Promise<boolean>;
@@ -93,896 +105,992 @@ export interface IStorage {
   unlockChapter(userId: number, chapterId: number): Promise<boolean>;
   isChapterUnlocked(userId: number, chapterId: number): Promise<boolean>;
 
-  // Payments
-  createPayment(payment: InsertPayment): Promise<Payment>;
+  // Payment management
+  createPayment(paymentData: InsertPayment): Promise<Payment>;
   getPayment(id: number): Promise<Payment | undefined>;
   getPaymentByTransactionId(transactionId: string): Promise<Payment | undefined>;
   getPaymentsByUser(userId: number): Promise<Payment[]>;
   getAllPayments(page?: number, limit?: number): Promise<{ payments: Payment[], total: number }>;
   updatePaymentStatus(id: number, status: 'pending' | 'completed' | 'failed'): Promise<Payment | undefined>;
 
-  // Advertisements
-  createAdvertisement(ad: InsertAdvertisement): Promise<Advertisement>;
+  // Advertisement management
+  createAdvertisement(adData: InsertAdvertisement): Promise<Advertisement>;
   getAdvertisement(id: number): Promise<Advertisement | undefined>;
   getActiveAdvertisements(position: 'banner' | 'sidebar' | 'popup'): Promise<Advertisement[]>;
   getAllAdvertisements(page?: number, limit?: number): Promise<{ ads: Advertisement[], total: number }>;
-  updateAdvertisement(id: number, ad: Partial<InsertAdvertisement>): Promise<Advertisement | undefined>;
+  updateAdvertisement(id: number, adData: Partial<InsertAdvertisement>): Promise<Advertisement | undefined>;
   deleteAdvertisement(id: number): Promise<boolean>;
   incrementAdViews(id: number): Promise<boolean>;
   incrementAdClicks(id: number): Promise<boolean>;
-  
-  // Payment Settings
+
+  // Payment settings
   getPaymentSettings(): Promise<PaymentSettings | undefined>;
   createDefaultPaymentSettings(): Promise<PaymentSettings>;
-  updatePaymentSettings(settings: Partial<InsertPaymentSettings>): Promise<PaymentSettings | undefined>;
-
-  // Session store
-  sessionStore: session.Store;
+  updatePaymentSettings(settingsData: Partial<InsertPaymentSettings>): Promise<PaymentSettings | undefined>;
 }
 
-export class MemStorage implements IStorage {
-  private users: Map<number, User>;
-  private genres: Map<number, Genre>;
-  private authors: Map<number, Author>;
-  private translationGroups: Map<number, TranslationGroup>;
-  private content: Map<number, Content>;
-  private contentGenres: Map<string, number>;
-  private chapters: Map<number, Chapter>;
-  private chapterContents: Map<number, ChapterContent>;
-  private comments: Map<number, Comment>;
-  private reports: Map<number, Report>;
-  private userFavorites: Map<string, boolean>;
-  private readingHistories: Map<number, { userId: number, contentId: number, chapterId: number, lastReadAt: Date }>;
-  private unlockedChapters: Map<string, { unlockedAt: Date }>;
-  private payments: Map<number, Payment>;
-  private advertisements: Map<number, Advertisement>;
-  private paymentSettings: PaymentSettings | null = null;
-  
-  private userId: number = 1;
-  private genreId: number = 1;
-  private authorId: number = 1;
-  private translationGroupId: number = 1;
-  private contentId: number = 1;
-  private chapterId: number = 1;
-  private chapterContentId: number = 1;
-  private commentId: number = 1;
-  private reportId: number = 1;
-  private readingHistoryId: number = 1;
-  private paymentId: number = 1;
-  private advertisementId: number = 1;
-  private paymentSettingsId: number = 1;
-
+export class DatabaseStorage implements IStorage {
   sessionStore: session.Store;
 
   constructor() {
-    this.users = new Map();
-    this.genres = new Map();
-    this.authors = new Map();
-    this.translationGroups = new Map();
-    this.content = new Map();
-    this.contentGenres = new Map();
-    this.chapters = new Map();
-    this.chapterContents = new Map();
-    this.comments = new Map();
-    this.reports = new Map();
-    this.userFavorites = new Map();
-    this.readingHistories = new Map();
-    this.unlockedChapters = new Map();
-    this.payments = new Map();
-    this.advertisements = new Map();
-
+    // Initialize session store
     this.sessionStore = new MemoryStore({
-      checkPeriod: 86400000 // prune expired entries every 24h
-    });
-
-    // Add admin user
-    this.createUser({
-      username: 'admin',
-      password: '$2b$10$kO5G7fXNSQkUv9zjFtGGt.IkPGVKAoJ9QADMvIT.Eotfk9UBOeDqu', // Hashed 'admin123'
-      email: 'admin@example.com',
-      role: 'admin'
-    });
-
-    // No seed data - we'll load everything from the database
-  }
-
-  private seedInitialData(): void {
-    // Seed genres
-    const genreIds = [
-      this.createGenre({ name: 'Action', description: 'Action packed content' }).id,
-      this.createGenre({ name: 'Adventure', description: 'Exploration and journey content' }).id,
-      this.createGenre({ name: 'Romance', description: 'Love and relationship focused content' }).id,
-      this.createGenre({ name: 'Fantasy', description: 'Magical and supernatural elements' }).id,
-      this.createGenre({ name: 'Sci-Fi', description: 'Science fiction themes' }).id,
-      this.createGenre({ name: 'Horror', description: 'Scary and frightening content' }).id,
-      this.createGenre({ name: 'Comedy', description: 'Humorous content' }).id,
-      this.createGenre({ name: 'Drama', description: 'Emotional and serious themes' }).id,
-    ];
-
-    // Seed authors
-    const authorIds = [
-      this.createAuthor({ name: 'Takahashi Rumiko', info: 'Famous manga author', birthDate: '1957-10-10' }).id,
-      this.createAuthor({ name: 'Oda Eiichiro', info: 'One Piece creator', birthDate: '1975-01-01' }).id,
-      this.createAuthor({ name: 'Miyazaki Hayao', info: 'Film director and manga artist', birthDate: '1941-01-05' }).id,
-    ];
-
-    // Seed translation groups
-    const groupIds = [
-      this.createTranslationGroup({ name: 'Manga Plus', description: 'Official translations', foundedDate: '2010-01-01' }).id,
-      this.createTranslationGroup({ name: 'Fan Translators', description: 'Community translations', foundedDate: '2015-05-05' }).id,
-    ];
-
-    // Seed content
-    const manga1 = this.createContent(
-      {
-        title: 'Demon Slayer',
-        alternativeTitle: 'Kimetsu no Yaiba',
-        type: 'manga',
-        authorId: authorIds[0],
-        translationGroupId: groupIds[0],
-        releaseYear: '2016',
-        status: 'completed',
-        description: 'A boy fights demons after his family is slaughtered',
-        coverImage: 'https://example.com/demon-slayer.jpg',
-      },
-      [genreIds[0], genreIds[1], genreIds[3]]
-    );
-
-    const manga2 = this.createContent(
-      {
-        title: 'One Piece',
-        alternativeTitle: 'ワンピース',
-        type: 'manga',
-        authorId: authorIds[1],
-        translationGroupId: groupIds[0],
-        releaseYear: '1997',
-        status: 'ongoing',
-        description: 'Pirates search for the ultimate treasure',
-        coverImage: 'https://example.com/one-piece.jpg',
-      },
-      [genreIds[0], genreIds[1], genreIds[6]]
-    );
-
-    const novel1 = this.createContent(
-      {
-        title: 'The Wind Rises',
-        alternativeTitle: '風立ちぬ',
-        type: 'novel',
-        authorId: authorIds[2],
-        translationGroupId: groupIds[1],
-        releaseYear: '2013',
-        status: 'completed',
-        description: 'A fictionalized biography of aircraft designer Jiro Horikoshi',
-        coverImage: 'https://example.com/wind-rises.jpg',
-      },
-      [genreIds[2], genreIds[7]]
-    );
-
-    // Seed chapters for manga1
-    const chapter1 = this.createChapter({
-      contentId: manga1.id,
-      number: 1,
-      title: 'Cruelty',
-      releaseDate: new Date('2016-02-15'),
-      isLocked: false,
-    });
-
-    const chapter2 = this.createChapter({
-      contentId: manga1.id,
-      number: 2,
-      title: 'Trainer Sakonji Urokodaki',
-      releaseDate: new Date('2016-02-22'),
-      isLocked: true,
-      unlockPrice: 2000, // 2000 VND
-    });
-
-    // Add chapter content
-    this.createChapterContent({
-      chapterId: chapter1.id,
-      pageOrder: 1,
-      imageUrl: 'https://example.com/demon-slayer/ch1/page1.jpg',
-    });
-
-    this.createChapterContent({
-      chapterId: chapter1.id,
-      pageOrder: 2,
-      imageUrl: 'https://example.com/demon-slayer/ch1/page2.jpg',
-    });
-
-    // Seed chapters for novel1
-    const novelChapter1 = this.createChapter({
-      contentId: novel1.id,
-      number: 1,
-      title: 'Dreams of Flight',
-      releaseDate: new Date('2013-07-20'),
-      isLocked: false,
-    });
-
-    // Add novel content
-    this.createChapterContent({
-      chapterId: novelChapter1.id,
-      content: 'The wind is rising! We must try to live! These words from Valéry\'s poem "Le Cimetière Marin" are spoken by the protagonist...',
-    });
-
-    // Seed advertisements
-    this.createAdvertisement({
-      title: 'Premium Membership Promotion',
-      imageUrl: 'https://example.com/ads/premium.jpg',
-      targetUrl: 'https://example.com/premium',
-      position: 'banner',
-      startDate: new Date(),
-      endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
-      isActive: true,
-    });
-
-    this.createAdvertisement({
-      title: 'New Manga Collection',
-      imageUrl: 'https://example.com/ads/manga-collection.jpg',
-      targetUrl: 'https://example.com/collection',
-      position: 'sidebar',
-      startDate: new Date(),
-      endDate: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000), // 15 days from now
-      isActive: true,
+      checkPeriod: 86400000 // Prune expired entries every 24h
     });
   }
 
-  private getKeyByUserIdContentId(userId: number, contentId: number): string {
-    return `${userId}-${contentId}`;
-  }
-
-  private getKeyByUserIdChapterId(userId: number, chapterId: number): string {
-    return `${userId}-${chapterId}`;
-  }
-
-  // User management
+  // User management methods
   async getUser(id: number): Promise<User | undefined> {
-    return this.users.get(id);
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user;
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(user => user.username === username);
+    const [user] = await db.select().from(users).where(eq(users.username, username));
+    return user;
   }
 
   async getUserByEmail(email: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(user => user.email === email);
+    const [user] = await db.select().from(users).where(eq(users.email, email));
+    return user;
   }
 
   async createUser(user: InsertUser): Promise<User> {
-    const id = this.userId++;
-    const now = new Date();
-    const newUser: User = { 
-      ...user, 
-      id, 
-      balance: 0,
-      createdAt: now 
-    };
-    this.users.set(id, newUser);
+    // Hash the password before storing
+    const hashedPassword = await hashPassword(user.password);
+    
+    const [newUser] = await db.insert(users).values({
+      ...user,
+      password: hashedPassword
+    }).returning();
+    
     return newUser;
   }
 
-  async updateUserBalance(id: number, amount: number): Promise<User | undefined> {
-    const user = this.users.get(id);
-    if (!user) return undefined;
+  async updateUser(id: number, userData: Partial<User>): Promise<User | undefined> {
+    // If password is being updated, hash it
+    if (userData.password) {
+      userData.password = await hashPassword(userData.password);
+    }
     
-    const updatedUser = { 
-      ...user, 
-      balance: user.balance + amount 
-    };
-    this.users.set(id, updatedUser);
+    const [updatedUser] = await db.update(users)
+      .set(userData)
+      .where(eq(users.id, id))
+      .returning();
+    
+    return updatedUser;
+  }
+
+  async updateUserBalance(id: number, amount: number): Promise<User | undefined> {
+    const [updatedUser] = await db.update(users)
+      .set({ balance: amount })
+      .where(eq(users.id, id))
+      .returning();
+    
     return updatedUser;
   }
 
   async getAllUsers(page: number = 1, limit: number = 10): Promise<{ users: User[], total: number }> {
-    const allUsers = Array.from(this.users.values());
-    const total = allUsers.length;
-    const start = (page - 1) * limit;
-    const end = start + limit;
-    const paginatedUsers = allUsers.slice(start, end);
-    return { users: paginatedUsers, total };
+    const offset = (page - 1) * limit;
+    
+    const usersList = await db.select().from(users)
+      .limit(limit)
+      .offset(offset);
+    
+    const [{ count }] = await db.select({
+      count: sql<number>`count(*)`
+    }).from(users);
+    
+    return {
+      users: usersList,
+      total: count
+    };
   }
 
   async deleteUser(id: number): Promise<boolean> {
-    return this.users.delete(id);
+    const result = await db.delete(users).where(eq(users.id, id));
+    return result.rowCount > 0;
   }
 
-  // Genre management
+  // Genre management methods
   async createGenre(genre: InsertGenre): Promise<Genre> {
-    const id = this.genreId++;
-    const newGenre: Genre = { ...genre, id };
-    this.genres.set(id, newGenre);
+    const [newGenre] = await db.insert(genres).values(genre).returning();
     return newGenre;
   }
 
   async getGenre(id: number): Promise<Genre | undefined> {
-    return this.genres.get(id);
+    const [genre] = await db.select().from(genres).where(eq(genres.id, id));
+    return genre;
   }
 
   async getGenreByName(name: string): Promise<Genre | undefined> {
-    return Array.from(this.genres.values()).find(genre => genre.name === name);
+    const [genre] = await db.select().from(genres).where(eq(genres.name, name));
+    return genre;
   }
 
   async getAllGenres(): Promise<Genre[]> {
-    return Array.from(this.genres.values());
+    return db.select().from(genres);
   }
 
-  async updateGenre(id: number, genre: Partial<InsertGenre>): Promise<Genre | undefined> {
-    const existingGenre = this.genres.get(id);
-    if (!existingGenre) return undefined;
+  async updateGenre(id: number, genreData: Partial<InsertGenre>): Promise<Genre | undefined> {
+    const [updatedGenre] = await db.update(genres)
+      .set(genreData)
+      .where(eq(genres.id, id))
+      .returning();
     
-    const updatedGenre = { ...existingGenre, ...genre };
-    this.genres.set(id, updatedGenre);
     return updatedGenre;
   }
 
   async deleteGenre(id: number): Promise<boolean> {
-    return this.genres.delete(id);
+    // First, delete all content-genre associations
+    await db.delete(contentGenres).where(eq(contentGenres.genreId, id));
+    
+    // Then delete the genre
+    const result = await db.delete(genres).where(eq(genres.id, id));
+    return result.rowCount > 0;
   }
 
-  // Author management
+  // Author management methods
   async createAuthor(author: InsertAuthor): Promise<Author> {
-    const id = this.authorId++;
-    const newAuthor: Author = { ...author, id };
-    this.authors.set(id, newAuthor);
+    const [newAuthor] = await db.insert(authors).values(author).returning();
     return newAuthor;
   }
 
   async getAuthor(id: number): Promise<Author | undefined> {
-    return this.authors.get(id);
+    const [author] = await db.select().from(authors).where(eq(authors.id, id));
+    return author;
   }
 
   async getAllAuthors(): Promise<Author[]> {
-    return Array.from(this.authors.values());
+    return db.select().from(authors);
   }
 
-  async updateAuthor(id: number, author: Partial<InsertAuthor>): Promise<Author | undefined> {
-    const existingAuthor = this.authors.get(id);
-    if (!existingAuthor) return undefined;
+  async updateAuthor(id: number, authorData: Partial<InsertAuthor>): Promise<Author | undefined> {
+    const [updatedAuthor] = await db.update(authors)
+      .set(authorData)
+      .where(eq(authors.id, id))
+      .returning();
     
-    const updatedAuthor = { ...existingAuthor, ...author };
-    this.authors.set(id, updatedAuthor);
     return updatedAuthor;
   }
 
   async deleteAuthor(id: number): Promise<boolean> {
-    return this.authors.delete(id);
+    const result = await db.delete(authors).where(eq(authors.id, id));
+    return result.rowCount > 0;
   }
 
-  // Translation Group management
+  // Translation group management methods
   async createTranslationGroup(group: InsertTranslationGroup): Promise<TranslationGroup> {
-    const id = this.translationGroupId++;
-    const newGroup: TranslationGroup = { ...group, id };
-    this.translationGroups.set(id, newGroup);
+    const [newGroup] = await db.insert(translationGroups).values(group).returning();
     return newGroup;
   }
 
   async getTranslationGroup(id: number): Promise<TranslationGroup | undefined> {
-    return this.translationGroups.get(id);
+    const [group] = await db.select().from(translationGroups).where(eq(translationGroups.id, id));
+    return group;
   }
 
   async getAllTranslationGroups(): Promise<TranslationGroup[]> {
-    return Array.from(this.translationGroups.values());
+    return db.select().from(translationGroups);
   }
 
-  async updateTranslationGroup(id: number, group: Partial<InsertTranslationGroup>): Promise<TranslationGroup | undefined> {
-    const existingGroup = this.translationGroups.get(id);
-    if (!existingGroup) return undefined;
+  async updateTranslationGroup(id: number, groupData: Partial<InsertTranslationGroup>): Promise<TranslationGroup | undefined> {
+    const [updatedGroup] = await db.update(translationGroups)
+      .set(groupData)
+      .where(eq(translationGroups.id, id))
+      .returning();
     
-    const updatedGroup = { ...existingGroup, ...group };
-    this.translationGroups.set(id, updatedGroup);
     return updatedGroup;
   }
 
   async deleteTranslationGroup(id: number): Promise<boolean> {
-    return this.translationGroups.delete(id);
+    const result = await db.delete(translationGroups).where(eq(translationGroups.id, id));
+    return result.rowCount > 0;
   }
 
-  // Content management
+  // Content management methods
   async createContent(contentData: InsertContent, genreIds: number[]): Promise<Content> {
-    const id = this.contentId++;
-    const now = new Date();
-    const newContent: Content = { 
-      ...contentData, 
-      id, 
-      views: 0, 
-      createdAt: now 
-    };
-    this.content.set(id, newContent);
-    
-    // Add genres
-    genreIds.forEach(genreId => {
-      this.contentGenres.set(`${id}-${genreId}`, genreId);
+    // Start a transaction
+    return await db.transaction(async (tx) => {
+      // Insert the content
+      const [newContent] = await tx.insert(content).values(contentData).returning();
+      
+      // Associate genres with the content
+      if (genreIds.length > 0) {
+        await tx.insert(contentGenres).values(
+          genreIds.map(genreId => ({
+            contentId: newContent.id,
+            genreId
+          }))
+        );
+      }
+      
+      return newContent;
     });
-    
-    return newContent;
   }
 
   async getContent(id: number): Promise<Content | undefined> {
-    return this.content.get(id);
+    const [contentItem] = await db.select().from(content).where(eq(content.id, id));
+    return contentItem;
   }
 
   async getContentWithDetails(id: number): Promise<{ content: Content, genres: Genre[], author: Author, translationGroup?: TranslationGroup } | undefined> {
-    const content = this.content.get(id);
-    if (!content) return undefined;
+    const [contentItem] = await db.select().from(content).where(eq(content.id, id));
     
-    const author = this.authors.get(content.authorId);
-    if (!author) return undefined;
+    if (!contentItem) {
+      return undefined;
+    }
     
-    const translationGroup = content.translationGroupId 
-      ? this.translationGroups.get(content.translationGroupId) 
-      : undefined;
+    // Get the author
+    const [author] = await db.select().from(authors).where(eq(authors.id, contentItem.authorId));
     
-    const contentGenreEntries = Array.from(this.contentGenres.entries())
-      .filter(([key]) => key.startsWith(`${id}-`))
-      .map(([_, genreId]) => this.genres.get(genreId))
-      .filter((genre): genre is Genre => genre !== undefined);
+    if (!author) {
+      return undefined; // Author must exist
+    }
+    
+    // Get the translation group if available
+    let translationGroup: TranslationGroup | undefined;
+    if (contentItem.translationGroupId) {
+      const [group] = await db.select().from(translationGroups)
+        .where(eq(translationGroups.id, contentItem.translationGroupId));
+      translationGroup = group;
+    }
+    
+    // Get the genres associated with this content
+    const contentGenresList = await db.select().from(contentGenres)
+      .where(eq(contentGenres.contentId, id));
+    
+    const genresList: Genre[] = [];
+    if (contentGenresList.length > 0) {
+      const genreIds = contentGenresList.map(cg => cg.genreId);
+      const genresResult = await db.select().from(genres)
+        .where(inArray(genres.id, genreIds));
+      genresList.push(...genresResult);
+    }
     
     return {
-      content,
-      genres: contentGenreEntries,
+      content: contentItem,
+      genres: genresList,
       author,
       translationGroup
     };
   }
 
-  async getAllContent(page: number = 1, limit: number = 10, filter?: Partial<Content>): Promise<{ content: Content[], total: number }> {
-    let allContent = Array.from(this.content.values());
+  async getAllContent(page: number = 1, limit: number = 10, filter: Partial<Content> = {}): Promise<{ content: Content[], total: number }> {
+    const offset = (page - 1) * limit;
     
-    // Apply filters if provided
-    if (filter) {
-      allContent = allContent.filter(item => {
-        let match = true;
-        if (filter.type !== undefined && item.type !== filter.type) match = false;
-        if (filter.authorId !== undefined && item.authorId !== filter.authorId) match = false;
-        if (filter.status !== undefined && item.status !== filter.status) match = false;
-        return match;
-      });
+    // Build the where clause based on filter
+    let query = db.select().from(content);
+    
+    if (filter.type) {
+      query = query.where(eq(content.type, filter.type));
     }
     
-    const total = allContent.length;
-    const start = (page - 1) * limit;
-    const end = start + limit;
-    const paginatedContent = allContent.slice(start, end);
-    return { content: paginatedContent, total };
+    if (filter.status) {
+      query = query.where(eq(content.status, filter.status));
+    }
+    
+    // Execute the query with limit and offset
+    const contentList = await query
+      .orderBy(desc(content.createdAt))
+      .limit(limit)
+      .offset(offset);
+    
+    // Count the total matching items
+    let countQuery = db.select({
+      count: sql<number>`count(*)`
+    }).from(content);
+    
+    if (filter.type) {
+      countQuery = countQuery.where(eq(content.type, filter.type));
+    }
+    
+    if (filter.status) {
+      countQuery = countQuery.where(eq(content.status, filter.status));
+    }
+    
+    const [{ count }] = await countQuery;
+    
+    return {
+      content: contentList,
+      total: count
+    };
   }
 
   async updateContent(id: number, contentData: Partial<InsertContent>, genreIds?: number[]): Promise<Content | undefined> {
-    const existingContent = this.content.get(id);
-    if (!existingContent) return undefined;
-    
-    const updatedContent = { ...existingContent, ...contentData };
-    this.content.set(id, updatedContent);
-    
-    // Update genres if provided
-    if (genreIds) {
-      // Remove existing genre associations
-      Array.from(this.contentGenres.keys())
-        .filter(key => key.startsWith(`${id}-`))
-        .forEach(key => this.contentGenres.delete(key));
+    return await db.transaction(async (tx) => {
+      // Update the content
+      const [updatedContent] = await tx.update(content)
+        .set(contentData)
+        .where(eq(content.id, id))
+        .returning();
       
-      // Add new genre associations
-      genreIds.forEach(genreId => {
-        this.contentGenres.set(`${id}-${genreId}`, genreId);
-      });
-    }
-    
-    return updatedContent;
+      if (!updatedContent) {
+        return undefined;
+      }
+      
+      // Update genres if provided
+      if (genreIds !== undefined) {
+        // Delete existing associations
+        await tx.delete(contentGenres).where(eq(contentGenres.contentId, id));
+        
+        // Add new associations
+        if (genreIds.length > 0) {
+          await tx.insert(contentGenres).values(
+            genreIds.map(genreId => ({
+              contentId: id,
+              genreId
+            }))
+          );
+        }
+      }
+      
+      return updatedContent;
+    });
   }
 
   async deleteContent(id: number): Promise<boolean> {
-    // Remove genre associations
-    Array.from(this.contentGenres.keys())
-      .filter(key => key.startsWith(`${id}-`))
-      .forEach(key => this.contentGenres.delete(key));
-    
-    // Remove chapters
-    const chaptersToDelete = Array.from(this.chapters.values())
-      .filter(chapter => chapter.contentId === id);
-    
-    chaptersToDelete.forEach(chapter => {
-      this.deleteChapter(chapter.id);
+    return await db.transaction(async (tx) => {
+      // Delete content-genre associations
+      await tx.delete(contentGenres).where(eq(contentGenres.contentId, id));
+      
+      // Delete chapters and their content
+      const chaptersList = await tx.select().from(chapters).where(eq(chapters.contentId, id));
+      
+      for (const chapter of chaptersList) {
+        // Delete chapter content
+        await tx.delete(chapterContents).where(eq(chapterContents.chapterId, chapter.id));
+        
+        // Delete unlocked chapters
+        await tx.delete(unlockedChapters).where(eq(unlockedChapters.chapterId, chapter.id));
+        
+        // Delete comments on chapter
+        await tx.delete(comments).where(eq(comments.chapterId, chapter.id));
+        
+        // Delete reports on chapter
+        await tx.delete(reports).where(eq(reports.chapterId, chapter.id));
+      }
+      
+      // Delete all chapters
+      await tx.delete(chapters).where(eq(chapters.contentId, id));
+      
+      // Delete comments on content
+      await tx.delete(comments).where(eq(comments.contentId, id));
+      
+      // Delete reports on content
+      await tx.delete(reports).where(eq(reports.contentId, id));
+      
+      // Delete favorites
+      await tx.delete(favorites).where(eq(favorites.contentId, id));
+      
+      // Delete reading history
+      await tx.delete(readingHistory).where(eq(readingHistory.contentId, id));
+      
+      // Finally, delete the content
+      const result = await tx.delete(content).where(eq(content.id, id));
+      return result.rowCount > 0;
     });
-    
-    return this.content.delete(id);
   }
 
   async incrementContentViews(id: number): Promise<boolean> {
-    const content = this.content.get(id);
-    if (!content) return false;
+    const result = await db.update(content)
+      .set({
+        views: sql`${content.views} + 1`
+      })
+      .where(eq(content.id, id));
     
-    const updatedContent = { ...content, views: content.views + 1 };
-    this.content.set(id, updatedContent);
-    return true;
+    return result.rowCount > 0;
   }
 
-  // Chapter management
-  async createChapter(chapterData: InsertChapter): Promise<Chapter> {
-    const id = this.chapterId++;
-    const newChapter: Chapter = { 
-      ...chapterData, 
-      id, 
-      views: 0 
+  async searchContent(query: string, page: number = 1, limit: number = 10): Promise<{ content: Content[], total: number }> {
+    const offset = (page - 1) * limit;
+    const searchTerm = `%${query}%`;
+    
+    // Search in title or alternative title
+    const contentList = await db.select().from(content)
+      .where(
+        or(
+          like(content.title, searchTerm),
+          like(content.alternativeTitle, searchTerm)
+        )
+      )
+      .orderBy(desc(content.createdAt))
+      .limit(limit)
+      .offset(offset);
+    
+    // Count total results
+    const [{ count }] = await db.select({
+      count: sql<number>`count(*)`
+    }).from(content).where(
+      or(
+        like(content.title, searchTerm),
+        like(content.alternativeTitle, searchTerm)
+      )
+    );
+    
+    return {
+      content: contentList,
+      total: count
     };
-    this.chapters.set(id, newChapter);
+  }
+
+  async searchContentAdvanced(params: any, page: number = 1, limit: number = 10): Promise<{ content: Content[], total: number }> {
+    const offset = (page - 1) * limit;
+    
+    // Build the query conditions
+    const conditions = [];
+    
+    if (params.title) {
+      conditions.push(like(content.title, `%${params.title}%`));
+    }
+    
+    if (params.type) {
+      conditions.push(eq(content.type, params.type));
+    }
+    
+    if (params.status) {
+      conditions.push(eq(content.status, params.status));
+    }
+    
+    // Handle genre filtering
+    const hasGenreFilter = params.genreIds && params.genreIds.length > 0;
+    
+    // First, find all content that matches basic criteria
+    let contentQuery = db.select().from(content);
+    
+    if (conditions.length > 0) {
+      contentQuery = contentQuery.where(and(...conditions));
+    }
+    
+    // Sort based on the sort parameter
+    if (params.sort) {
+      switch (params.sort) {
+        case 'newest':
+          contentQuery = contentQuery.orderBy(desc(content.createdAt));
+          break;
+        case 'oldest':
+          contentQuery = contentQuery.orderBy(asc(content.createdAt));
+          break;
+        case 'az':
+          contentQuery = contentQuery.orderBy(asc(content.title));
+          break;
+        case 'za':
+          contentQuery = contentQuery.orderBy(desc(content.title));
+          break;
+        case 'popularity':
+          contentQuery = contentQuery.orderBy(desc(content.views));
+          break;
+      }
+    } else {
+      // Default sort by newest
+      contentQuery = contentQuery.orderBy(desc(content.createdAt));
+    }
+    
+    let filteredContentIds: number[] = [];
+    
+    // If genre filtering is needed, get all contentIds that match the genre criteria
+    if (hasGenreFilter) {
+      // Get all content-genre mappings for the requested genres
+      const genreMappings = await db.select().from(contentGenres)
+        .where(inArray(contentGenres.genreId, params.genreIds));
+      
+      // Count how many genres match for each content
+      const contentGenreCounts: Record<number, number> = {};
+      genreMappings.forEach(mapping => {
+        contentGenreCounts[mapping.contentId] = (contentGenreCounts[mapping.contentId] || 0) + 1;
+      });
+      
+      // Only include content that matches all requested genres
+      filteredContentIds = Object.entries(contentGenreCounts)
+        .filter(([_, count]) => count === params.genreIds.length)
+        .map(([contentId, _]) => parseInt(contentId));
+      
+      // If no content matches all genres, return empty result
+      if (filteredContentIds.length === 0 && hasGenreFilter) {
+        return { content: [], total: 0 };
+      }
+    }
+    
+    // Apply genre filter if needed
+    if (hasGenreFilter) {
+      contentQuery = contentQuery.where(inArray(content.id, filteredContentIds));
+    }
+    
+    // Execute the query with pagination
+    const contentList = await contentQuery.limit(limit).offset(offset);
+    
+    // Count total results
+    let countQuery = db.select({
+      count: sql<number>`count(*)`
+    }).from(content);
+    
+    if (conditions.length > 0) {
+      countQuery = countQuery.where(and(...conditions));
+    }
+    
+    if (hasGenreFilter) {
+      countQuery = countQuery.where(inArray(content.id, filteredContentIds));
+    }
+    
+    const [{ count }] = await countQuery;
+    
+    return {
+      content: contentList,
+      total: count
+    };
+  }
+
+  // Chapter management methods
+  async createChapter(chapterData: InsertChapter): Promise<Chapter> {
+    const [newChapter] = await db.insert(chapters).values(chapterData).returning();
     return newChapter;
   }
 
   async getChapter(id: number): Promise<Chapter | undefined> {
-    return this.chapters.get(id);
+    const [chapter] = await db.select().from(chapters).where(eq(chapters.id, id));
+    return chapter;
   }
 
   async getChaptersByContent(contentId: number): Promise<Chapter[]> {
-    return Array.from(this.chapters.values())
-      .filter(chapter => chapter.contentId === contentId)
-      .sort((a, b) => a.number - b.number);
+    return db.select().from(chapters)
+      .where(eq(chapters.contentId, contentId))
+      .orderBy(asc(chapters.number));
   }
 
   async updateChapter(id: number, chapterData: Partial<InsertChapter>): Promise<Chapter | undefined> {
-    const existingChapter = this.chapters.get(id);
-    if (!existingChapter) return undefined;
+    const [updatedChapter] = await db.update(chapters)
+      .set(chapterData)
+      .where(eq(chapters.id, id))
+      .returning();
     
-    const updatedChapter = { ...existingChapter, ...chapterData };
-    this.chapters.set(id, updatedChapter);
     return updatedChapter;
   }
 
   async deleteChapter(id: number): Promise<boolean> {
-    // Delete chapter content
-    Array.from(this.chapterContents.values())
-      .filter(content => content.chapterId === id)
-      .forEach(content => {
-        this.chapterContents.delete(content.id);
-      });
-    
-    return this.chapters.delete(id);
+    return await db.transaction(async (tx) => {
+      // Delete chapter content
+      await tx.delete(chapterContent).where(eq(chapterContent.chapterId, id));
+      
+      // Delete unlocked chapters
+      await tx.delete(unlockedChapters).where(eq(unlockedChapters.chapterId, id));
+      
+      // Delete comments on chapter
+      await tx.delete(comments).where(eq(comments.chapterId, id));
+      
+      // Delete reports on chapter
+      await tx.delete(reports).where(eq(reports.chapterId, id));
+      
+      // Delete reading history for this chapter
+      await tx.delete(readingHistory).where(eq(readingHistory.chapterId, id));
+      
+      // Finally, delete the chapter
+      const result = await tx.delete(chapters).where(eq(chapters.id, id));
+      return result.rowCount !== null && result.rowCount > 0;
+    });
   }
 
   async incrementChapterViews(id: number): Promise<boolean> {
-    const chapter = this.chapters.get(id);
-    if (!chapter) return false;
+    const result = await db.update(chapters)
+      .set({
+        views: sql`${chapters.views} + 1`
+      })
+      .where(eq(chapters.id, id));
     
-    const updatedChapter = { ...chapter, views: chapter.views + 1 };
-    this.chapters.set(id, updatedChapter);
-    return true;
+    return result.rowCount > 0;
   }
 
-  // Chapter content management
+  // Chapter content management methods
   async createChapterContent(chapterContentData: InsertChapterContent): Promise<ChapterContent> {
-    const id = this.chapterContentId++;
-    const newChapterContent: ChapterContent = { ...chapterContentData, id };
-    this.chapterContents.set(id, newChapterContent);
-    return newChapterContent;
+    const [newContent] = await db.insert(chapterContent).values(chapterContentData).returning();
+    return newContent;
   }
 
   async getChapterContentByChapter(chapterId: number): Promise<ChapterContent[]> {
-    return Array.from(this.chapterContents.values())
-      .filter(content => content.chapterId === chapterId)
-      .sort((a, b) => {
-        // Sort by pageOrder for manga
-        if (a.pageOrder !== undefined && b.pageOrder !== undefined) {
-          return a.pageOrder - b.pageOrder;
-        }
-        return 0;
-      });
+    const chapterContentList = await db.select().from(chapterContent)
+      .where(eq(chapterContent.chapterId, chapterId))
+      .orderBy(asc(chapterContent.pageOrder));
+    
+    // Sort by page order if available
+    return chapterContentList.sort((a, b) => {
+      if (a.pageOrder === null && b.pageOrder === null) return 0;
+      if (a.pageOrder === null) return 1;
+      if (b.pageOrder === null) return -1;
+      return a.pageOrder - b.pageOrder;
+    });
   }
 
   async updateChapterContent(id: number, contentData: Partial<InsertChapterContent>): Promise<ChapterContent | undefined> {
-    const existingContent = this.chapterContents.get(id);
-    if (!existingContent) return undefined;
+    const [updatedContent] = await db.update(chapterContent)
+      .set(contentData)
+      .where(eq(chapterContent.id, id))
+      .returning();
     
-    const updatedContent = { ...existingContent, ...contentData };
-    this.chapterContents.set(id, updatedContent);
     return updatedContent;
   }
 
   async deleteChapterContent(id: number): Promise<boolean> {
-    return this.chapterContents.delete(id);
+    const result = await db.delete(chapterContent).where(eq(chapterContent.id, id));
+    return result.rowCount !== null && result.rowCount > 0;
   }
 
-  // Comments management
+  // Comment management methods
   async createComment(commentData: InsertComment): Promise<Comment> {
-    const id = this.commentId++;
-    const now = new Date();
-    const newComment: Comment = { ...commentData, id, createdAt: now };
-    this.comments.set(id, newComment);
+    const [newComment] = await db.insert(comments).values(commentData).returning();
     return newComment;
   }
 
   async getComment(id: number): Promise<Comment | undefined> {
-    return this.comments.get(id);
+    const [comment] = await db.select().from(comments).where(eq(comments.id, id));
+    return comment;
   }
 
   async getCommentsByContent(contentId: number): Promise<Comment[]> {
-    return Array.from(this.comments.values())
-      .filter(comment => comment.contentId === contentId)
-      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+    return db.select().from(comments)
+      .where(and(
+        eq(comments.contentId, contentId),
+        eq(comments.chapterId, null)
+      ))
+      .orderBy(desc(comments.createdAt));
   }
 
   async getCommentsByChapter(chapterId: number): Promise<Comment[]> {
-    return Array.from(this.comments.values())
-      .filter(comment => comment.chapterId === chapterId)
-      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+    return db.select().from(comments)
+      .where(eq(comments.chapterId, chapterId))
+      .orderBy(desc(comments.createdAt));
   }
 
   async deleteComment(id: number): Promise<boolean> {
-    return this.comments.delete(id);
+    // Delete reports related to this comment
+    await db.delete(reports).where(eq(reports.commentId, id));
+    
+    // Delete the comment
+    const result = await db.delete(comments).where(eq(comments.id, id));
+    return result.rowCount > 0;
   }
 
-  // Reports management
+  // Report management methods
   async createReport(reportData: InsertReport): Promise<Report> {
-    const id = this.reportId++;
-    const now = new Date();
-    const newReport: Report = { ...reportData, id, createdAt: now };
-    this.reports.set(id, newReport);
+    const [newReport] = await db.insert(reports).values(reportData).returning();
     return newReport;
   }
 
   async getReport(id: number): Promise<Report | undefined> {
-    return this.reports.get(id);
+    const [report] = await db.select().from(reports).where(eq(reports.id, id));
+    return report;
   }
 
   async getAllReports(page: number = 1, limit: number = 10): Promise<{ reports: Report[], total: number }> {
-    const allReports = Array.from(this.reports.values())
-      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+    const offset = (page - 1) * limit;
     
-    const total = allReports.length;
-    const start = (page - 1) * limit;
-    const end = start + limit;
-    const paginatedReports = allReports.slice(start, end);
-    return { reports: paginatedReports, total };
+    const reportsList = await db.select().from(reports)
+      .orderBy(desc(reports.createdAt))
+      .limit(limit)
+      .offset(offset);
+    
+    const [{ count }] = await db.select({
+      count: sql<number>`count(*)`
+    }).from(reports);
+    
+    return {
+      reports: reportsList,
+      total: count
+    };
   }
 
   async deleteReport(id: number): Promise<boolean> {
-    return this.reports.delete(id);
+    const result = await db.delete(reports).where(eq(reports.id, id));
+    return result.rowCount > 0;
   }
 
-  // User activity
+  // User content interaction methods
   async toggleFavorite(userId: number, contentId: number): Promise<boolean> {
-    const key = this.getKeyByUserIdContentId(userId, contentId);
-    if (this.userFavorites.has(key)) {
-      this.userFavorites.delete(key);
-      return false; // no longer favorite
+    // Check if favorite already exists
+    const [existingFavorite] = await db.select().from(userFavorites)
+      .where(and(
+        eq(userFavorites.userId, userId),
+        eq(userFavorites.contentId, contentId)
+      ));
+    
+    if (existingFavorite) {
+      // Remove favorite
+      await db.delete(userFavorites)
+        .where(and(
+          eq(userFavorites.userId, userId),
+          eq(userFavorites.contentId, contentId)
+        ));
+      return false; // Removed
     } else {
-      this.userFavorites.set(key, true);
-      return true; // now favorite
+      // Add favorite
+      await db.insert(userFavorites).values({
+        userId,
+        contentId
+      });
+      return true; // Added
     }
   }
 
   async getFavorites(userId: number): Promise<Content[]> {
-    const favoriteContentIds = Array.from(this.userFavorites.entries())
-      .filter(([key, value]) => key.startsWith(`${userId}-`) && value)
-      .map(([key]) => parseInt(key.split('-')[1]));
+    const favorites = await db.select().from(userFavorites)
+      .where(eq(userFavorites.userId, userId));
     
-    return favoriteContentIds
-      .map(id => this.content.get(id))
-      .filter((content): content is Content => content !== undefined);
+    if (favorites.length === 0) {
+      return [];
+    }
+    
+    const contentIds = favorites.map(fav => fav.contentId);
+    
+    return db.select().from(content)
+      .where(inArray(content.id, contentIds))
+      .orderBy(desc(content.createdAt));
   }
 
   async addReadingHistory(userId: number, contentId: number, chapterId: number): Promise<boolean> {
-    const id = this.readingHistoryId++;
-    const now = new Date();
+    // Check if entry already exists
+    const [existingEntry] = await db.select().from(readingHistory)
+      .where(and(
+        eq(readingHistory.userId, userId),
+        eq(readingHistory.contentId, contentId)
+      ));
     
-    this.readingHistories.set(id, {
-      userId,
-      contentId,
-      chapterId,
-      lastReadAt: now
-    });
+    if (existingEntry) {
+      // Update existing entry
+      await db.update(readingHistory)
+        .set({
+          chapterId,
+          updatedAt: new Date()
+        })
+        .where(eq(readingHistory.id, existingEntry.id));
+    } else {
+      // Add new entry
+      await db.insert(readingHistory).values({
+        userId,
+        contentId,
+        chapterId,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      });
+    }
     
     return true;
   }
 
   async getReadingHistory(userId: number): Promise<{ content: Content, chapter: Chapter }[]> {
-    const userHistory = Array.from(this.readingHistories.values())
-      .filter(history => history.userId === userId)
-      .sort((a, b) => b.lastReadAt.getTime() - a.lastReadAt.getTime());
+    const historyEntries = await db.select().from(readingHistory)
+      .where(eq(readingHistory.userId, userId))
+      .orderBy(desc(readingHistory.updatedAt));
     
-    // Group by contentId and get the most recent chapter for each content
-    const contentMap = new Map<number, { contentId: number, chapterId: number, lastReadAt: Date }>();
+    const result: { content: Content, chapter: Chapter }[] = [];
     
-    userHistory.forEach(history => {
-      const existing = contentMap.get(history.contentId);
-      if (!existing || history.lastReadAt > existing.lastReadAt) {
-        contentMap.set(history.contentId, history);
+    for (const entry of historyEntries) {
+      const [contentItem] = await db.select().from(content)
+        .where(eq(content.id, entry.contentId));
+      
+      const [chapterItem] = await db.select().from(chapters)
+        .where(eq(chapters.id, entry.chapterId));
+      
+      if (contentItem && chapterItem) {
+        result.push({
+          content: contentItem,
+          chapter: chapterItem
+        });
       }
-    });
+    }
     
-    // Get content and chapter objects
-    return Array.from(contentMap.values())
-      .map(history => {
-        const content = this.content.get(history.contentId);
-        const chapter = this.chapters.get(history.chapterId);
-        
-        if (content && chapter) {
-          return { content, chapter };
-        }
-        return null;
-      })
-      .filter((item): item is { content: Content, chapter: Chapter } => item !== null);
+    return result;
   }
 
   async unlockChapter(userId: number, chapterId: number): Promise<boolean> {
-    const key = this.getKeyByUserIdChapterId(userId, chapterId);
-    const now = new Date();
+    await db.insert(unlockedChapters).values({
+      userId,
+      chapterId,
+      unlockedAt: new Date()
+    });
     
-    this.unlockedChapters.set(key, { unlockedAt: now });
     return true;
   }
 
   async isChapterUnlocked(userId: number, chapterId: number): Promise<boolean> {
-    const key = this.getKeyByUserIdChapterId(userId, chapterId);
-    return this.unlockedChapters.has(key);
+    const [unlocked] = await db.select().from(unlockedChapters)
+      .where(and(
+        eq(unlockedChapters.userId, userId),
+        eq(unlockedChapters.chapterId, chapterId)
+      ));
+    
+    return !!unlocked;
   }
 
-  // Payments
+  // Payment management methods
   async createPayment(paymentData: InsertPayment): Promise<Payment> {
-    const id = this.paymentId++;
-    const now = new Date();
-    const newPayment: Payment = { ...paymentData, id, createdAt: now };
-    this.payments.set(id, newPayment);
+    const [newPayment] = await db.insert(payments).values(paymentData).returning();
     return newPayment;
   }
 
   async getPayment(id: number): Promise<Payment | undefined> {
-    return this.payments.get(id);
+    const [payment] = await db.select().from(payments).where(eq(payments.id, id));
+    return payment;
   }
 
   async getPaymentByTransactionId(transactionId: string): Promise<Payment | undefined> {
-    return Array.from(this.payments.values())
-      .find(payment => payment.transactionId === transactionId);
+    const [payment] = await db.select().from(payments)
+      .where(eq(payments.transactionId, transactionId));
+    
+    return payment;
   }
 
   async getPaymentsByUser(userId: number): Promise<Payment[]> {
-    return Array.from(this.payments.values())
-      .filter(payment => payment.userId === userId)
-      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+    return db.select().from(payments)
+      .where(eq(payments.userId, userId))
+      .orderBy(desc(payments.createdAt));
   }
 
   async getAllPayments(page: number = 1, limit: number = 10): Promise<{ payments: Payment[], total: number }> {
-    const allPayments = Array.from(this.payments.values())
-      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+    const offset = (page - 1) * limit;
     
-    const total = allPayments.length;
-    const start = (page - 1) * limit;
-    const end = start + limit;
-    const paginatedPayments = allPayments.slice(start, end);
-    return { payments: paginatedPayments, total };
+    const paymentsList = await db.select().from(payments)
+      .orderBy(desc(payments.createdAt))
+      .limit(limit)
+      .offset(offset);
+    
+    const [{ count }] = await db.select({
+      count: sql<number>`count(*)`
+    }).from(payments);
+    
+    return {
+      payments: paymentsList,
+      total: count
+    };
   }
 
   async updatePaymentStatus(id: number, status: 'pending' | 'completed' | 'failed'): Promise<Payment | undefined> {
-    const existingPayment = this.payments.get(id);
-    if (!existingPayment) return undefined;
+    const [updatedPayment] = await db.update(payments)
+      .set({ status })
+      .where(eq(payments.id, id))
+      .returning();
     
-    const updatedPayment = { ...existingPayment, status };
-    this.payments.set(id, updatedPayment);
     return updatedPayment;
   }
 
-  // Advertisements
+  // Advertisement management methods
   async createAdvertisement(adData: InsertAdvertisement): Promise<Advertisement> {
-    const id = this.advertisementId++;
-    const newAd: Advertisement = { 
-      ...adData, 
-      id, 
-      views: 0, 
-      clicks: 0 
-    };
-    this.advertisements.set(id, newAd);
+    const [newAd] = await db.insert(advertisements).values(adData).returning();
     return newAd;
   }
 
   async getAdvertisement(id: number): Promise<Advertisement | undefined> {
-    return this.advertisements.get(id);
+    const [ad] = await db.select().from(advertisements).where(eq(advertisements.id, id));
+    return ad;
   }
 
   async getActiveAdvertisements(position: 'banner' | 'sidebar' | 'popup'): Promise<Advertisement[]> {
     const now = new Date();
-    return Array.from(this.advertisements.values())
-      .filter(ad => 
-        ad.position === position && 
-        ad.isActive && 
-        ad.startDate <= now && 
-        ad.endDate >= now
-      );
+    
+    return db.select().from(advertisements)
+      .where(and(
+        eq(advertisements.position, position),
+        eq(advertisements.isActive, true),
+        lt(advertisements.startDate, now),
+        gt(advertisements.endDate, now)
+      ));
   }
 
   async getAllAdvertisements(page: number = 1, limit: number = 10): Promise<{ ads: Advertisement[], total: number }> {
-    const allAds = Array.from(this.advertisements.values())
-      .sort((a, b) => b.startDate.getTime() - a.startDate.getTime());
+    const offset = (page - 1) * limit;
     
-    const total = allAds.length;
-    const start = (page - 1) * limit;
-    const end = start + limit;
-    const paginatedAds = allAds.slice(start, end);
-    return { ads: paginatedAds, total };
+    const adsList = await db.select().from(advertisements)
+      .orderBy(desc(advertisements.createdAt))
+      .limit(limit)
+      .offset(offset);
+    
+    const [{ count }] = await db.select({
+      count: sql<number>`count(*)`
+    }).from(advertisements);
+    
+    return {
+      ads: adsList,
+      total: count
+    };
   }
 
   async updateAdvertisement(id: number, adData: Partial<InsertAdvertisement>): Promise<Advertisement | undefined> {
-    const existingAd = this.advertisements.get(id);
-    if (!existingAd) return undefined;
+    const [updatedAd] = await db.update(advertisements)
+      .set(adData)
+      .where(eq(advertisements.id, id))
+      .returning();
     
-    const updatedAd = { ...existingAd, ...adData };
-    this.advertisements.set(id, updatedAd);
     return updatedAd;
   }
 
   async deleteAdvertisement(id: number): Promise<boolean> {
-    return this.advertisements.delete(id);
+    const result = await db.delete(advertisements).where(eq(advertisements.id, id));
+    return result.rowCount > 0;
   }
 
   async incrementAdViews(id: number): Promise<boolean> {
-    const ad = this.advertisements.get(id);
-    if (!ad) return false;
+    const result = await db.update(advertisements)
+      .set({
+        views: sql`${advertisements.views} + 1`
+      })
+      .where(eq(advertisements.id, id));
     
-    const updatedAd = { ...ad, views: ad.views + 1 };
-    this.advertisements.set(id, updatedAd);
-    return true;
+    return result.rowCount > 0;
   }
 
   async incrementAdClicks(id: number): Promise<boolean> {
-    const ad = this.advertisements.get(id);
-    if (!ad) return false;
+    const result = await db.update(advertisements)
+      .set({
+        clicks: sql`${advertisements.clicks} + 1`
+      })
+      .where(eq(advertisements.id, id));
     
-    const updatedAd = { ...ad, clicks: ad.clicks + 1 };
-    this.advertisements.set(id, updatedAd);
-    return true;
+    return result.rowCount > 0;
   }
-  
-  // Payment Settings
+
+  // Payment settings methods
   async getPaymentSettings(): Promise<PaymentSettings | undefined> {
-    return this.paymentSettings || undefined;
+    const [settings] = await db.select().from(paymentSettings);
+    return settings;
   }
-  
+
   async createDefaultPaymentSettings(): Promise<PaymentSettings> {
-    const id = this.paymentSettingsId++;
-    const now = new Date();
-    
-    const defaultSettings: PaymentSettings = {
-      id,
-      createdAt: now,
-      updatedAt: now,
-      bankConfig: {
-        enabled: true,
-        accountNumber: "0123456789",
-        accountName: "CONG TY TNHH GOC TRUYEN NHO",
-        bankName: "Vietcombank",
-        bankBranch: "Ho Chi Minh",
-        transferContent: "GTN_{username}_{amount}"
-      },
+    const defaultSettings: InsertPaymentSettings = {
       vietQRConfig: {
-        enabled: true,
-        accountNumber: "0123456789", 
-        accountName: "CONG TY TNHH GOC TRUYEN NHO",
-        bankId: "VCB",
-        template: "GTN_{username}_{amount}"
+        bankId: 'TCB', // Default to Techcombank
+        accountNumber: '1234567890',
+        accountName: 'Admin',
+        template: 'compact'
       },
       priceConfig: {
-        coinConversionRate: 1000,
-        minimumDeposit: 10000,
-        chapterUnlockPrice: 5,
-        discountTiers: [
-          { amount: 50000, discountPercent: 5 },
-          { amount: 100000, discountPercent: 10 },
-          { amount: 200000, discountPercent: 15 },
-        ]
-      }
+        defaultUnlockPrice: 1000,
+        minDepositAmount: 10000,
+        maxDepositAmount: 10000000
+      },
+      discountTiers: [
+        { minAmount: 50000, discountPercent: 5 },
+        { minAmount: 100000, discountPercent: 10 },
+        { minAmount: 200000, discountPercent: 15 }
+      ]
     };
     
-    this.paymentSettings = defaultSettings;
-    return defaultSettings;
+    const [newSettings] = await db.insert(paymentSettings)
+      .values(defaultSettings)
+      .returning();
+    
+    return newSettings;
   }
-  
-  async updatePaymentSettings(settings: Partial<InsertPaymentSettings>): Promise<PaymentSettings | undefined> {
-    if (!this.paymentSettings) {
+
+  async updatePaymentSettings(settingsData: Partial<InsertPaymentSettings>): Promise<PaymentSettings | undefined> {
+    const [settings] = await db.select().from(paymentSettings);
+    
+    if (!settings) {
+      // Create new settings if none exist
       return this.createDefaultPaymentSettings();
     }
     
-    const updatedSettings: PaymentSettings = {
-      ...this.paymentSettings,
-      ...settings,
-      updatedAt: new Date()
-    };
+    const [updatedSettings] = await db.update(paymentSettings)
+      .set(settingsData)
+      .where(eq(paymentSettings.id, settings.id))
+      .returning();
     
-    this.paymentSettings = updatedSettings;
     return updatedSettings;
   }
 }

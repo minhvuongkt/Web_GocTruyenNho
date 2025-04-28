@@ -17,6 +17,7 @@ import MangaReaderPage from "@/pages/manga-reader-page";
 import NovelReaderPage from "@/pages/novel-reader-page";
 import ProfilePage from "@/pages/profile-page";
 import PaymentPage from "@/pages/payment-page";
+import { SearchPage } from "@/pages/search-page";
 
 // Admin Pages
 import DashboardPage from "@/pages/admin/dashboard-page";
@@ -36,6 +37,7 @@ function Router() {
       {/* Public routes */}
       <Route path="/" component={HomePage} />
       <Route path="/auth" component={AuthPage} />
+      <Route path="/search" component={SearchPage} />
       
       {/* Content detail pages */}
       <Route path="/manga/:id">

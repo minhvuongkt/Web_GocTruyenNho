@@ -1214,14 +1214,47 @@ export function MangaManagementPage() {
               </DialogDescription>
             </DialogHeader>
             {editContent && (
-              <form onSubmit={(e) => {
+              <form onSubmit={async (e) => {
                 e.preventDefault();
-                // Implement update mutation here
-                toast({
-                  title: "Cập nhật thành công",
-                  description: "Thông tin truyện đã được cập nhật",
-                });
-                setIsEditDialogOpen(false);
+                try {
+                  // Convert genreIds to array of numbers if it's an array of strings
+                  const formattedContent = {
+                    ...editContent,
+                    genreIds: Array.isArray(editContent.genreIds) 
+                      ? editContent.genreIds.map(id => typeof id === 'string' ? parseInt(id) : id)
+                      : [],
+                    authorId: parseInt(editContent.authorId.toString()),
+                    translationGroupId: editContent.translationGroupId 
+                      ? parseInt(editContent.translationGroupId.toString()) 
+                      : null
+                  };
+                  
+                  // Call the API
+                  const response = await apiRequest(
+                    "PUT", 
+                    `/api/content/${editContent.id}`, 
+                    formattedContent
+                  );
+                  
+                  if (!response.ok) {
+                    throw new Error('Lỗi khi cập nhật thông tin truyện');
+                  }
+                  
+                  toast({
+                    title: "Cập nhật thành công",
+                    description: "Thông tin truyện đã được cập nhật"
+                  });
+                  
+                  // Refresh content list
+                  queryClient.invalidateQueries({ queryKey: ["/api/admin/content"] });
+                  setIsEditDialogOpen(false);
+                } catch (error) {
+                  toast({
+                    title: "Lỗi cập nhật",
+                    description: error instanceof Error ? error.message : "Đã xảy ra lỗi khi cập nhật truyện",
+                    variant: "destructive"
+                  });
+                }
               }}>
                 <div className="grid gap-4 py-4">
                   <div className="grid grid-cols-4 items-center gap-4">
@@ -1343,19 +1376,75 @@ export function MangaManagementPage() {
                   </div>
 
                   <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="edit-coverImage" className="text-right">URL ảnh bìa</Label>
-                    <div className="col-span-3 flex gap-2">
-                      <Input
-                        id="edit-coverImage"
-                        name="coverImage"
-                        placeholder="https://example.com/image.jpg"
-                        className="flex-1"
-                        value={editContent.coverImage || ""}
-                        onChange={(e) => setEditContent({...editContent, coverImage: e.target.value})}
-                      />
-                      <Button type="button" variant="outline" size="icon">
-                        <ImageIcon className="h-4 w-4" />
-                      </Button>
+                    <Label htmlFor="edit-coverImageFile" className="text-right">Ảnh bìa</Label>
+                    <div className="col-span-3 flex flex-col gap-2">
+                      <div className="flex items-center gap-2">
+                        <Input
+                          id="edit-coverImageFile"
+                          name="coverImageFile"
+                          type="file"
+                          className="flex-1"
+                          accept="image/jpeg,image/png,image/webp"
+                          onChange={async (e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              try {
+                                // Tạo FormData để tải lên file
+                                const formData = new FormData();
+                                formData.append('coverImage', file);
+                                
+                                // Gửi file lên server
+                                const response = await fetch('/api/upload/cover', {
+                                  method: 'POST',
+                                  body: formData,
+                                  credentials: 'include'
+                                });
+                                
+                                if (!response.ok) {
+                                  throw new Error('Lỗi khi tải ảnh lên');
+                                }
+                                
+                                const data = await response.json();
+                                
+                                // Cập nhật state với đường dẫn ảnh từ server
+                                setEditContent(prev => ({
+                                  ...prev,
+                                  coverImage: data.coverImagePath
+                                }));
+                                
+                                toast({
+                                  title: "Tải ảnh thành công",
+                                  description: "Ảnh bìa đã được tải lên"
+                                });
+                              } catch (error) {
+                                toast({
+                                  title: "Lỗi tải ảnh",
+                                  description: error instanceof Error ? error.message : "Đã xảy ra lỗi khi tải ảnh bìa",
+                                  variant: "destructive"
+                                });
+                              }
+                            }
+                          }}
+                        />
+                      </div>
+                      {editContent.coverImage && (
+                        <div className="mt-2 border rounded p-2 w-36 relative group">
+                          <img 
+                            src={editContent.coverImage} 
+                            alt="Ảnh bìa" 
+                            className="w-full h-auto"
+                          />
+                          <Button
+                            type="button"
+                            variant="destructive"
+                            size="icon"
+                            className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                            onClick={() => setEditContent(prev => ({ ...prev, coverImage: '' }))}
+                          >
+                            <X className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      )}
                     </div>
                   </div>
 

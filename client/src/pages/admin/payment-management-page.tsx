@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { AdminLayout } from "@/components/layouts/admin-layout";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
@@ -30,80 +31,66 @@ export function PaymentManagementPage() {
   const [page, setPage] = useState(1);
   const [limit] = useState(10);
   const [statusFilter, setStatusFilter] = useState("all");
+  const { toast } = useToast();
   
+  // Define the type for payments
+  interface Payment {
+    id: number;
+    userId: number;
+    username: string;
+    amount: number;
+    method: string;
+    status: string;
+    transactionId: string;
+    createdAt: string;
+  }
+
   // Fetch payments
-  const { data, isLoading } = useQuery({
-    queryKey: ["/api/admin/payments", page, limit, statusFilter],
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: ["/api/payments", page, limit, statusFilter],
     queryFn: async () => {
-      // In a real implementation, this would be an API call
-      // For now, we'll return mock data
-      const allPayments = [
-        { 
-          id: 1, 
-          userId: 1, 
-          username: "user123", 
-          amount: 100000, 
-          method: "bank_transfer", 
-          status: "completed", 
-          transactionId: "PAY123456789",
-          createdAt: "2023-07-10T08:45:12Z",
-          updatedAt: "2023-07-10T09:15:36Z"
-        },
-        { 
-          id: 2, 
-          userId: 3, 
-          username: "reader456", 
-          amount: 50000, 
-          method: "bank_transfer", 
-          status: "pending", 
-          transactionId: "PAY987654321",
-          createdAt: "2023-07-12T10:22:45Z",
-          updatedAt: "2023-07-12T10:22:45Z"
-        },
-        { 
-          id: 3, 
-          userId: 4, 
-          username: "mangalover", 
-          amount: 200000, 
-          method: "credit_card", 
-          status: "completed", 
-          transactionId: "PAY246813579",
-          createdAt: "2023-07-05T16:30:18Z",
-          updatedAt: "2023-07-05T16:45:20Z"
-        },
-        { 
-          id: 4, 
-          userId: 2, 
-          username: "admin", 
-          amount: 500000, 
-          method: "bank_transfer", 
-          status: "completed", 
-          transactionId: "PAY135792468",
-          createdAt: "2023-07-01T12:15:42Z",
-          updatedAt: "2023-07-01T12:35:15Z"
-        },
-        { 
-          id: 5, 
-          userId: 5, 
-          username: "novelfan", 
-          amount: 20000, 
-          method: "e_wallet", 
-          status: "failed", 
-          transactionId: "PAY975318642",
-          createdAt: "2023-07-15T09:18:24Z",
-          updatedAt: "2023-07-15T09:25:32Z"
-        }
-      ];
+      // Build the query parameters
+      const params = new URLSearchParams({
+        page: page.toString(),
+        limit: limit.toString(),
+        all: 'true' // Admin view, get all payments
+      });
       
-      // Filter by status
-      const filteredByStatus = statusFilter === "all" 
-        ? allPayments 
-        : allPayments.filter(payment => payment.status === statusFilter);
+      if (statusFilter !== 'all') {
+        params.append('status', statusFilter);
+      }
       
-      return {
-        payments: filteredByStatus,
-        total: filteredByStatus.length
-      };
+      try {
+        const response = await apiRequest("GET", `/api/payments?${params.toString()}`);
+        const data = await response.json();
+        
+        // Add username to each payment by fetching user info
+        const paymentsWithUsername = await Promise.all(
+          data.payments.map(async (payment: any) => {
+            try {
+              // In a full implementation, this would be a batch request
+              // For now, we'll add a placeholder username based on userId
+              return {
+                ...payment,
+                username: `user_${payment.userId}`
+              };
+            } catch (error) {
+              return {
+                ...payment,
+                username: `Unknown User (ID: ${payment.userId})`
+              };
+            }
+          })
+        );
+        
+        return {
+          payments: paymentsWithUsername,
+          total: data.total
+        };
+      } catch (error) {
+        console.error("Error fetching payments:", error);
+        return { payments: [], total: 0 };
+      }
     }
   });
 
@@ -124,24 +111,48 @@ export function PaymentManagementPage() {
   // Approve payment mutation
   const approveMutation = useMutation({
     mutationFn: async (paymentId: number) => {
-      // In a real implementation, this would be an API call
-      await new Promise(resolve => setTimeout(resolve, 500)); // Simulate API delay
-      return { success: true };
+      const response = await apiRequest("PUT", `/api/payments/${paymentId}/status`, {
+        status: 'completed'
+      });
+      return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/payments"] });
+      toast({
+        title: "Giao dịch đã được duyệt",
+        description: "Số dư của người dùng đã được cập nhật"
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/payments"] });
+    },
+    onError: (error) => {
+      toast({
+        title: "Duyệt giao dịch thất bại",
+        description: error instanceof Error ? error.message : "Không thể duyệt giao dịch",
+        variant: "destructive"
+      });
     }
   });
 
   // Reject payment mutation
   const rejectMutation = useMutation({
     mutationFn: async (paymentId: number) => {
-      // In a real implementation, this would be an API call
-      await new Promise(resolve => setTimeout(resolve, 500)); // Simulate API delay
-      return { success: true };
+      const response = await apiRequest("PUT", `/api/payments/${paymentId}/status`, {
+        status: 'failed'
+      });
+      return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/payments"] });
+      toast({
+        title: "Giao dịch đã bị từ chối",
+        description: "Trạng thái giao dịch đã được cập nhật thành 'Thất bại'"
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/payments"] });
+    },
+    onError: (error) => {
+      toast({
+        title: "Từ chối giao dịch thất bại",
+        description: error instanceof Error ? error.message : "Không thể từ chối giao dịch",
+        variant: "destructive"
+      });
     }
   });
 

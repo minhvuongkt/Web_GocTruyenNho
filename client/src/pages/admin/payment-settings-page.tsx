@@ -113,8 +113,24 @@ export function PaymentSettingsPage() {
   // Save settings mutation
   const saveSettingsMutation = useMutation({
     mutationFn: async (settings: any) => {
-      const response = await apiRequest("PUT", "/api/payment-settings", settings);
-      return await response.json();
+      try {
+        const response = await apiRequest("PUT", "/api/payment-settings", settings);
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`Lỗi ${response.status}: ${errorText}`);
+        }
+        
+        const contentType = response.headers.get("content-type");
+        if (contentType && contentType.includes("application/json")) {
+          return await response.json();
+        } else {
+          return { success: true };
+        }
+      } catch (err) {
+        console.error("Lỗi cập nhật cấu hình:", err);
+        throw err;
+      }
     },
     onSuccess: () => {
       toast({
@@ -124,6 +140,7 @@ export function PaymentSettingsPage() {
       queryClient.invalidateQueries({ queryKey: ["/api/payment-settings"] });
     },
     onError: (error) => {
+      console.error("Lỗi mutation:", error);
       toast({
         title: "Không thể lưu thiết lập",
         description: error instanceof Error ? error.message : "Đã xảy ra lỗi khi lưu cấu hình",

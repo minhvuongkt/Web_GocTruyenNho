@@ -56,11 +56,12 @@ import {
 } from "drizzle-orm";
 import session from "express-session";
 import { hashPassword, comparePasswords } from "./auth";
-import memorystore from "memorystore";
+import connectPg from "connect-pg-simple";
+import { pool } from "./db";
 
-// Wrap memorystore with session to create a MemoryStore constructor
+// Set up PostgreSQL session store
 type SessionStore = session.Store;
-const MemoryStore = memorystore(session);
+const PostgresSessionStore = connectPg(session);
 
 export interface IStorage {
   // User management
@@ -245,9 +246,12 @@ export class DatabaseStorage implements IStorage {
   sessionStore: session.Store;
 
   constructor() {
-    // Initialize session store
-    this.sessionStore = new MemoryStore({
-      checkPeriod: 86400000, // Prune expired entries every 24h
+    // Initialize PostgreSQL session store
+    this.sessionStore = new PostgresSessionStore({
+      pool,
+      tableName: 'session', // Table to store sessions
+      createTableIfMissing: true, // Auto-create session table if it doesn't exist
+      pruneSessionInterval: 60 * 60, // Prune old sessions hourly
     });
   }
 

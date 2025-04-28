@@ -1400,22 +1400,31 @@ export class DatabaseStorage implements IStorage {
 
   async createDefaultPaymentSettings(): Promise<PaymentSettings> {
     const defaultSettings: InsertPaymentSettings = {
+      bankConfig: {
+        enabled: true,
+        accountNumber: "0123456789",
+        accountName: "CONG TY TNHH GOC TRUYEN NHO",
+        bankName: "Vietcombank",
+        bankBranch: "Ho Chi Minh",
+        transferContent: "GTN_{username}_{amount}"
+      },
       vietQRConfig: {
-        bankId: "TCB", // Default to Techcombank
-        accountNumber: "1234567890",
-        accountName: "Admin",
-        template: "compact",
+        enabled: true,
+        accountNumber: "0123456789",
+        accountName: "CONG TY TNHH GOC TRUYEN NHO",
+        bankId: "VCB",
+        template: "GTN_{username}_{amount}"
       },
       priceConfig: {
-        defaultUnlockPrice: 1000,
-        minDepositAmount: 10000,
-        maxDepositAmount: 10000000,
-      },
-      discountTiers: [
-        { minAmount: 50000, discountPercent: 5 },
-        { minAmount: 100000, discountPercent: 10 },
-        { minAmount: 200000, discountPercent: 15 },
-      ],
+        coinConversionRate: 1000,
+        minimumDeposit: 10000,
+        chapterUnlockPrice: 5,
+        discountTiers: [
+          { amount: 50000, discountPercent: 5 },
+          { amount: 100000, discountPercent: 10 },
+          { amount: 200000, discountPercent: 15 },
+        ]
+      }
     };
 
     const [newSettings] = await db

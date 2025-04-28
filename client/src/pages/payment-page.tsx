@@ -182,9 +182,10 @@ export function PaymentPage() {
       // Set payment status and date
       setPaymentStatus({
         processing: false,
-        transactionId: data.transactionId,
+        transactionId: data.payment.transactionId,
+        qrCode: data.qrCodeURL // Lưu URL QR code để hiển thị
       });
-      setPaymentDate(new Date());
+      setPaymentDate(new Date(data.payment.createdAt));
       
       // Set initial cooldown to prevent spam clicking
       setConfirmCooldown(30); // 30 seconds cooldown

@@ -283,7 +283,7 @@ export default function ChapterManagementPage() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (content.type === 'manga' && chapterImages.length === 0) {
+    if (content?.type === 'manga' && chapterImages.length === 0) {
       toast({
         title: "Thiếu ảnh",
         description: "Vui lòng tải lên ít nhất một ảnh cho chương truyện tranh",
@@ -293,7 +293,7 @@ export default function ChapterManagementPage() {
     }
     
     // Nếu là truyện tranh, chuẩn bị dữ liệu ảnh
-    if (content.type === 'manga') {
+    if (content?.type === 'manga') {
       // Trong môi trường thực tế, ở đây sẽ gửi ảnh lên server và chuyển thành URLs
       // Hiện tại chỉ mô phỏng việc gửi dữ liệu chương
       toast({

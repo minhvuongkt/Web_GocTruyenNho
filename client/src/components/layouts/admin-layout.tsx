@@ -13,7 +13,10 @@ import {
   LogOut,
   Menu,
   X,
-  ChevronDown
+  ChevronDown,
+  BookMarked,
+  Users2,
+  LibraryBig
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -46,6 +49,9 @@ export function AdminLayout({ children }: AdminLayoutProps) {
   const navigation = [
     { name: "Dashboard", href: "/admin", icon: LayoutDashboard },
     { name: "Quản lý truyện", href: "/admin/manga", icon: BookOpen },
+    { name: "Quản lý thể loại", href: "/admin/genres", icon: Tag },
+    { name: "Quản lý tác giả", href: "/admin/authors", icon: Users2 },
+    { name: "Quản lý nhóm dịch", href: "/admin/translation-groups", icon: LibraryBig },
     { name: "Quản lý người dùng", href: "/admin/users", icon: Users },
     { name: "Quản lý thanh toán", href: "/admin/payments", icon: CreditCard },
     { name: "Quản lý quảng cáo", href: "/admin/ads", icon: Layout },

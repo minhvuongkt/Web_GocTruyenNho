@@ -165,11 +165,27 @@ export function DashboardPage() {
         <div className="flex justify-between items-center">
           <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm">
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => {
+                // Filter data for this week
+                alert('Đang lọc dữ liệu trong tuần này');
+                // In a real app, you would dispatch a query with date filters
+              }}
+            >
               <Calendar className="mr-2 h-4 w-4" />
               Tuần này
             </Button>
-            <Button variant="outline" size="sm">
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => {
+                // Generate and download report
+                alert('Đang tạo báo cáo...');
+                // In a real app, you would generate and trigger download of a report
+              }}
+            >
               <BarChart3 className="mr-2 h-4 w-4" />
               Báo cáo
             </Button>

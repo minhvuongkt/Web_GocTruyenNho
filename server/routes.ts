@@ -941,6 +941,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Error processing advertisement click", error });
     }
   });
+  
+  // Payment settings routes
+  app.get("/api/payment-settings", ensureAdmin, async (req, res) => {
+    try {
+      // Get payment settings from database or create default
+      // For now, we'll return default settings
+      const paymentSettings = {
+        bankConfig: {
+          enabled: true,
+          accountNumber: "0123456789",
+          accountName: "CONG TY TNHH GOC TRUYEN NHO",
+          bankName: "Vietcombank",
+          bankBranch: "Ho Chi Minh",
+          transferContent: "GTN_{username}_{amount}"
+        },
+        vietQRConfig: {
+          enabled: true,
+          accountNumber: "0123456789",
+          accountName: "CONG TY TNHH GOC TRUYEN NHO",
+          bankId: "VCB",
+          template: "GTN_{username}_{amount}"
+        },
+        priceConfig: {
+          coinConversionRate: 1000,
+          minimumDeposit: 10000,
+          chapterUnlockPrice: 5,
+          discountTiers: [
+            { amount: 50000, discountPercent: 5 },
+            { amount: 100000, discountPercent: 10 },
+            { amount: 200000, discountPercent: 15 },
+          ]
+        }
+      };
+      
+      res.json(paymentSettings);
+    } catch (error) {
+      res.status(500).json({ message: "Error fetching payment settings", error });
+    }
+  });
+  
+  app.put("/api/payment-settings", ensureAdmin, async (req, res) => {
+    try {
+      // In a real implementation, save settings to database
+      // For now, just return the received settings
+      res.json(req.body);
+    } catch (error) {
+      res.status(500).json({ message: "Error updating payment settings", error });
+    }
+  });
 
   const httpServer = createServer(app);
   return httpServer;

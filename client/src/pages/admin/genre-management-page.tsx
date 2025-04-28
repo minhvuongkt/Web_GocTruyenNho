@@ -6,6 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { Plus, Pencil, Trash2, Loader2, Search } from 'lucide-react';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import { insertGenreSchema, type Genre } from '@shared/schema';
+import AdminLayout from '@/components/layouts/admin-layout';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -184,10 +185,11 @@ export default function GenreManagementPage() {
   );
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">Quản lý thể loại</h1>
-        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+    <AdminLayout>
+      <div className="space-y-6">
+        <div className="flex justify-between items-center">
+          <h1 className="text-2xl font-bold">Quản lý thể loại</h1>
+          <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
           <DialogTrigger asChild>
             <Button>
               <Plus className="mr-2 h-4 w-4" /> Thêm thể loại
@@ -398,5 +400,6 @@ export default function GenreManagementPage() {
         </DialogContent>
       </Dialog>
     </div>
+    </AdminLayout>
   );
 }

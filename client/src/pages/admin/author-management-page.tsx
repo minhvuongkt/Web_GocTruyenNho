@@ -7,6 +7,7 @@ import { Plus, Pencil, Trash2, Loader2, Search, Calendar } from 'lucide-react';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import { insertAuthorSchema, type Author } from '@shared/schema';
 import { formatDate } from '@/lib/utils';
+import AdminLayout from '@/components/layouts/admin-layout';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -197,10 +198,11 @@ export default function AuthorManagementPage() {
   );
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">Quản lý tác giả</h1>
-        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+    <AdminLayout>
+      <div className="space-y-6">
+        <div className="flex justify-between items-center">
+          <h1 className="text-2xl font-bold">Quản lý tác giả</h1>
+          <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
           <DialogTrigger asChild>
             <Button>
               <Plus className="mr-2 h-4 w-4" /> Thêm tác giả
@@ -485,5 +487,6 @@ export default function AuthorManagementPage() {
         </DialogContent>
       </Dialog>
     </div>
+    </AdminLayout>
   );
 }

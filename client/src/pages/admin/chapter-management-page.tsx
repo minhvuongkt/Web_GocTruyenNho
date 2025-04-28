@@ -79,6 +79,10 @@ export default function ChapterManagementPage() {
   const [sortConfig, setSortConfig] = useState<{key: string, direction: 'asc' | 'desc'}>({key: 'number', direction: 'desc'});
   const [selectedChapter, setSelectedChapter] = useState<any>(null);
   const [showLockDialog, setShowLockDialog] = useState(false);
+  const [showChapterSelect, setShowChapterSelect] = useState(false);
+  const [relativeChapter, setRelativeChapter] = useState<number | null>(null);
+  const [relativePosition, setRelativePosition] = useState<string>("after");
+  const [chapterImages, setChapterImages] = useState<File[]>([]);
   
   // State cho form thêm chương
   const [newChapter, setNewChapter] = useState({
@@ -86,7 +90,9 @@ export default function ChapterManagementPage() {
     number: 0,
     title: "",
     isLocked: false,
-    unlockPrice: 0
+    unlockPrice: 0,
+    content: "",
+    releaseDate: new Date().toISOString().split('T')[0]
   });
   
   // Fetch thông tin truyện
@@ -223,6 +229,35 @@ export default function ChapterManagementPage() {
       }));
     }
   }, [chapters]);
+  
+  // Xử lý tải ảnh lên
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      const newFiles = Array.from(e.target.files);
+      // Kiểm tra kích thước file và loại file
+      const validFiles = newFiles.filter(file => {
+        const isValidType = ['image/jpeg', 'image/png', 'image/webp'].includes(file.type);
+        const isValidSize = file.size <= 5 * 1024 * 1024; // 5MB
+        if (!isValidType) {
+          toast({
+            title: "Loại file không hợp lệ",
+            description: `${file.name} không phải là định dạng JPG, PNG hoặc WEBP`,
+            variant: "destructive",
+          });
+        }
+        if (!isValidSize) {
+          toast({
+            title: "File quá lớn",
+            description: `${file.name} vượt quá giới hạn 5MB`,
+            variant: "destructive",
+          });
+        }
+        return isValidType && isValidSize;
+      });
+      
+      setChapterImages(prev => [...prev, ...validFiles]);
+    }
+  };
   
   // Xử lý form input
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -364,6 +399,105 @@ export default function ChapterManagementPage() {
               <form onSubmit={handleSubmit}>
                 <div className="grid gap-4 py-4">
                   <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="insertType" className="text-right">Vị trí chèn</Label>
+                    <div className="col-span-3">
+                      <Select
+                        name="insertType"
+                        value="end"
+                        onValueChange={(value) => {
+                          if (value === "specific") {
+                            setShowChapterSelect(true);
+                          } else {
+                            setShowChapterSelect(false);
+                            if (value === "start") {
+                              setNewChapter(prev => ({
+                                ...prev,
+                                number: 1
+                              }));
+                            } else if (value === "end" && chapters?.length > 0) {
+                              setNewChapter(prev => ({
+                                ...prev,
+                                number: (chapters[chapters.length - 1]?.number || 0) + 1
+                              }));
+                            }
+                          }
+                        }}
+                      >
+                        <SelectTrigger className="col-span-3">
+                          <SelectValue placeholder="Chọn vị trí chèn" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="start">Đầu truyện (Chương 1)</SelectItem>
+                          <SelectItem value="end">Cuối truyện</SelectItem>
+                          <SelectItem value="specific">Chèn trước/sau chương cụ thể</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  
+                  {showChapterSelect && (
+                    <>
+                      <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="relativeChapter" className="text-right">Chọn chương</Label>
+                        <div className="col-span-3">
+                          <Select
+                            name="relativeChapter"
+                            value=""
+                            onValueChange={(value) => {
+                              setRelativeChapter(parseInt(value));
+                            }}
+                          >
+                            <SelectTrigger className="col-span-3">
+                              <SelectValue placeholder="Chọn chương tham chiếu" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {chapters && chapters.map((chapter: any) => (
+                                <SelectItem key={chapter.id} value={chapter.number.toString()}>
+                                  Chương {chapter.number}{chapter.title ? `: ${chapter.title}` : ''}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                      
+                      <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="relativePosition" className="text-right">Vị trí</Label>
+                        <div className="col-span-3">
+                          <Select
+                            name="relativePosition"
+                            value="after"
+                            onValueChange={(value) => {
+                              setRelativePosition(value);
+                              if (relativeChapter) {
+                                if (value === "before") {
+                                  setNewChapter(prev => ({
+                                    ...prev,
+                                    number: relativeChapter
+                                  }));
+                                } else {
+                                  setNewChapter(prev => ({
+                                    ...prev,
+                                    number: relativeChapter + 1
+                                  }));
+                                }
+                              }
+                            }}
+                          >
+                            <SelectTrigger className="col-span-3">
+                              <SelectValue placeholder="Chọn vị trí" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="before">Chèn trước chương đã chọn</SelectItem>
+                              <SelectItem value="after">Chèn sau chương đã chọn</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                    </>
+                  )}
+                  
+                  <div className="grid grid-cols-4 items-center gap-4">
                     <Label htmlFor="number" className="text-right">Số chương <span className="text-red-500">*</span></Label>
                     <Input
                       id="number"
@@ -416,26 +550,93 @@ export default function ChapterManagementPage() {
                   {content.type === 'manga' ? (
                     <div className="grid grid-cols-4 items-start gap-4">
                       <Label className="text-right pt-2">Tải ảnh lên</Label>
-                      <div className="col-span-3">
-                        <Button type="button" variant="outline" className="w-full">
-                          <Upload className="mr-2 h-4 w-4" />
-                          Chọn file ảnh
-                        </Button>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Hỗ trợ các định dạng: JPG, PNG, WEBP. Kích thước tối đa: 5MB/ảnh
-                        </p>
+                      <div className="col-span-3 space-y-4">
+                        <div className="flex space-x-2">
+                          <Button 
+                            type="button" 
+                            variant="outline" 
+                            className="flex-1"
+                            onClick={() => {
+                              const input = document.createElement('input');
+                              input.type = 'file';
+                              input.multiple = true;
+                              input.accept = 'image/jpeg,image/png,image/webp';
+                              input.onchange = (e) => handleImageUpload(e as React.ChangeEvent<HTMLInputElement>);
+                              input.click();
+                            }}
+                          >
+                            <Upload className="mr-2 h-4 w-4" />
+                            Tải ảnh lên
+                          </Button>
+                          <Button 
+                            type="button" 
+                            variant="outline" 
+                            className="flex-1"
+                            onClick={() => {
+                              const input = document.createElement('input');
+                              input.type = 'file';
+                              input.accept = '.zip';
+                              input.onchange = (e) => {
+                                // Handle ZIP upload
+                                if (e.target && (e.target as HTMLInputElement).files && (e.target as HTMLInputElement).files!.length > 0) {
+                                  const file = (e.target as HTMLInputElement).files![0];
+                                  toast({
+                                    title: "Tính năng đang phát triển",
+                                    description: `Tải lên file ZIP sẽ được hỗ trợ trong bản cập nhật tới`,
+                                  });
+                                }
+                              };
+                              input.click();
+                            }}
+                          >
+                            <Download className="mr-2 h-4 w-4" />
+                            Tải file ZIP
+                          </Button>
+                        </div>
+                        
+                        <div className="border rounded-md p-4 text-center min-h-[200px] flex flex-col items-center justify-center bg-muted/30">
+                          <ImageIcon className="h-10 w-10 text-muted-foreground mb-2" />
+                          <p className="text-sm text-muted-foreground mb-2">Kéo thả ảnh vào đây hoặc nhấn nút để tải lên</p>
+                          <p className="text-xs text-muted-foreground">Hỗ trợ: JPG, PNG, WEBP (Tối đa 5MB mỗi ảnh)</p>
+                        </div>
+                        
+                        <div className="text-sm text-muted-foreground">
+                          <p>Lưu ý: Ảnh sẽ được sắp xếp theo thứ tự tải lên. Bạn có thể kéo thả để thay đổi thứ tự.</p>
+                        </div>
                       </div>
                     </div>
                   ) : (
                     <div className="grid grid-cols-4 items-start gap-4">
                       <Label htmlFor="content" className="text-right pt-2">Nội dung chương</Label>
-                      <Textarea
-                        id="content"
-                        name="content"
-                        className="col-span-3"
-                        rows={8}
-                        placeholder="Nhập nội dung chương tại đây..."
-                      />
+                      <div className="col-span-3 space-y-2">
+                        <div className="flex justify-between mb-2">
+                          <div className="space-x-1">
+                            <Button type="button" variant="outline" size="sm">B</Button>
+                            <Button type="button" variant="outline" size="sm">I</Button>
+                            <Button type="button" variant="outline" size="sm">U</Button>
+                          </div>
+                          <div className="space-x-1">
+                            <Button type="button" variant="outline" size="sm">H1</Button>
+                            <Button type="button" variant="outline" size="sm">H2</Button>
+                            <Button type="button" variant="outline" size="sm">H3</Button>
+                          </div>
+                          <div className="space-x-1">
+                            <Button type="button" variant="outline" size="sm">
+                              <Upload className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                        <Textarea
+                          id="content"
+                          name="content"
+                          rows={12}
+                          value={newChapter.content}
+                          onChange={handleInputChange}
+                          placeholder="Nhập nội dung chương (truyện chữ)"
+                          required
+                          className="font-mono text-sm"
+                        />
+                      </div>
                     </div>
                   )}
                 </div>

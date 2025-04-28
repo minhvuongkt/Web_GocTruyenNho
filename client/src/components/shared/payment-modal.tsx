@@ -6,6 +6,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { formatCurrency } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { QRCode } from "@/components/shared/qr-code";
+import { useLocation } from "wouter";
 import {
   Dialog,
   DialogContent,
@@ -38,6 +39,7 @@ export function PaymentModal({
   onClose,
   defaultAmount = 50000
 }: PaymentModalProps) {
+  const [, navigate] = useLocation();
   const { user } = useAuth();
   const { toast } = useToast();
   const [amount, setAmount] = useState(defaultAmount.toString());
@@ -75,6 +77,13 @@ export function PaymentModal({
       return response.json();
     },
     onSuccess: (data) => {
+      // Redirect to payment page for credit card and e-wallet
+      if (paymentMethod === "credit_card" || paymentMethod === "e_wallet") {
+        navigate(`/payment/${data.transactionId}`);
+        onClose();
+        return;
+      }
+      
       toast({
         title: "Tạo giao dịch thành công",
         description: "Vui lòng hoàn tất thanh toán trong vòng 10 phút."

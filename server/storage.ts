@@ -1334,19 +1334,19 @@ export class DatabaseStorage implements IStorage {
     const adsList = await db
       .select()
       .from(advertisements)
-      .orderBy(desc(advertisements.createdAt))
+      .orderBy(desc(advertisements.endDate))
       .limit(limit)
       .offset(offset);
 
-    const [{ count }] = await db
-      .select({
-        count: sql<number>`count(*)`,
-      })
+    const [countResult] = await db
+      .select({ count: count() })
       .from(advertisements);
+    
+    const total = Number(countResult?.count || 0);
 
     return {
       ads: adsList,
-      total: count,
+      total: total,
     };
   }
 

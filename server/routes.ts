@@ -725,7 +725,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         method: "bank_transfer", // Only support bank transfers
         transactionId,
         status: "pending",
-        createdAt: new Date(),
       });
 
       // Get the payment settings for VietQR
@@ -1136,8 +1135,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           startDate: new Date(startDate),
           endDate: new Date(endDate),
           isActive: true,
-          views: 0,
-          clicks: 0,
         });
 
         res.status(201).json(newAd);

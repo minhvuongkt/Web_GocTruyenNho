@@ -355,6 +355,338 @@ function getPayloadConfigFromPayload(
     : config[key as keyof typeof config]
 }
 
+// Area Chart Component
+type AreaChartProps = {
+  data: any[];
+  index: string;
+  categories: string[];
+  colors?: string[];
+  valueFormatter?: (value: number) => string;
+  showLegend?: boolean;
+  showXAxis?: boolean;
+  showYAxis?: boolean;
+  showGridLines?: boolean;
+  startEndOnly?: boolean;
+  height?: string;
+}
+
+function AreaChart({
+  data,
+  index,
+  categories,
+  colors = ["#2563eb", "#0ea5e9", "#84cc16", "#ef4444"],
+  valueFormatter = (value: number) => `${value}`,
+  showLegend = false,
+  showXAxis = false,
+  showYAxis = false,
+  showGridLines = false,
+  startEndOnly = true,
+  height = "h-[300px]",
+}: AreaChartProps) {
+  const config = React.useMemo(() => {
+    return categories.reduce(
+      (acc, category, i) => ({
+        ...acc,
+        [category]: {
+          label: category,
+          theme: {
+            light: colors[i % colors.length],
+            dark: colors[i % colors.length],
+          },
+        },
+      }),
+      {}
+    );
+  }, [categories, colors]);
+
+  return (
+    <div className={cn("w-full", height)}>
+      <ChartContainer config={config}>
+        <RechartsPrimitive.ComposedChart
+          data={data}
+          margin={{ top: 16, right: 16, bottom: 0, left: 0 }}
+        >
+          {showGridLines && (
+            <RechartsPrimitive.CartesianGrid strokeDasharray="3 3" />
+          )}
+          {showXAxis && (
+            <RechartsPrimitive.XAxis
+              dataKey={index}
+              tickLine={false}
+              axisLine={false}
+              tick={{ dy: 10 }}
+              tickMargin={10}
+              tick={startEndOnly ? startEndTickProps : undefined}
+            />
+          )}
+          {showYAxis && (
+            <RechartsPrimitive.YAxis
+              tickLine={false}
+              axisLine={false}
+              tick={{ dx: -10 }}
+              tickMargin={10}
+              tickFormatter={(value) => valueFormatter(value)}
+            />
+          )}
+          <ChartTooltip
+            content={
+              <ChartTooltipContent
+                formatter={(value) => valueFormatter(Number(value))}
+              />
+            }
+          />
+          {showLegend && (
+            <ChartLegend
+              content={<ChartLegendContent nameKey="name" />}
+              verticalAlign="top"
+              height={60}
+            />
+          )}
+          {categories.map((category) => (
+            <RechartsPrimitive.Area
+              key={category}
+              type="monotone"
+              dataKey={category}
+              fill={`var(--color-${category})`}
+              stroke={`var(--color-${category})`}
+              strokeWidth={2}
+              activeDot={{ r: 6, strokeWidth: 0, fill: `var(--color-${category})` }}
+              dot={false}
+            />
+          ))}
+        </RechartsPrimitive.ComposedChart>
+      </ChartContainer>
+    </div>
+  );
+}
+
+// Bar Chart Component
+type BarChartProps = {
+  data: any[];
+  index: string;
+  categories: string[];
+  colors?: string[];
+  valueFormatter?: (value: number) => string;
+  showLegend?: boolean;
+  showXAxis?: boolean;
+  showYAxis?: boolean;
+  showGridLines?: boolean;
+  height?: string;
+}
+
+function BarChart({
+  data,
+  index,
+  categories,
+  colors = ["#2563eb", "#0ea5e9", "#84cc16", "#ef4444"],
+  valueFormatter = (value: number) => `${value}`,
+  showLegend = false,
+  showXAxis = false,
+  showYAxis = false,
+  showGridLines = false,
+  height = "h-[300px]",
+}: BarChartProps) {
+  const config = React.useMemo(() => {
+    return categories.reduce(
+      (acc, category, i) => ({
+        ...acc,
+        [category]: {
+          label: category,
+          theme: {
+            light: colors[i % colors.length],
+            dark: colors[i % colors.length],
+          },
+        },
+      }),
+      {}
+    );
+  }, [categories, colors]);
+
+  return (
+    <div className={cn("w-full", height)}>
+      <ChartContainer config={config}>
+        <RechartsPrimitive.BarChart
+          data={data}
+          margin={{ top: 16, right: 16, bottom: 0, left: 0 }}
+        >
+          {showGridLines && (
+            <RechartsPrimitive.CartesianGrid strokeDasharray="3 3" />
+          )}
+          {showXAxis && (
+            <RechartsPrimitive.XAxis
+              dataKey={index}
+              tickLine={false}
+              axisLine={false}
+              tick={{ dy: 10 }}
+              tickMargin={10}
+            />
+          )}
+          {showYAxis && (
+            <RechartsPrimitive.YAxis
+              tickLine={false}
+              axisLine={false}
+              tick={{ dx: -10 }}
+              tickMargin={10}
+              tickFormatter={(value) => valueFormatter(value)}
+            />
+          )}
+          <ChartTooltip
+            content={
+              <ChartTooltipContent
+                formatter={(value) => valueFormatter(Number(value))}
+              />
+            }
+          />
+          {showLegend && (
+            <ChartLegend
+              content={<ChartLegendContent nameKey="name" />}
+              verticalAlign="top"
+              height={60}
+            />
+          )}
+          {categories.map((category) => (
+            <RechartsPrimitive.Bar
+              key={category}
+              dataKey={category}
+              fill={`var(--color-${category})`}
+              radius={[4, 4, 0, 0]}
+              barSize={20}
+            />
+          ))}
+        </RechartsPrimitive.BarChart>
+      </ChartContainer>
+    </div>
+  );
+}
+
+// Line Chart Component
+type LineChartProps = {
+  data: any[];
+  index: string;
+  categories: string[];
+  colors?: string[];
+  valueFormatter?: (value: number) => string;
+  showLegend?: boolean;
+  showXAxis?: boolean;
+  showYAxis?: boolean;
+  showGridLines?: boolean;
+  startEndOnly?: boolean;
+  height?: string;
+}
+
+function LineChart({
+  data,
+  index,
+  categories,
+  colors = ["#2563eb", "#0ea5e9", "#84cc16", "#ef4444"],
+  valueFormatter = (value: number) => `${value}`,
+  showLegend = false,
+  showXAxis = false,
+  showYAxis = false,
+  showGridLines = false,
+  startEndOnly = true,
+  height = "h-[300px]",
+}: LineChartProps) {
+  const config = React.useMemo(() => {
+    return categories.reduce(
+      (acc, category, i) => ({
+        ...acc,
+        [category]: {
+          label: category,
+          theme: {
+            light: colors[i % colors.length],
+            dark: colors[i % colors.length],
+          },
+        },
+      }),
+      {}
+    );
+  }, [categories, colors]);
+
+  return (
+    <div className={cn("w-full", height)}>
+      <ChartContainer config={config}>
+        <RechartsPrimitive.LineChart
+          data={data}
+          margin={{ top: 16, right: 16, bottom: 0, left: 0 }}
+        >
+          {showGridLines && (
+            <RechartsPrimitive.CartesianGrid strokeDasharray="3 3" />
+          )}
+          {showXAxis && (
+            <RechartsPrimitive.XAxis
+              dataKey={index}
+              tickLine={false}
+              axisLine={false}
+              tick={{ dy: 10 }}
+              tickMargin={10}
+              tick={startEndOnly ? startEndTickProps : undefined}
+            />
+          )}
+          {showYAxis && (
+            <RechartsPrimitive.YAxis
+              tickLine={false}
+              axisLine={false}
+              tick={{ dx: -10 }}
+              tickMargin={10}
+              tickFormatter={(value) => valueFormatter(value)}
+            />
+          )}
+          <ChartTooltip
+            content={
+              <ChartTooltipContent
+                formatter={(value) => valueFormatter(Number(value))}
+              />
+            }
+          />
+          {showLegend && (
+            <ChartLegend
+              content={<ChartLegendContent nameKey="name" />}
+              verticalAlign="top"
+              height={60}
+            />
+          )}
+          {categories.map((category) => (
+            <RechartsPrimitive.Line
+              key={category}
+              type="monotone"
+              dataKey={category}
+              stroke={`var(--color-${category})`}
+              strokeWidth={2}
+              activeDot={{ r: 6, strokeWidth: 0, fill: `var(--color-${category})` }}
+              dot={{ fill: `var(--color-${category})`, strokeWidth: 0 }}
+            />
+          ))}
+        </RechartsPrimitive.LineChart>
+      </ChartContainer>
+    </div>
+  );
+}
+
+// Helper function for start/end tick props
+const startEndTickProps = (props: any) => {
+  const { x, y, payload, textAnchor, index, visibleTicksCount } = props;
+  const isFirst = index === 0;
+  const isLast = index === visibleTicksCount - 1;
+
+  if (isFirst || isLast) {
+    return (
+      <g transform={`translate(${x},${y})`}>
+        <text
+          x={0}
+          y={0}
+          dy={16}
+          textAnchor={isFirst ? "start" : "end"}
+          fill="currentColor"
+        >
+          {payload.value}
+        </text>
+      </g>
+    );
+  }
+  return null;
+};
+
 export {
   ChartContainer,
   ChartTooltip,
@@ -362,4 +694,7 @@ export {
   ChartLegend,
   ChartLegendContent,
   ChartStyle,
+  AreaChart,
+  BarChart,
+  LineChart,
 }

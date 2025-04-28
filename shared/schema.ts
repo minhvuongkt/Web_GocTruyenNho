@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, pgEnum, timestamp, doublePrecision } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, pgEnum, timestamp, doublePrecision, jsonb } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -133,6 +133,14 @@ export const payments = pgTable("payments", {
   method: paymentMethodEnum("method").notNull(),
   status: paymentStatusEnum("status").notNull().default('pending'),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const paymentSettings = pgTable("payment_settings", {
+  id: serial("id").primaryKey(),
+  bankConfig: jsonb("bank_config").notNull(),
+  vietQRConfig: jsonb("viet_qr_config").notNull(),
+  priceConfig: jsonb("price_config").notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
 export const advertisements = pgTable("advertisements", {
@@ -284,6 +292,15 @@ export type Payment = typeof payments.$inferSelect;
 
 export type InsertAdvertisement = z.infer<typeof insertAdvertisementSchema>;
 export type Advertisement = typeof advertisements.$inferSelect;
+
+export const insertPaymentSettingsSchema = createInsertSchema(paymentSettings).pick({
+  bankConfig: true,
+  vietQRConfig: true,
+  priceConfig: true,
+});
+
+export type InsertPaymentSettings = z.infer<typeof insertPaymentSettingsSchema>;
+export type PaymentSettings = typeof paymentSettings.$inferSelect;
 
 // Extended schemas for client validations
 export const loginSchema = z.object({

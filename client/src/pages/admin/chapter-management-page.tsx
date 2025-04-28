@@ -569,7 +569,7 @@ export default function ChapterManagementPage() {
                       />
                     </div>
                   )}
-                  {content.type === 'manga' ? (
+                  {content?.type === 'manga' ? (
                     <div className="grid grid-cols-4 items-start gap-4">
                       <Label className="text-right pt-2">Tải ảnh lên</Label>
                       <div className="col-span-3 space-y-4">

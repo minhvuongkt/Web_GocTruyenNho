@@ -498,7 +498,7 @@ export function MangaManagementPage() {
                               </SelectItem>
                             ))
                           ) : (
-                            <SelectItem value="" disabled>Không có tác giả</SelectItem>
+                            <SelectItem value="no-author" disabled>Không có tác giả</SelectItem>
                           )}
                         </SelectContent>
                       </Select>
@@ -515,7 +515,7 @@ export function MangaManagementPage() {
                           <SelectValue placeholder="Chọn nhóm dịch" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">Không có</SelectItem>
+                          <SelectItem value="0">Không có</SelectItem>
                           {translationGroups && translationGroups.length > 0 && 
                             translationGroups.map(group => (
                               <SelectItem key={group.id} value={group.id.toString()}>

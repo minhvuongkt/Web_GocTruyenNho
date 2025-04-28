@@ -285,9 +285,14 @@ export function MangaManagementPage() {
 
   // Handle select changes
   const handleSelectChange = (name: string, value: string) => {
-    // Chuyển đổi authorId từ chuỗi sang số
-    if (name === "authorId") {
-      setNewContent(prev => ({ ...prev, [name]: parseInt(value, 10) }));
+    // Chuyển đổi các trường ID từ chuỗi sang số
+    if (name === "authorId" || name === "translationGroupId") {
+      // Nếu giá trị là "0" thì đặt giá trị thành null (không có nhóm dịch)
+      if (name === "translationGroupId" && value === "0") {
+        setNewContent(prev => ({ ...prev, [name]: null }));
+      } else {
+        setNewContent(prev => ({ ...prev, [name]: parseInt(value, 10) }));
+      }
     } else {
       setNewContent(prev => ({ ...prev, [name]: value }));
     }
@@ -1176,7 +1181,14 @@ export function MangaManagementPage() {
                     <Select
                       name="translationGroupId"
                       value={editContent.translationGroupId || ""}
-                      onValueChange={(value) => setEditContent({...editContent, translationGroupId: value})}
+                      onValueChange={(value) => {
+                        // Nếu giá trị là "0" thì đặt giá trị thành null (không có nhóm dịch)
+                        if (value === "0") {
+                          setEditContent({...editContent, translationGroupId: null});
+                        } else {
+                          setEditContent({...editContent, translationGroupId: parseInt(value, 10)});
+                        }
+                      }}
                     >
                       <SelectTrigger className="col-span-3">
                         <SelectValue placeholder="Chọn nhóm dịch" />

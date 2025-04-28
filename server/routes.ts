@@ -895,7 +895,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // User route to confirm a payment (sends notification to admin)
-  app.post("/api/payments/:transactionId/confirm", ensureAuthenticated, async (req, res) => {
+  app.put("/api/payments/:transactionId/confirm", ensureAuthenticated, async (req, res) => {
     try {
       const transactionId = req.params.transactionId;
       
@@ -918,6 +918,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (payment.status === 'failed') {
         return res.status(400).json({ message: "Giao dịch đã bị hủy hoặc thất bại" });
       }
+      
+      // Check if payment has expired (10 minutes)
+      const paymentTime = new Date(payment.createdAt);
+      const now = new Date();
+      const diffMinutes = (now.getTime() - paymentTime.getTime()) / (1000 * 60);
+      
+      if (diffMinutes > 10) {
+        // Update payment status to failed due to timeout
+        await storage.updatePaymentStatus(payment.id, 'failed');
+        return res.status(400).json({ message: "Giao dịch đã hết hạn (quá 10 phút)" });
+      }
+      
+      // Update payment status to pending (for admin verification)
+      await storage.updatePaymentStatus(payment.id, 'pending');
       
       // Get user data
       const user = await storage.getUser(payment.userId);

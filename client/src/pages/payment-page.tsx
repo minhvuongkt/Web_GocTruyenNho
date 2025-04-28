@@ -40,6 +40,7 @@ import {
   ClipboardCheck,
   Loader2,
   Check,
+  CheckCircle,
   AlertTriangle,
   Clock,
 } from "lucide-react";
@@ -427,7 +428,7 @@ export function PaymentPage() {
                             accountNo={bankDetails.accountNumber}
                             accountName={bankDetails.accountName}
                             bankId={vietQRConfig?.bankSettings?.bankId || "MB"}
-                            addInfo={`NAPTIEN ${user?.username} ${paymentStatus.transactionId}`}
+                            addInfo={`NAPTIEN admin ${amount}`}
                           />
                         )}
                       </div>
@@ -495,9 +496,49 @@ export function PaymentPage() {
                           </p>
                         </div>
                         
+                        {/* Thời gian còn lại */}
+                        {paymentDate && (
+                          <div className="flex flex-col gap-2 pt-2 pb-2">
+                            <div className="flex justify-between items-center">
+                              <div className="text-sm text-muted-foreground">Thời gian còn lại:</div>
+                              <div className="font-medium text-amber-500">
+                                {getRemainingTimeText()}
+                              </div>
+                            </div>
+                            <p className="text-xs text-muted-foreground">
+                              Giao dịch sẽ tự động hết hạn sau 10 phút nếu không được xác nhận
+                            </p>
+                          </div>
+                        )}
+                        
+                        {/* Nút xác nhận thanh toán */}
+                        <Button
+                          onClick={() => confirmPaymentMutation.mutate()}
+                          disabled={confirmCooldown > 0 || confirmPaymentMutation.isPending}
+                          className="w-full mt-2"
+                          variant="default"
+                        >
+                          {confirmPaymentMutation.isPending ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Đang xác nhận...
+                            </>
+                          ) : confirmCooldown > 0 ? (
+                            <>
+                              <Clock className="mr-2 h-4 w-4" />
+                              Xác nhận thanh toán ({confirmCooldown}s)
+                            </>
+                          ) : (
+                            <>
+                              <CheckCircle className="mr-2 h-4 w-4" />
+                              Tôi đã thanh toán
+                            </>
+                          )}
+                        </Button>
+                        
                         <Button
                           variant="outline"
-                          className="w-full"
+                          className="w-full mt-2"
                           onClick={() => setPaymentStatus({ processing: false })}
                         >
                           Tạo giao dịch mới

@@ -880,7 +880,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch('/api/genres/:id', ensureAdmin, async (req, res) => {
+  // Hỗ trợ cả PATCH và PUT cho cập nhật thể loại
+  const updateGenreHandler = async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
       const updatedGenre = await storage.updateGenre(id, req.body);
@@ -893,7 +894,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       res.status(500).json({ error: 'Failed to update genre' });
     }
-  });
+  };
+  
+  app.patch('/api/genres/:id', ensureAdmin, updateGenreHandler);
+  app.put('/api/genres/:id', ensureAdmin, updateGenreHandler);
 
   app.delete('/api/genres/:id', ensureAdmin, async (req, res) => {
     try {
@@ -924,7 +928,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch('/api/authors/:id', ensureAdmin, async (req, res) => {
+  // Hỗ trợ cả PATCH và PUT cho cập nhật tác giả
+  const updateAuthorHandler = async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
       const updatedAuthor = await storage.updateAuthor(id, req.body);
@@ -937,7 +942,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       res.status(500).json({ error: 'Failed to update author' });
     }
-  });
+  };
+  
+  app.patch('/api/authors/:id', ensureAdmin, updateAuthorHandler);
+  app.put('/api/authors/:id', ensureAdmin, updateAuthorHandler);
 
   app.delete('/api/authors/:id', ensureAdmin, async (req, res) => {
     try {
@@ -968,7 +976,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch('/api/translation-groups/:id', ensureAdmin, async (req, res) => {
+  // Hỗ trợ cả PATCH và PUT cho cập nhật nhóm dịch
+  const updateTranslationGroupHandler = async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
       const updatedGroup = await storage.updateTranslationGroup(id, req.body);
@@ -981,7 +990,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       res.status(500).json({ error: 'Failed to update translation group' });
     }
-  });
+  };
+  
+  app.patch('/api/translation-groups/:id', ensureAdmin, updateTranslationGroupHandler);
+  app.put('/api/translation-groups/:id', ensureAdmin, updateTranslationGroupHandler);
 
   app.delete('/api/translation-groups/:id', ensureAdmin, async (req, res) => {
     try {

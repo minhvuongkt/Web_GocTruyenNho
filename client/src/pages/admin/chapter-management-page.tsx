@@ -399,7 +399,7 @@ export default function ChapterManagementPage() {
             </Button>
             <h1 className="text-2xl font-bold tracking-tight">Quản lý chương: {content.title}</h1>
             <p className="text-muted-foreground mt-1">
-              Loại: {content.type === 'manga' ? 'Truyện tranh' : 'Truyện chữ'} | 
+              Loại: {content?.type === 'manga' ? 'Truyện tranh' : 'Truyện chữ'} | 
               Tác giả: {content.authorName || "Không rõ"} | 
               Tổng số chương: {chapters?.length || 0}
             </p>
@@ -583,7 +583,7 @@ export default function ChapterManagementPage() {
                               input.type = 'file';
                               input.multiple = true;
                               input.accept = 'image/jpeg,image/png,image/webp';
-                              input.onchange = (e) => handleImageUpload(e as React.ChangeEvent<HTMLInputElement>);
+                              input.onchange = (e) => handleImageUpload(e as unknown as React.ChangeEvent<HTMLInputElement>);
                               input.click();
                             }}
                           >
@@ -637,7 +637,7 @@ export default function ChapterManagementPage() {
                                   target: {
                                     files: Object.assign([], imageFiles)
                                   }
-                                } as React.ChangeEvent<HTMLInputElement>;
+                                } as unknown as React.ChangeEvent<HTMLInputElement>;
                                 
                                 handleImageUpload(changeEvent);
                               }
@@ -848,7 +848,7 @@ export default function ChapterManagementPage() {
                               size="icon" 
                               asChild
                             >
-                              <a href={`/${content.type}/${content.id}/chapter/${chapter.number}`} target="_blank">
+                              <a href={`/${content?.type}/${content.id}/chapter/${chapter.number}`} target="_blank">
                                 <Eye className="h-4 w-4" />
                               </a>
                             </Button>

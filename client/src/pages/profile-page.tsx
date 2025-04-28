@@ -5,6 +5,7 @@ import { Link, useLocation } from "wouter";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { PaymentModal } from "@/components/shared/payment-modal";
 import { MainLayout } from "@/components/layouts/main-layout";
+import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -58,6 +59,24 @@ export function ProfilePage() {
   const { user, logoutMutation } = useAuth();
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const { theme, setTheme } = useTheme();
+  const { toast } = useToast();
+  
+  // Function to notify success
+  const notifySuccess = (message: string) => {
+    toast({
+      title: "Thành công",
+      description: message,
+    });
+  };
+  
+  // Function to notify error
+  const notifyError = (message: string) => {
+    toast({
+      title: "Lỗi",
+      description: message,
+      variant: "destructive",
+    });
+  };
   
   // Extract query parameters
   const search = new URLSearchParams(window.location.search);
@@ -110,10 +129,30 @@ export function ProfilePage() {
     setTheme(watchDarkMode ? "dark" : "light");
   }, [form.watch("darkMode"), setTheme]);
   
+  // Update user profile mutation
+  const updateProfileMutation = useMutation({
+    mutationFn: async (userData: z.infer<typeof formSchema>) => {
+      const res = await apiRequest("PATCH", "/api/user/profile", userData);
+      return res.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+      queryClient.setQueryData(["/api/user"], (oldData: any) => ({
+        ...oldData,
+        ...data,
+      }));
+      // Thông báo thành công
+      notifySuccess("Thông tin cá nhân đã được cập nhật");
+    },
+    onError: (error: Error) => {
+      // Thông báo lỗi
+      notifyError(`Không thể cập nhật thông tin: ${error.message}`);
+    },
+  });
+
   // Handle form submission
   function onSubmit(values: z.infer<typeof formSchema>) {
-    // In a real app, you would update the user profile here
-    console.log(values);
+    updateProfileMutation.mutate(values);
   }
   
   // Fetch reading history
@@ -347,7 +386,15 @@ export function ProfilePage() {
                           )}
                         />
                         
-                        <Button type="submit">Lưu thay đổi</Button>
+                        <Button 
+                          type="submit" 
+                          disabled={updateProfileMutation.isPending}
+                        >
+                          {updateProfileMutation.isPending && (
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          )}
+                          Lưu thay đổi
+                        </Button>
                       </form>
                     </Form>
                   </TabsContent>

@@ -565,16 +565,44 @@ export function MangaManagementPage() {
                             type="file"
                             className="flex-1"
                             accept="image/jpeg,image/png,image/webp"
-                            onChange={(e) => {
+                            onChange={async (e) => {
                               const file = e.target.files?.[0];
                               if (file) {
-                                // Trong thực tế, đây là nơi bạn sẽ xử lý tải lên
-                                // Hiện tại chỉ giả lập với URL đặt tạm cho file
-                                const tempUrl = URL.createObjectURL(file);
-                                setNewContent(prev => ({
-                                  ...prev,
-                                  coverImage: tempUrl
-                                }));
+                                try {
+                                  // Tạo FormData để tải lên file
+                                  const formData = new FormData();
+                                  formData.append('coverImage', file);
+                                  
+                                  // Gửi file lên server
+                                  const response = await fetch('/api/upload/cover', {
+                                    method: 'POST',
+                                    body: formData,
+                                    credentials: 'include'
+                                  });
+                                  
+                                  if (!response.ok) {
+                                    throw new Error('Lỗi khi tải ảnh lên');
+                                  }
+                                  
+                                  const data = await response.json();
+                                  
+                                  // Cập nhật state với đường dẫn ảnh từ server
+                                  setNewContent(prev => ({
+                                    ...prev,
+                                    coverImage: data.coverImagePath
+                                  }));
+                                  
+                                  toast({
+                                    title: "Tải ảnh thành công",
+                                    description: "Ảnh bìa đã được tải lên"
+                                  });
+                                } catch (error) {
+                                  toast({
+                                    title: "Lỗi tải ảnh",
+                                    description: error instanceof Error ? error.message : "Đã xảy ra lỗi khi tải ảnh bìa",
+                                    variant: "destructive"
+                                  });
+                                }
                               }
                             }}
                           />
@@ -650,19 +678,116 @@ export function MangaManagementPage() {
                     <Button variant="outline" type="button" onClick={() => setIsAddDialogOpen(false)}>
                       Hủy
                     </Button>
-                    <Button 
-                      type="button" 
-                      variant="outline" 
-                      className="mr-2"
-                      onClick={() => {
-                        toast({
-                          title: "Xem trước",
-                          description: "Tính năng xem trước đang được phát triển",
-                        });
-                      }}
-                    >
-                      Xem trước
-                    </Button>
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <Button 
+                          type="button" 
+                          variant="outline" 
+                          className="mr-2"
+                          disabled={!newContent.title || !newContent.description}
+                        >
+                          <Eye className="mr-2 h-4 w-4" />
+                          Xem trước
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="sm:max-w-[800px]">
+                        <DialogHeader>
+                          <DialogTitle>Xem trước truyện</DialogTitle>
+                          <DialogDescription>
+                            Xem trước thông tin truyện trước khi thêm vào hệ thống.
+                          </DialogDescription>
+                        </DialogHeader>
+                        <div className="grid gap-6 py-4">
+                          <div className="flex flex-col md:flex-row gap-6">
+                            <div className="w-32 h-44 relative overflow-hidden rounded-md border border-border bg-muted">
+                              {newContent.coverImage ? (
+                                <img 
+                                  src={newContent.coverImage} 
+                                  alt={newContent.title}
+                                  className="w-full h-full object-cover"
+                                />
+                              ) : (
+                                <div className="flex items-center justify-center h-full text-muted-foreground">
+                                  <ImageIcon className="h-12 w-12" />
+                                </div>
+                              )}
+                            </div>
+                            <div className="flex-1">
+                              <h2 className="text-xl font-bold">{newContent.title}</h2>
+                              {newContent.alternativeTitle && (
+                                <p className="text-muted-foreground">{newContent.alternativeTitle}</p>
+                              )}
+                              
+                              <div className="mt-2 flex flex-wrap gap-2">
+                                <Badge variant="outline" className="flex items-center gap-1">
+                                  <CalendarDays className="h-3 w-3" />
+                                  {newContent.releaseYear || "N/A"}
+                                </Badge>
+                                <Badge variant="outline" className="flex items-center gap-1">
+                                  {newContent.type === 'manga' ? (
+                                    <>
+                                      <BookOpen className="h-3 w-3" />
+                                      Truyện tranh
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Bookmark className="h-3 w-3" />
+                                      Truyện chữ
+                                    </>
+                                  )}
+                                </Badge>
+                                <Badge variant="outline" className="flex items-center gap-1">
+                                  <Info className="h-3 w-3" />
+                                  {getStatusLabel(newContent.status as any)}
+                                </Badge>
+                              </div>
+                              
+                              <div className="mt-4 space-y-2">
+                                <div className="flex items-center gap-2">
+                                  <User className="h-4 w-4 text-muted-foreground" />
+                                  <span className="font-medium">Tác giả:</span>
+                                  <span>
+                                    {authors?.find(a => a.id === parseInt(newContent.authorId.toString()))?.name || "Chưa chọn"}
+                                  </span>
+                                </div>
+                                
+                                <div className="flex items-center gap-2">
+                                  <Users className="h-4 w-4 text-muted-foreground" />
+                                  <span className="font-medium">Nhóm dịch:</span>
+                                  <span>
+                                    {newContent.translationGroupId
+                                      ? translationGroups?.find(g => g.id === parseInt(newContent.translationGroupId!.toString()))?.name
+                                      : "Không có"}
+                                  </span>
+                                </div>
+                                
+                                <div className="flex items-start gap-2">
+                                  <Tags className="h-4 w-4 text-muted-foreground mt-1" />
+                                  <span className="font-medium mt-0.5">Thể loại:</span>
+                                  <div className="flex flex-wrap gap-1">
+                                    {newContent.genreIds && newContent.genreIds.length > 0
+                                      ? newContent.genreIds.map(genreId => (
+                                          <Badge key={genreId} variant="secondary" className="text-xs">
+                                            {genres?.find(g => g.id === genreId)?.name || ""}
+                                          </Badge>
+                                        ))
+                                      : <span className="text-muted-foreground">Chưa chọn thể loại</span>
+                                    }
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          <div>
+                            <h3 className="font-medium mb-2">Mô tả:</h3>
+                            <div className="bg-muted rounded-md p-3 text-sm whitespace-pre-line">
+                              {newContent.description || "Không có mô tả"}
+                            </div>
+                          </div>
+                        </div>
+                      </DialogContent>
+                    </Dialog>
                     <Button type="submit" disabled={createContentMutation.isPending}>
                       {createContentMutation.isPending ? (
                         <>

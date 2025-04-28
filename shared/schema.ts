@@ -193,6 +193,11 @@ export const insertChapterSchema = createInsertSchema(chapters).pick({
   releaseDate: true,
   isLocked: true,
   unlockPrice: true,
+}).extend({
+  releaseDate: z.preprocess(
+    (arg) => typeof arg === 'string' ? new Date(arg) : arg,
+    z.date().optional().default(() => new Date())
+  )
 });
 
 export const insertChapterContentSchema = createInsertSchema(chapterContent).pick({
@@ -233,6 +238,15 @@ export const insertAdvertisementSchema = createInsertSchema(advertisements).pick
   startDate: true,
   endDate: true,
   isActive: true,
+}).extend({
+  startDate: z.preprocess(
+    (arg) => typeof arg === 'string' ? new Date(arg) : arg,
+    z.date()
+  ),
+  endDate: z.preprocess(
+    (arg) => typeof arg === 'string' ? new Date(arg) : arg,
+    z.date()
+  )
 });
 
 // TypeScript types for the tables

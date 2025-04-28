@@ -1,14 +1,36 @@
-import { pgTable, text, serial, integer, boolean, pgEnum, timestamp, doublePrecision, jsonb } from "drizzle-orm/pg-core";
+import {
+  pgTable,
+  text,
+  serial,
+  integer,
+  boolean,
+  pgEnum,
+  timestamp,
+  doublePrecision,
+  jsonb,
+} from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
 // Enums
-export const userRoleEnum = pgEnum('user_role', ['user', 'admin']);
-export const contentTypeEnum = pgEnum('content_type', ['manga', 'novel']);
-export const statusEnum = pgEnum('status', ['ongoing', 'completed', 'hiatus']);
-export const paymentMethodEnum = pgEnum('payment_method', ['bank_transfer', 'credit_card', 'e_wallet']);
-export const paymentStatusEnum = pgEnum('payment_status', ['pending', 'completed', 'failed']);
-export const adPositionEnum = pgEnum('ad_position', ['banner', 'sidebar', 'popup']);
+export const userRoleEnum = pgEnum("user_role", ["user", "admin"]);
+export const contentTypeEnum = pgEnum("content_type", ["manga", "novel"]);
+export const statusEnum = pgEnum("status", ["ongoing", "completed", "hiatus"]);
+export const paymentMethodEnum = pgEnum("payment_method", [
+  "bank_transfer",
+  "credit_card",
+  "e_wallet",
+]);
+export const paymentStatusEnum = pgEnum("payment_status", [
+  "pending",
+  "completed",
+  "failed",
+]);
+export const adPositionEnum = pgEnum("ad_position", [
+  "banner",
+  "sidebar",
+  "popup",
+]);
 
 // Users Table
 export const users = pgTable("users", {
@@ -16,7 +38,7 @@ export const users = pgTable("users", {
   username: text("username").notNull().unique(),
   password: text("password").notNull(),
   email: text("email").notNull().unique(),
-  role: userRoleEnum("role").notNull().default('user'),
+  role: userRoleEnum("role").notNull().default("user"),
   firstName: text("first_name"),
   lastName: text("last_name"),
   balance: integer("balance").notNull().default(0),
@@ -53,7 +75,7 @@ export const content = pgTable("content", {
   authorId: integer("author_id").notNull(),
   translationGroupId: integer("translation_group_id"),
   releaseYear: text("release_year"),
-  status: statusEnum("status").notNull().default('ongoing'),
+  status: statusEnum("status").notNull().default("ongoing"),
   description: text("description"),
   coverImage: text("cover_image"),
   views: integer("views").notNull().default(0),
@@ -131,7 +153,7 @@ export const payments = pgTable("payments", {
   transactionId: text("transaction_id").notNull().unique(),
   amount: integer("amount").notNull(),
   method: paymentMethodEnum("method").notNull(),
-  status: paymentStatusEnum("status").notNull().default('pending'),
+  status: paymentStatusEnum("status").notNull().default("pending"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -179,7 +201,9 @@ export const insertAuthorSchema = createInsertSchema(authors).pick({
   birthDate: true,
 });
 
-export const insertTranslationGroupSchema = createInsertSchema(translationGroups).pick({
+export const insertTranslationGroupSchema = createInsertSchema(
+  translationGroups,
+).pick({
   name: true,
   description: true,
   foundedDate: true,
@@ -197,21 +221,28 @@ export const insertContentSchema = createInsertSchema(content).pick({
   coverImage: true,
 });
 
-export const insertChapterSchema = createInsertSchema(chapters).pick({
-  contentId: true,
-  number: true,
-  title: true,
-  releaseDate: true,
-  isLocked: true,
-  unlockPrice: true,
-}).extend({
-  releaseDate: z.preprocess(
-    (arg) => typeof arg === 'string' ? new Date(arg) : arg,
-    z.date().optional().default(() => new Date())
-  )
-});
+export const insertChapterSchema = createInsertSchema(chapters)
+  .pick({
+    contentId: true,
+    number: true,
+    title: true,
+    releaseDate: true,
+    isLocked: true,
+    unlockPrice: true,
+  })
+  .extend({
+    releaseDate: z.preprocess(
+      (arg) => (typeof arg === "string" ? new Date(arg) : arg),
+      z
+        .date()
+        .optional()
+        .default(() => new Date()),
+    ),
+  });
 
-export const insertChapterContentSchema = createInsertSchema(chapterContent).pick({
+export const insertChapterContentSchema = createInsertSchema(
+  chapterContent,
+).pick({
   chapterId: true,
   content: true,
   pageOrder: true,
@@ -223,6 +254,7 @@ export const insertCommentSchema = createInsertSchema(comments).pick({
   contentId: true,
   chapterId: true,
   text: true,
+  createdAt: true,
 });
 
 export const insertReportSchema = createInsertSchema(reports).pick({
@@ -241,24 +273,26 @@ export const insertPaymentSchema = createInsertSchema(payments).pick({
   status: true,
 });
 
-export const insertAdvertisementSchema = createInsertSchema(advertisements).pick({
-  title: true,
-  imageUrl: true,
-  targetUrl: true,
-  position: true,
-  startDate: true,
-  endDate: true,
-  isActive: true,
-}).extend({
-  startDate: z.preprocess(
-    (arg) => typeof arg === 'string' ? new Date(arg) : arg,
-    z.date()
-  ),
-  endDate: z.preprocess(
-    (arg) => typeof arg === 'string' ? new Date(arg) : arg,
-    z.date()
-  )
-});
+export const insertAdvertisementSchema = createInsertSchema(advertisements)
+  .pick({
+    title: true,
+    imageUrl: true,
+    targetUrl: true,
+    position: true,
+    startDate: true,
+    endDate: true,
+    isActive: true,
+  })
+  .extend({
+    startDate: z.preprocess(
+      (arg) => (typeof arg === "string" ? new Date(arg) : arg),
+      z.date(),
+    ),
+    endDate: z.preprocess(
+      (arg) => (typeof arg === "string" ? new Date(arg) : arg),
+      z.date(),
+    ),
+  });
 
 // TypeScript types for the tables
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -270,7 +304,9 @@ export type Genre = typeof genres.$inferSelect;
 export type InsertAuthor = z.infer<typeof insertAuthorSchema>;
 export type Author = typeof authors.$inferSelect;
 
-export type InsertTranslationGroup = z.infer<typeof insertTranslationGroupSchema>;
+export type InsertTranslationGroup = z.infer<
+  typeof insertTranslationGroupSchema
+>;
 export type TranslationGroup = typeof translationGroups.$inferSelect;
 
 export type InsertContent = z.infer<typeof insertContentSchema>;
@@ -294,7 +330,9 @@ export type Payment = typeof payments.$inferSelect;
 export type InsertAdvertisement = z.infer<typeof insertAdvertisementSchema>;
 export type Advertisement = typeof advertisements.$inferSelect;
 
-export const insertPaymentSettingsSchema = createInsertSchema(paymentSettings).pick({
+export const insertPaymentSettingsSchema = createInsertSchema(
+  paymentSettings,
+).pick({
   bankConfig: true,
   vietQRConfig: true,
   priceConfig: true,

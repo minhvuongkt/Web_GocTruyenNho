@@ -5,7 +5,9 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-export function formatDate(date: Date | string): string {
+export function formatDate(date: Date | string | undefined | null): string {
+  if (!date) return 'Không có dữ liệu';
+  
   const d = typeof date === 'string' ? new Date(date) : date;
   return d.toLocaleDateString('vi-VN', {
     year: 'numeric',
@@ -14,7 +16,9 @@ export function formatDate(date: Date | string): string {
   });
 }
 
-export function formatDateTime(date: Date | string): string {
+export function formatDateTime(date: Date | string | undefined | null): string {
+  if (!date) return 'Không có dữ liệu';
+  
   const d = typeof date === 'string' ? new Date(date) : date;
   return d.toLocaleDateString('vi-VN', {
     year: 'numeric',

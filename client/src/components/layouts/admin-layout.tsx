@@ -16,7 +16,8 @@ import {
   ChevronDown,
   BookMarked,
   Users2,
-  LibraryBig
+  LibraryBig,
+  Settings
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -54,6 +55,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
     { name: "Quản lý nhóm dịch", href: "/admin/translation-groups", icon: LibraryBig },
     { name: "Quản lý người dùng", href: "/admin/users", icon: Users },
     { name: "Quản lý thanh toán", href: "/admin/payments", icon: CreditCard },
+    { name: "Thiết lập thanh toán", href: "/admin/payment-settings", icon: Settings },
     { name: "Quản lý quảng cáo", href: "/admin/ads", icon: Layout },
   ];
 

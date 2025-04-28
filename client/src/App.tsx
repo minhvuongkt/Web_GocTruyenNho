@@ -24,6 +24,7 @@ import MangaManagementPage from "@/pages/admin/manga-management-page";
 import UsersManagementPage from "@/pages/admin/users-management-page";
 import ChapterManagementPage from "@/pages/admin/chapter-management-page";
 import PaymentManagementPage from "@/pages/admin/payment-management-page";
+import PaymentSettingsPage from "@/pages/admin/payment-settings-page";
 import AdManagementPage from "@/pages/admin/ad-management-page";
 import GenreManagementPage from "@/pages/admin/genre-management-page";
 import AuthorManagementPage from "@/pages/admin/author-management-page";
@@ -74,6 +75,7 @@ function Router() {
         {(params) => <ChapterManagementPage contentId={parseInt(params.contentId)} />}
       </ProtectedRoute>
       <ProtectedRoute path="/admin/payments" component={PaymentManagementPage} requireAdmin={true} />
+      <ProtectedRoute path="/admin/payment-settings" component={PaymentSettingsPage} requireAdmin={true} />
       <ProtectedRoute path="/admin/ads" component={AdManagementPage} requireAdmin={true} />
       <ProtectedRoute path="/admin/genres" component={GenreManagementPage} requireAdmin={true} />
       <ProtectedRoute path="/admin/authors" component={AuthorManagementPage} requireAdmin={true} />

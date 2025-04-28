@@ -42,7 +42,7 @@ export function getContentTypeLabel(type: 'manga' | 'novel'): string {
   return type === 'manga' ? 'Truyện tranh' : 'Truyện chữ';
 }
 
-export function getStatusLabel(status: 'ongoing' | 'completed' | 'hiatus'): string {
+export function getStatusLabel(status: string): string {
   switch (status) {
     case 'ongoing':
       return 'Đang tiến hành';

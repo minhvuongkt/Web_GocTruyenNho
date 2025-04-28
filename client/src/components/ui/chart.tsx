@@ -414,7 +414,6 @@ function AreaChart({
               dataKey={index}
               tickLine={false}
               axisLine={false}
-              tick={{ dy: 10 }}
               tickMargin={10}
               tick={startEndOnly ? startEndTickProps : undefined}
             />
@@ -618,7 +617,6 @@ function LineChart({
               dataKey={index}
               tickLine={false}
               axisLine={false}
-              tick={{ dy: 10 }}
               tickMargin={10}
               tick={startEndOnly ? startEndTickProps : undefined}
             />
@@ -684,7 +682,8 @@ const startEndTickProps = (props: any) => {
       </g>
     );
   }
-  return null;
+  // Return empty element instead of null to avoid React errors
+  return <g></g>;
 };
 
 export {

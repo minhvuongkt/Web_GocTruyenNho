@@ -939,8 +939,8 @@ export function MangaManagementPage() {
                             <div className="text-xs text-muted-foreground truncate">{item.alternativeTitle}</div>
                           )}
                         </TableCell>
-                        <TableCell>{item.authorName || "—"}</TableCell>
-                        <TableCell>{item.translationGroupName || "—"}</TableCell>
+                        <TableCell>{item.author?.name || "—"}</TableCell>
+                        <TableCell>{item.translationGroup?.name || "—"}</TableCell>
                         <TableCell>{item.releaseYear || "—"}</TableCell>
                         <TableCell>
                           <div className="flex flex-wrap gap-1 max-w-[150px]">
@@ -1053,7 +1053,7 @@ export function MangaManagementPage() {
                     <div className="flex space-x-2">
                       <Button variant="outline" size="sm" onClick={() => {
                         navigator.clipboard.writeText(
-                          `ID: ${detailContent.id}\nTên: ${detailContent.title}\nTác giả: ${detailContent.authorName || "—"}\nThể loại: ${detailContent.genres?.map((g: any) => g.name).join(", ") || "—"}\nTrạng thái: ${getStatusLabel(detailContent.status)}`
+                          `ID: ${detailContent.id}\nTên: ${detailContent.title}\nTác giả: ${detailContent.author?.name || "—"}\nThể loại: ${detailContent.genres?.map((g: any) => g.name).join(", ") || "—"}\nTrạng thái: ${getStatusLabel(detailContent.status)}`
                         );
                         toast({
                           title: "Đã sao chép thông tin",
@@ -1104,11 +1104,11 @@ export function MangaManagementPage() {
                         </div>
                         <div>
                           <h3 className="text-sm font-medium">Tác giả</h3>
-                          <p>{detailContent.authorName || "—"}</p>
+                          <p>{detailContent.author?.name || "—"}</p>
                         </div>
                         <div>
                           <h3 className="text-sm font-medium">Nhóm dịch</h3>
-                          <p>{detailContent.translationGroupName || "—"}</p>
+                          <p>{detailContent.translationGroup?.name || "—"}</p>
                         </div>
                       </div>
                       

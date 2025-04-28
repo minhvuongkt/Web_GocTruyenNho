@@ -801,8 +801,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put("/api/payments/:id/status", ensureAdmin, async (req, res) => {
     try {
       const paymentId = parseInt(req.params.id);
-      const statusSchema = z.enum(['pending', 'completed', 'failed']);
-      const { status } = statusSchema.parse(req.body);
+      
+      // Get valid payment status types
+      type PaymentStatusType = 'pending' | 'completed' | 'failed';
+      const validStatuses: PaymentStatusType[] = ['pending', 'completed', 'failed'];
+      
+      // Get status from request
+      let newStatus: PaymentStatusType;
+      
+      if (typeof req.body === 'string') {
+        // Direct string input
+        if (validStatuses.includes(req.body as PaymentStatusType)) {
+          newStatus = req.body as PaymentStatusType;
+        } else {
+          return res.status(400).json({ message: "Invalid status value" });
+        }
+      } else if (req.body && typeof req.body.status === 'string') {
+        // Object with status property
+        if (validStatuses.includes(req.body.status as PaymentStatusType)) {
+          newStatus = req.body.status as PaymentStatusType;
+        } else {
+          return res.status(400).json({ message: "Invalid status value" });
+        }
+      } else {
+        return res.status(400).json({ message: "Invalid status format" });
+      }
       
       // Get payment info
       const payment = await storage.getPayment(paymentId);
@@ -811,13 +834,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Update the payment status
-      const updatedPayment = await storage.updatePaymentStatus(paymentId, status as 'pending' | 'completed' | 'failed');
+      const updatedPayment = await storage.updatePaymentStatus(paymentId, newStatus);
       if (!updatedPayment) {
         return res.status(500).json({ message: "Failed to update payment status" });
       }
       
       // If payment is completed, add amount to user's balance
-      if (status === 'completed' && payment.status !== 'completed') {
+      if (newStatus === 'completed' && payment.status !== 'completed') {
         const updatedUser = await storage.updateUserBalance(payment.userId, payment.amount);
         if (!updatedUser) {
           return res.status(500).json({ message: "Failed to update user balance" });

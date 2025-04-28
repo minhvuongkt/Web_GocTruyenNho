@@ -116,72 +116,7 @@ export function MangaManagementPage() {
         return await response.json();
       } catch (error) {
         console.error("Failed to fetch content:", error);
-        // Fallback to mock data if API fails
-        return {
-          content: [
-            { 
-              id: 1, 
-              title: "Thám Tử Lừng Danh", 
-              type: "manga", 
-              authorId: 1,
-              authorName: "Aoyama Gosho",
-              status: "ongoing", 
-              views: 12345,
-              chapters: 123,
-              createdAt: "2023-01-15T08:45:12Z",
-              updatedAt: "2023-07-15T08:45:12Z" 
-            },
-            { 
-              id: 2, 
-              title: "Hoa Anh Đào", 
-              type: "manga", 
-              authorId: 2,
-              authorName: "Sakura Kinomoto",
-              status: "ongoing", 
-              views: 8765,
-              chapters: 45,
-              createdAt: "2023-02-14T08:45:12Z",
-              updatedAt: "2023-07-14T08:45:12Z" 
-            },
-            { 
-              id: 3, 
-              title: "Vũ Trụ Song Song", 
-              type: "novel", 
-              authorId: 3,
-              authorName: "Trần Văn A",
-              status: "ongoing", 
-              views: 5432,
-              chapters: 67,
-              createdAt: "2023-03-13T08:45:12Z",
-              updatedAt: "2023-07-13T08:45:12Z" 
-            },
-            { 
-              id: 4, 
-              title: "Kiếm Sĩ Bóng Đêm", 
-              type: "manga", 
-              authorId: 4,
-              authorName: "Lý Thái B",
-              status: "completed", 
-              views: 9876,
-              chapters: 89,
-              createdAt: "2023-04-12T08:45:12Z",
-              updatedAt: "2023-07-12T08:45:12Z" 
-            },
-            { 
-              id: 5, 
-              title: "Bí Mật Của Naoko", 
-              type: "novel", 
-              authorId: 5,
-              authorName: "Nguyễn Văn C",
-              status: "ongoing", 
-              views: 3456,
-              chapters: 34,
-              createdAt: "2023-05-11T08:45:12Z",
-              updatedAt: "2023-07-11T08:45:12Z" 
-            },
-          ],
-          total: 5
-        };
+        return { content: [], total: 0 };
       }
     }
   });
@@ -760,15 +695,7 @@ export function MangaManagementPage() {
                         aria-label="Chọn tất cả"
                       />
                     </TableHead>
-                    <TableHead 
-                      className="cursor-pointer"
-                      onClick={() => sortData('id')}
-                    >
-                      ID
-                      {sortConfig?.key === 'id' && (
-                        sortConfig.direction === 'asc' ? <SortAsc className="ml-1 h-3 w-3 inline" /> : <SortDesc className="ml-1 h-3 w-3 inline" />
-                      )}
-                    </TableHead>
+
                     <TableHead 
                       className="cursor-pointer"
                       onClick={() => sortData('title')}
@@ -820,7 +747,7 @@ export function MangaManagementPage() {
                             aria-label={`Chọn ${item.title}`}
                           />
                         </TableCell>
-                        <TableCell>{item.id}</TableCell>
+
                         <TableCell className="font-medium max-w-[200px] truncate">
                           {item.title}
                           {item.alternativeTitle && (

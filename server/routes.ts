@@ -871,8 +871,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/ads", async (req, res) => {
     try {
-      if (req.query.position) {
-        // Get active ads for a specific position
+      if (req.query.position && !req.isAuthenticated()) {
+        // Get active ads for a specific position - public endpoint
         const positionSchema = z.enum(['banner', 'sidebar', 'popup']);
         const position = positionSchema.parse(req.query.position);
         const ads = await storage.getActiveAdvertisements(position as 'banner' | 'sidebar' | 'popup');
@@ -884,12 +884,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         res.json(ads);
       } else {
-        // Admin view of all ads
+        // Admin view of all ads - requires authentication
+        if (!req.isAuthenticated() || req.user?.role !== 'admin') {
+          return res.status(401).json({ message: "Unauthorized" });
+        }
+        
         const page = req.query.page ? parseInt(req.query.page as string) : 1;
         const limit = req.query.limit ? parseInt(req.query.limit as string) : 10;
         
+        // Get additional query parameters for filtering
+        const position = req.query.position ? req.query.position as string : undefined;
+        const status = req.query.status ? req.query.status as string : undefined;
+        
         const result = await storage.getAllAdvertisements(page, limit);
-        res.json(result);
+        
+        // Apply additional filtering in memory (since we don't have specific DB methods)
+        let filteredAds = result.ads;
+        
+        if (position && position !== 'all') {
+          filteredAds = filteredAds.filter(ad => ad.position === position);
+        }
+        
+        if (status) {
+          if (status === 'active') {
+            const now = new Date();
+            filteredAds = filteredAds.filter(ad => 
+              ad.isActive && 
+              new Date(ad.startDate) <= now && 
+              new Date(ad.endDate) >= now
+            );
+          } else if (status === 'inactive') {
+            const now = new Date();
+            filteredAds = filteredAds.filter(ad => 
+              !ad.isActive || 
+              new Date(ad.startDate) > now || 
+              new Date(ad.endDate) < now
+            );
+          }
+        }
+        
+        res.json({
+          ads: filteredAds,
+          total: result.total
+        });
       }
     } catch (error) {
       res.status(500).json({ message: "Error fetching advertisements", error });

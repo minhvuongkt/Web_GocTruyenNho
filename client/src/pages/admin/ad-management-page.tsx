@@ -35,92 +35,32 @@ export function AdManagementPage() {
   
   // Fetch advertisements
   const { data, isLoading } = useQuery({
-    queryKey: ["/api/admin/advertisements", activeTab, positionFilter],
+    queryKey: ["/api/ads", activeTab, positionFilter],
     queryFn: async () => {
-      // In a real implementation, this would be an API call
-      // For now, we'll return mock data
-      const allAds = [
-        { 
-          id: 1, 
-          title: "Premium Membership Promotion", 
-          imageUrl: "https://via.placeholder.com/800x100?text=Premium+Membership", 
-          targetUrl: "https://example.com/premium", 
-          position: "banner",
-          startDate: "2023-06-01T00:00:00Z",
-          endDate: "2023-08-31T23:59:59Z",
-          isActive: true,
-          views: 15432,
-          clicks: 423,
-          createdAt: "2023-05-25T10:00:00Z"
-        },
-        { 
-          id: 2, 
-          title: "New Manga Collection", 
-          imageUrl: "https://via.placeholder.com/300x600?text=New+Manga+Collection", 
-          targetUrl: "https://example.com/manga-collection", 
-          position: "sidebar",
-          startDate: "2023-07-01T00:00:00Z",
-          endDate: "2023-07-31T23:59:59Z",
-          isActive: true,
-          views: 8765,
-          clicks: 321,
-          createdAt: "2023-06-25T09:30:00Z"
-        },
-        { 
-          id: 3, 
-          title: "Mobile App Download", 
-          imageUrl: "https://via.placeholder.com/400x300?text=Mobile+App+Download", 
-          targetUrl: "https://example.com/mobile-app", 
-          position: "popup",
-          startDate: "2023-07-15T00:00:00Z",
-          endDate: "2023-08-15T23:59:59Z",
-          isActive: true,
-          views: 5421,
-          clicks: 198,
-          createdAt: "2023-07-10T14:45:00Z"
-        },
-        { 
-          id: 4, 
-          title: "Summer Sale", 
-          imageUrl: "https://via.placeholder.com/800x100?text=Summer+Sale", 
-          targetUrl: "https://example.com/summer-sale", 
-          position: "banner",
-          startDate: "2023-06-15T00:00:00Z",
-          endDate: "2023-06-30T23:59:59Z",
-          isActive: false,
-          views: 12543,
-          clicks: 567,
-          createdAt: "2023-06-10T11:20:00Z"
-        },
-        { 
-          id: 5, 
-          title: "Fantasy Novel Collection", 
-          imageUrl: "https://via.placeholder.com/300x600?text=Fantasy+Novel+Collection", 
-          targetUrl: "https://example.com/fantasy-novels", 
-          position: "sidebar",
-          startDate: "2023-08-01T00:00:00Z",
-          endDate: "2023-09-30T23:59:59Z",
-          isActive: false,
-          views: 0,
-          clicks: 0,
-          createdAt: "2023-07-20T16:35:00Z"
+      try {
+        // Construct query parameters
+        const params = new URLSearchParams();
+        
+        if (positionFilter !== "all") {
+          params.append("position", positionFilter);
         }
-      ];
-      
-      // Filter by active status
-      const filteredByStatus = activeTab === "all" 
-        ? allAds 
-        : allAds.filter(ad => (activeTab === "active" ? ad.isActive : !ad.isActive));
-      
-      // Filter by position
-      const filteredByPosition = positionFilter === "all"
-        ? filteredByStatus
-        : filteredByStatus.filter(ad => ad.position === positionFilter);
-      
-      return {
-        ads: filteredByPosition,
-        total: filteredByPosition.length
-      };
+        
+        if (activeTab !== "all") {
+          params.append("status", activeTab === "active" ? "active" : "inactive");
+        }
+        
+        // Add pagination parameters
+        params.append("page", "1");
+        params.append("limit", "20");
+        
+        // Make the API request
+        const queryString = params.toString() ? `?${params.toString()}` : "";
+        const response = await apiRequest("GET", `/api/ads${queryString}`);
+        return await response.json();
+      } catch (error) {
+        console.error("Failed to fetch advertisements:", error);
+        return { ads: [], total: 0 };
+      }
     }
   });
 

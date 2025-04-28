@@ -1,5 +1,6 @@
 import { useState, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { AdminLayout } from "@/components/layouts/admin-layout";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
@@ -86,6 +87,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 
 export function MangaManagementPage() {
   const { toast } = useToast();
+  const [location, setLocation] = useLocation();
   const [search, setSearch] = useState("");
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
@@ -99,7 +101,10 @@ export function MangaManagementPage() {
     authorId: 1,
     status: "ongoing",
     coverImage: "",
-    genreIds: []
+    genreIds: [],
+    translationGroupId: null,
+    releaseYear: null,
+    alternativeTitle: null
   });
   
   // Fetch manga/novel content list
@@ -228,7 +233,10 @@ export function MangaManagementPage() {
         authorId: 1,
         status: "ongoing",
         coverImage: "",
-        genreIds: []
+        genreIds: [],
+        translationGroupId: null,
+        releaseYear: null,
+        alternativeTitle: null
       });
       setIsAddDialogOpen(false);
       // Refresh content list
@@ -858,11 +866,9 @@ export function MangaManagementPage() {
                                     Xem trang truyện
                                   </a>
                                 </DropdownMenuItem>
-                                <DropdownMenuItem asChild>
-                                  <a href={`/admin/chapters/${item.id}`} className="flex cursor-pointer items-center">
-                                    <Bookmark className="mr-2 h-4 w-4" />
-                                    Quản lý chương
-                                  </a>
+                                <DropdownMenuItem onClick={() => setLocation(`/admin/chapters/${item.id}`)}>
+                                  <Bookmark className="mr-2 h-4 w-4" />
+                                  Quản lý chương
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem onClick={() => handleEdit(item)}>
@@ -927,18 +933,27 @@ export function MangaManagementPage() {
                 <DialogHeader>
                   <DialogTitle className="flex items-center justify-between">
                     <span>{detailContent.title}</span>
-                    <Button variant="outline" size="sm" onClick={() => {
-                      navigator.clipboard.writeText(
-                        `ID: ${detailContent.id}\nTên: ${detailContent.title}\nTác giả: ${detailContent.authorName || "—"}\nThể loại: ${detailContent.genres?.map((g: any) => g.name).join(", ") || "—"}\nTrạng thái: ${getStatusLabel(detailContent.status)}`
-                      );
-                      toast({
-                        title: "Đã sao chép thông tin",
-                        description: "Thông tin truyện đã được sao chép vào clipboard",
-                      });
-                    }}>
-                      <Copy className="mr-2 h-4 w-4" />
-                      Sao chép thông tin
-                    </Button>
+                    <div className="flex space-x-2">
+                      <Button variant="outline" size="sm" onClick={() => {
+                        navigator.clipboard.writeText(
+                          `ID: ${detailContent.id}\nTên: ${detailContent.title}\nTác giả: ${detailContent.authorName || "—"}\nThể loại: ${detailContent.genres?.map((g: any) => g.name).join(", ") || "—"}\nTrạng thái: ${getStatusLabel(detailContent.status)}`
+                        );
+                        toast({
+                          title: "Đã sao chép thông tin",
+                          description: "Thông tin truyện đã được sao chép vào clipboard",
+                        });
+                      }}>
+                        <Copy className="mr-2 h-4 w-4" />
+                        Sao chép
+                      </Button>
+                      <Button variant="default" size="sm" onClick={() => {
+                        setIsViewDetailOpen(false);
+                        setLocation(`/admin/chapters/${detailContent.id}`);
+                      }}>
+                        <Bookmark className="mr-2 h-4 w-4" />
+                        Quản lý chương
+                      </Button>
+                    </div>
                   </DialogTitle>
                 </DialogHeader>
 

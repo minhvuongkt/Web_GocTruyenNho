@@ -1,11 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { nanoid } from "nanoid";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { formatCurrency } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
-import { generateQRCode } from "@/utils/qrcode-generator";
+import { generateQRCode, generateBankingQR } from "@/utils/qrcode-generator";
 import { QRCode } from "@/components/shared/qr-code";
 import {
   Dialog,
@@ -25,7 +25,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Clipboard, ClipboardCheck } from "lucide-react";
+import { Clipboard, ClipboardCheck, AlertTriangle, Timer } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
 
 interface PaymentModalProps {
   isOpen: boolean;
@@ -43,7 +44,9 @@ export function PaymentModal({
   const [amount, setAmount] = useState(defaultAmount.toString());
   const [paymentMethod, setPaymentMethod] = useState("bank_transfer");
   const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null);
+  const [bankingQrUrl, setBankingQrUrl] = useState<string | null>(null);
   const [transactionId, setTransactionId] = useState<string | null>(null);
+  const [timeRemaining, setTimeRemaining] = useState<number>(600); // 10 minutes in seconds
   const [copyStatus, setCopyStatus] = useState<{
     account: boolean;
     content: boolean;
@@ -54,6 +57,7 @@ export function PaymentModal({
     bankName: "MB Bank",
     accountNumber: "9999123456789",
     accountName: "GocTruyenNho",
+    bankBin: "970422" // MB Bank BIN
   };
 
   // Create payment mutation
@@ -74,19 +78,35 @@ export function PaymentModal({
     onSuccess: (data) => {
       toast({
         title: "Tạo giao dịch thành công",
-        description: "Vui lòng hoàn tất thanh toán để nạp tiền vào tài khoản."
+        description: "Vui lòng hoàn tất thanh toán trong vòng 10 phút."
       });
       
       // Set the transaction ID
       setTransactionId(data.transactionId);
       
-      // Generate QR code
+      // Reset timer
+      setTimeRemaining(600);
+      
+      // Generate QR code in two formats
+      const paymentMessage = `NAPTIEN ${user?.username || ""} ${data.transactionId}`;
+      
+      // Standard EMV format for general QR readers
       const qrContent = generateQRCode({
         bankNumber: bankDetails.accountNumber,
         amount: parseInt(amount),
-        message: `NAPTIEN ${user?.username || ""} ${data.transactionId}`
+        message: paymentMessage,
+        bankBin: bankDetails.bankBin
       });
       setQrCodeUrl(qrContent);
+      
+      // Banking-specific format that works with Vietnamese banking apps
+      const bankingQrContent = generateBankingQR({
+        bankNumber: bankDetails.accountNumber,
+        amount: parseInt(amount),
+        message: paymentMessage,
+        bankBin: bankDetails.bankBin
+      });
+      setBankingQrUrl(bankingQrContent);
     },
     onError: (error: Error) => {
       toast({
@@ -96,6 +116,28 @@ export function PaymentModal({
       });
     }
   });
+
+  // Timer countdown effect
+  useEffect(() => {
+    if (!transactionId || timeRemaining <= 0) return;
+    
+    const timer = setInterval(() => {
+      setTimeRemaining(prev => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          toast({
+            title: "Hết thời gian thanh toán",
+            description: "Giao dịch đã hết hạn. Vui lòng tạo giao dịch mới.",
+            variant: "destructive"
+          });
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    
+    return () => clearInterval(timer);
+  }, [transactionId, timeRemaining, toast]);
 
   const handleCreatePayment = () => {
     createPaymentMutation.mutate();
@@ -122,11 +164,46 @@ export function PaymentModal({
     });
   };
 
+  // Format time remaining as MM:SS
+  const formatTimeRemaining = () => {
+    const minutes = Math.floor(timeRemaining / 60);
+    const seconds = timeRemaining % 60;
+    return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+  };
+
+  // Confirm payment manually
+  const confirmPaymentMutation = useMutation({
+    mutationFn: async () => {
+      if (!transactionId) throw new Error("Không có mã giao dịch");
+      
+      const response = await apiRequest("POST", `/api/payments/${transactionId}/confirm`, {});
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Xác nhận thanh toán",
+        description: "Yêu cầu xác nhận đã được gửi tới quản trị viên. Chúng tôi sẽ kiểm tra và cập nhật số dư của bạn sớm nhất.",
+      });
+      
+      // Close the modal after confirmation
+      handleClose();
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Không thể xác nhận",
+        description: error.message || "Đã xảy ra lỗi khi xác nhận thanh toán.",
+        variant: "destructive"
+      });
+    }
+  });
+
   // Reset state when modal is closed
   const handleClose = () => {
-    if (!createPaymentMutation.isPending) {
+    if (!createPaymentMutation.isPending && !confirmPaymentMutation.isPending) {
       setQrCodeUrl(null);
+      setBankingQrUrl(null);
       setTransactionId(null);
+      setTimeRemaining(600);
       setCopyStatus({ account: false, content: false });
       onClose();
     }
@@ -194,76 +271,120 @@ export function PaymentModal({
             </Button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="flex flex-col items-center justify-center border border-border rounded-md p-4">
-              <QRCode value={qrCodeUrl} size={150} />
-              <p className="text-center text-sm font-medium mt-3">
-                Quét mã QR để thanh toán
-              </p>
+          <div className="space-y-4">
+            {/* Timer display */}
+            <div className="flex flex-col items-center space-y-2 mb-2">
+              <div className="flex items-center">
+                <Timer className="h-4 w-4 mr-2 text-yellow-500" />
+                <span className="text-sm font-medium">Thời gian còn lại: {formatTimeRemaining()}</span>
+              </div>
+              <Progress value={(timeRemaining / 600) * 100} className="h-2 w-full" />
             </div>
 
-            <div className="space-y-3">
-              <div>
-                <p className="text-sm font-medium">Thông tin chuyển khoản:</p>
-                <div className="mt-2 space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Ngân hàng:</span>
-                    <span>{bankDetails.bankName}</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-muted-foreground">Số tài khoản:</span>
-                    <div className="flex items-center">
-                      <span>{bankDetails.accountNumber}</span>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 ml-1"
-                        onClick={() => handleCopyText(bankDetails.accountNumber, 'account')}
-                      >
-                        {copyStatus.account ? (
-                          <ClipboardCheck className="h-3.5 w-3.5 text-green-500" />
-                        ) : (
-                          <Clipboard className="h-3.5 w-3.5" />
-                        )}
-                      </Button>
-                    </div>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Chủ tài khoản:</span>
-                    <span>{bankDetails.accountName}</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-muted-foreground">Nội dung CK:</span>
-                    <div className="flex items-center">
-                      <span>NAPTIEN {user?.username} {transactionId}</span>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 ml-1"
-                        onClick={() => handleCopyText(`NAPTIEN ${user?.username} ${transactionId}`, 'content')}
-                      >
-                        {copyStatus.content ? (
-                          <ClipboardCheck className="h-3.5 w-3.5 text-green-500" />
-                        ) : (
-                          <Clipboard className="h-3.5 w-3.5" />
-                        )}
-                      </Button>
-                    </div>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Số tiền:</span>
-                    <span className="font-medium">{formatCurrency(parseInt(amount))}</span>
-                  </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="flex flex-col items-center justify-center border border-border rounded-md p-4">
+                <div className="mb-1 text-xs text-center font-medium text-muted-foreground">
+                  {bankingQrUrl ? "QR dành cho ứng dụng ngân hàng & Momo" : "Mã QR chuẩn"}
                 </div>
-              </div>
-
-              <div className="pt-3 border-t border-border">
-                <p className="text-xs text-muted-foreground">
-                  Sau khi chuyển khoản, vui lòng đợi hệ thống xác nhận (thường trong vòng 5 phút).
-                  Tiền sẽ được cộng vào tài khoản sau khi xác nhận thành công.
+                <QRCode 
+                  value={bankingQrUrl || qrCodeUrl} 
+                  size={150} 
+                />
+                <p className="text-center text-sm font-medium mt-3">
+                  Quét mã QR để thanh toán
                 </p>
               </div>
+
+              <div className="space-y-3">
+                <div>
+                  <p className="text-sm font-medium">Thông tin chuyển khoản:</p>
+                  <div className="mt-2 space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Ngân hàng:</span>
+                      <span>{bankDetails.bankName}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-muted-foreground">Số tài khoản:</span>
+                      <div className="flex items-center">
+                        <span>{bankDetails.accountNumber}</span>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 ml-1"
+                          onClick={() => handleCopyText(bankDetails.accountNumber, 'account')}
+                        >
+                          {copyStatus.account ? (
+                            <ClipboardCheck className="h-3.5 w-3.5 text-green-500" />
+                          ) : (
+                            <Clipboard className="h-3.5 w-3.5" />
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Chủ tài khoản:</span>
+                      <span>{bankDetails.accountName}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-muted-foreground">Nội dung CK:</span>
+                      <div className="flex items-center">
+                        <span>NAPTIEN {user?.username} {transactionId}</span>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 ml-1"
+                          onClick={() => handleCopyText(`NAPTIEN ${user?.username} ${transactionId}`, 'content')}
+                        >
+                          {copyStatus.content ? (
+                            <ClipboardCheck className="h-3.5 w-3.5 text-green-500" />
+                          ) : (
+                            <Clipboard className="h-3.5 w-3.5" />
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Số tiền:</span>
+                      <span className="font-medium">{formatCurrency(parseInt(amount))}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="pt-3 border-t border-border">
+                  <p className="text-xs text-muted-foreground">
+                    Sau khi chuyển khoản, vui lòng nhấn nút "Tôi đã thanh toán" để xác nhận.
+                  </p>
+                </div>
+              </div>
             </div>
+
+            <div className="flex items-center gap-2 mt-4">
+              <Button
+                onClick={() => confirmPaymentMutation.mutate()}
+                className="flex-1"
+                disabled={confirmPaymentMutation.isPending || timeRemaining <= 0}
+              >
+                {confirmPaymentMutation.isPending ? "Đang xử lý..." : "Tôi đã thanh toán"}
+              </Button>
+              <Button
+                onClick={() => setQrCodeUrl(null)}
+                variant="outline"
+                className="flex-1"
+                disabled={confirmPaymentMutation.isPending}
+              >
+                Hủy
+              </Button>
+            </div>
+
+            {timeRemaining <= 0 && (
+              <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-md flex items-start mt-4">
+                <AlertTriangle className="h-5 w-5 text-yellow-500 mr-2 flex-shrink-0 mt-0.5" />
+                <div className="text-sm text-yellow-800">
+                  <p className="font-medium">Giao dịch đã hết hạn</p>
+                  <p>Vui lòng tạo giao dịch mới để tiếp tục thanh toán.</p>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </DialogContent>

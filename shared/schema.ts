@@ -140,6 +140,7 @@ export const paymentSettings = pgTable("payment_settings", {
   bankConfig: jsonb("bank_config").notNull(),
   vietQRConfig: jsonb("viet_qr_config").notNull(),
   priceConfig: jsonb("price_config").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 

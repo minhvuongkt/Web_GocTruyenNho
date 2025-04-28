@@ -267,10 +267,119 @@ export function MangaManagementPage() {
       <div className="space-y-6">
         <div className="flex justify-between items-center">
           <h1 className="text-2xl font-bold tracking-tight">Quản lý truyện</h1>
-          <Button>
-            <Plus className="mr-2 h-4 w-4" />
-            Thêm truyện mới
-          </Button>
+          <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="mr-2 h-4 w-4" />
+                Thêm truyện mới
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[600px]">
+              <DialogHeader>
+                <DialogTitle>Thêm truyện mới</DialogTitle>
+                <DialogDescription>
+                  Điền thông tin chi tiết về truyện bạn muốn thêm.
+                </DialogDescription>
+              </DialogHeader>
+              <form onSubmit={handleSubmit}>
+                <div className="grid gap-4 py-4">
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="title" className="text-right">Tên truyện</Label>
+                    <Input
+                      id="title"
+                      name="title"
+                      className="col-span-3"
+                      value={newContent.title}
+                      onChange={handleInputChange}
+                      required
+                    />
+                  </div>
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="type" className="text-right">Loại truyện</Label>
+                    <Select
+                      name="type"
+                      value={newContent.type}
+                      onValueChange={(value) => handleSelectChange("type", value)}
+                    >
+                      <SelectTrigger className="col-span-3">
+                        <SelectValue placeholder="Chọn loại truyện" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="manga">Truyện tranh</SelectItem>
+                        <SelectItem value="novel">Truyện chữ</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="authorId" className="text-right">Tác giả</Label>
+                    <Select
+                      name="authorId"
+                      value={newContent.authorId.toString()}
+                      onValueChange={(value) => handleSelectChange("authorId", value)}
+                    >
+                      <SelectTrigger className="col-span-3">
+                        <SelectValue placeholder="Chọn tác giả" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {authors?.map(author => (
+                          <SelectItem key={author.id} value={author.id.toString()}>
+                            {author.name}
+                          </SelectItem>
+                        )) || (
+                          <SelectItem value="1">Tác giả mặc định</SelectItem>
+                        )}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="status" className="text-right">Trạng thái</Label>
+                    <Select
+                      name="status"
+                      value={newContent.status}
+                      onValueChange={(value) => handleSelectChange("status", value)}
+                    >
+                      <SelectTrigger className="col-span-3">
+                        <SelectValue placeholder="Chọn trạng thái" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="ongoing">Đang tiến hành</SelectItem>
+                        <SelectItem value="completed">Hoàn thành</SelectItem>
+                        <SelectItem value="dropped">Đã ngừng</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="coverImage" className="text-right">Ảnh bìa URL</Label>
+                    <Input
+                      id="coverImage"
+                      name="coverImage"
+                      placeholder="https://example.com/image.jpg"
+                      className="col-span-3"
+                      value={newContent.coverImage}
+                      onChange={handleInputChange}
+                    />
+                  </div>
+                  <div className="grid grid-cols-4 items-start gap-4">
+                    <Label htmlFor="description" className="text-right pt-2">Mô tả</Label>
+                    <Textarea
+                      id="description"
+                      name="description"
+                      className="col-span-3"
+                      rows={5}
+                      value={newContent.description}
+                      onChange={handleInputChange}
+                      required
+                    />
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button type="submit" disabled={createContentMutation.isPending}>
+                    {createContentMutation.isPending ? "Đang xử lý..." : "Thêm truyện"}
+                  </Button>
+                </DialogFooter>
+              </form>
+            </DialogContent>
+          </Dialog>
         </div>
         
         <Card>
@@ -347,7 +456,11 @@ export function MangaManagementPage() {
                                 <Pencil className="h-4 w-4" />
                               </a>
                             </Button>
-                            <Button variant="ghost" size="icon">
+                            <Button 
+                              variant="ghost" 
+                              size="icon"
+                              onClick={() => handleDelete(item.id)}
+                            >
                               <Trash2 className="h-4 w-4" />
                             </Button>
                           </div>
@@ -360,6 +473,36 @@ export function MangaManagementPage() {
             </div>
           </CardContent>
         </Card>
+        {/* Delete Confirmation Dialog */}
+        <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Xác nhận xóa truyện</AlertDialogTitle>
+              <AlertDialogDescription>
+                Hành động này không thể khôi phục. Truyện này sẽ bị xóa vĩnh viễn khỏi hệ thống cùng với tất cả các chương và dữ liệu liên quan.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Hủy</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={confirmDelete}
+                className="bg-destructive hover:bg-destructive/90"
+              >
+                {deleteContentMutation.isPending ? (
+                  <>
+                    <span className="mr-2">Đang xử lý</span>
+                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                  </>
+                ) : (
+                  <>
+                    <AlertTriangle className="mr-2 h-4 w-4" />
+                    Xác nhận xóa
+                  </>
+                )}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </AdminLayout>
   );

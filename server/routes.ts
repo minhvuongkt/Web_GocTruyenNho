@@ -20,9 +20,14 @@ const ensureAuthenticated = (req: Request, res: Response, next: NextFunction) =>
 };
 
 const ensureAdmin = (req: Request, res: Response, next: NextFunction) => {
-  if (req.isAuthenticated() && req.user && (req.user as any).role === 'admin') {
+  if (!req.isAuthenticated() || !req.user) {
+    return res.status(401).json({ error: 'Not authenticated' });
+  }
+  
+  if (req.user.role === 'admin') {
     return next();
   }
+  
   res.status(403).json({ error: 'Forbidden' });
 };
 
@@ -117,6 +122,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } else {
       res.status(401).json({ error: 'Not authenticated' });
     }
+  });
+  
+  app.get('/api/user/is-admin', (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: 'Not authenticated' });
+    }
+    
+    const isAdmin = req.user.role === 'admin';
+    res.json({ isAdmin });
   });
 
   // User Routes

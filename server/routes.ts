@@ -738,8 +738,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Generate VietQR URL
+      const vietQRConfig = settings.vietQRConfig as any;
       const qrCodeURL = generateVietQRURL({
-        ...settings.vietQRConfig,
+        bankId: vietQRConfig.bankId,
+        accountNumber: vietQRConfig.accountNumber,
+        accountName: vietQRConfig.accountName,
+        template: vietQRConfig.template,
         amount,
         message: `NAPTIEN admin ${amount}`,
       });

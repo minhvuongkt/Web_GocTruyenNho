@@ -271,6 +271,14 @@ export const insertPaymentSchema = createInsertSchema(payments).pick({
   amount: true,
   method: true,
   status: true,
+}).extend({
+  createdAt: z.preprocess(
+    (arg) => (typeof arg === "string" ? new Date(arg) : arg),
+    z
+      .date()
+      .optional()
+      .default(() => new Date()),
+  ),
 });
 
 export const insertAdvertisementSchema = createInsertSchema(advertisements)

@@ -373,7 +373,7 @@ export default function ChapterManagementPage() {
             <Button 
               className="mt-4" 
               variant="outline"
-              onClick={() => setLocation('/admin/content-management')}
+              onClick={() => setLocation('/admin/manga')}
             >
               <ArrowLeft className="mr-2 h-4 w-4" />
               Quay lại trang quản lý truyện

@@ -1,0 +1,50 @@
+Trang admin:
+
+Lỗi lưu thiết lập thanh toán: Unexpected token '<', "<!DOCTYPE "... is not valid JSON
+Lỗi khi thêm truyện mới: 400: {"message":"Invalid data","error":{"issues":[{"code":"invalid_type","expected":"number","received":"string","path":["authorId"],"message":"Expected number, received string"}],"name":"ZodError"}}
+Trang thông tin truyện chưa hoạt động (không lưu thay đổi được, không cập nhật ảnh bìa được)
+Chỉnh sửa:
+2.3 Quản lý truyện
+2.3.1 Hiển thị danh sách truyện
+Giao diện:
+Cột: ID, Tên truyện, Tác giả, Nhóm dịch, Năm xuất bản, Thể loại, Trạng thái (Đang tiến hành/Hoàn thành/Tạm dừng).
+Bộ lọc: Dropdown Thể loại, Trạng thái.
+Nút "Xuất dữ liệu" (CSV/Excel).
+Chức năng:
+Sắp xếp theo cột (nhấp tiêu đề).
+Chọn nhiều: Xóa, Cập nhật trạng thái hàng loạt.
+2.3.2 Xem thông tin chi tiết truyện
+Giao diện:
+Thông tin: Tên, Tác giả, Nhóm dịch, Thể loại, Mô tả, Trạng thái.
+Lịch sử chỉnh sửa: Thời gian, Người chỉnh sửa, Nội dung thay đổi.
+Thống kê lượt xem: Lọc theo thời gian/thiết bị, chỉ số Lượt xem trung bình/ngày, Tỷ lệ hoàn thành.
+Chức năng:
+Nút "Sao chép thông tin" (text).
+Xuất thống kê (PDF/PNG).
+2.3.3 Chỉnh sửa truyện
+Form:
+Các trường: Tên, Tên khác, Tác giả, Nhóm dịch, Năm xuất bản, Thể loại, Mô tả, Trạng thái (Dropdown), Ghi chú nội bộ (Textarea).
+Chức năng:
+Lưu nháp.
+Cảnh báo trùng lặp Tên/Tên khác.
+2.3.4 Xóa truyện
+Chức năng:
+Xóa mềm: Chuyển vào thùng rác (khôi phục trong 30 ngày).
+Log hành động: Người xóa, Thời gian, Lý do.
+Thông báo admin khác (nếu có).
+2.3.5 Thêm truyện mới
+Form:
+Các trường: Tên, Tên khác, Tác giả, Nhóm dịch, Năm xuất bản, Thể loại, Mô tả, Nguồn gốc, Tags, Độ tuổi (13+/16+/18+).
+Tự động điền: Nhập URL → Lấy Tên, Tác giả, Mô tả, Ảnh bìa.
+Chức năng:
+Nhiều ảnh bìa (carousel).
+Kiểm tra URL ảnh bìa.
+Gợi ý thể loại dựa trên mô tả.
+Nút "Xem trước" giao diện truyện.
+2.3.6 Quản lý chương
+Form thêm/sửa chương:
+Các trường: Số chương, Tiêu đề, Nội dung (truyện chữ) hoặc Ảnh (truyện tranh), Thời gian phát hành, Ẩn chương (Checkbox), Khóa chương (Checkbox), Giá mở khóa (Số tiền VNĐ).
+Chức năng:
+Sao chép chương.
+Kiểm tra lỗi: Chính tả (truyện chữ), Ảnh lỗi/thiếu (truyện tranh).
+Đặt giá mở khóa: Admin nhập số tiền tùy chỉnh cho từng chương khóa.

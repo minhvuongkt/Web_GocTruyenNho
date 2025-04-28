@@ -234,7 +234,12 @@ export function MangaManagementPage() {
 
   // Handle select changes
   const handleSelectChange = (name: string, value: string) => {
-    setNewContent(prev => ({ ...prev, [name]: value }));
+    // Chuyển đổi authorId từ chuỗi sang số
+    if (name === "authorId") {
+      setNewContent(prev => ({ ...prev, [name]: parseInt(value, 10) }));
+    } else {
+      setNewContent(prev => ({ ...prev, [name]: value }));
+    }
   };
 
   // Handle form submission

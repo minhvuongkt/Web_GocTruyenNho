@@ -48,7 +48,7 @@ import {
 export function PaymentPage() {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [paymentMethod, setPaymentMethod] = useState("bank_transfer");
+  const paymentMethod = "bank_transfer"; // Chỉ hỗ trợ chuyển khoản ngân hàng
   const [amount, setAmount] = useState("50000");
   const [copyStatus, setCopyStatus] = useState<{
     account: boolean;
@@ -259,11 +259,7 @@ export function PaymentPage() {
     });
   };
 
-  // Reset payment state when changing methods
-  const handlePaymentMethodChange = (value: string) => {
-    setPaymentMethod(value);
-    setPaymentStatus({ processing: false });
-  };
+  // Không còn cần hàm này vì chỉ có một phương thức thanh toán
 
   if (!user) {
     return (
@@ -334,34 +330,11 @@ export function PaymentPage() {
 
                         <div className="space-y-2">
                           <Label htmlFor="payment-method">Phương thức thanh toán</Label>
-                          <Select
-                            value={paymentMethod}
-                            onValueChange={handlePaymentMethodChange}
-                          >
-                            <SelectTrigger id="payment-method">
-                              <SelectValue placeholder="Chọn phương thức thanh toán" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="bank_transfer" className="flex items-center">
-                                <div className="flex items-center">
-                                  <Landmark className="mr-2 h-4 w-4" />
-                                  <span>Chuyển khoản ngân hàng</span>
-                                </div>
-                              </SelectItem>
-                              <SelectItem value="credit_card" className="flex items-center">
-                                <div className="flex items-center">
-                                  <CreditCard className="mr-2 h-4 w-4" />
-                                  <span>Thẻ tín dụng</span>
-                                </div>
-                              </SelectItem>
-                              <SelectItem value="e_wallet" className="flex items-center">
-                                <div className="flex items-center">
-                                  <Wallet className="mr-2 h-4 w-4" />
-                                  <span>Ví điện tử</span>
-                                </div>
-                              </SelectItem>
-                            </SelectContent>
-                          </Select>
+                          <div className="flex items-center p-3 border rounded-md">
+                            <Landmark className="mr-2 h-4 w-4 text-primary" />
+                            <span>Chuyển khoản ngân hàng</span>
+                          </div>
+                          <input type="hidden" name="payment-method" value="bank_transfer" />
                         </div>
 
                         <Button
@@ -399,24 +372,7 @@ export function PaymentPage() {
                           </div>
                         )}
                         
-                        {paymentMethod === "credit_card" && (
-                          <div className="space-y-2 text-sm">
-                            <p className="text-muted-foreground">
-                              Thanh toán bằng thẻ tín dụng/ghi nợ. 
-                              Thông tin thẻ của bạn sẽ được bảo mật và xử lý an toàn.
-                              (Chức năng này đang được phát triển)
-                            </p>
-                          </div>
-                        )}
-                        
-                        {paymentMethod === "e_wallet" && (
-                          <div className="space-y-2 text-sm">
-                            <p className="text-muted-foreground">
-                              Sử dụng ví điện tử như Momo, ZaloPay, VNPay để thanh toán.
-                              (Chức năng này đang được phát triển)
-                            </p>
-                          </div>
-                        )}
+
                       </div>
                     </>
                   ) : (

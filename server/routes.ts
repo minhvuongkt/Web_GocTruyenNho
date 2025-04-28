@@ -90,7 +90,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!success) {
         return res.status(404).json({ message: "Genre not found" });
       }
-      res.status(204).send();
+      res.status(200).json({ success: true, message: "Genre deleted successfully" });
     } catch (error) {
       res.status(500).json({ message: "Error deleting genre", error });
     }
@@ -147,7 +147,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!success) {
         return res.status(404).json({ message: "Author not found" });
       }
-      res.status(204).send();
+      res.status(200).json({ success: true, message: "Author deleted successfully" });
     } catch (error) {
       res.status(500).json({ message: "Error deleting author", error });
     }
@@ -204,7 +204,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!success) {
         return res.status(404).json({ message: "Translation group not found" });
       }
-      res.status(204).send();
+      res.status(200).json({ success: true, message: "Translation group deleted successfully" });
     } catch (error) {
       res.status(500).json({ message: "Error deleting translation group", error });
     }
@@ -291,7 +291,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!success) {
         return res.status(404).json({ message: "Content not found" });
       }
-      res.status(204).send();
+      res.status(200).json({ success: true, message: "Content deleted successfully" });
     } catch (error) {
       res.status(500).json({ message: "Error deleting content", error });
     }
@@ -388,7 +388,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!success) {
         return res.status(404).json({ message: "Chapter not found" });
       }
-      res.status(204).send();
+      res.status(200).json({ success: true, message: "Chapter deleted successfully" });
     } catch (error) {
       res.status(500).json({ message: "Error deleting chapter", error });
     }
@@ -424,7 +424,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!success) {
         return res.status(404).json({ message: "Chapter content not found" });
       }
-      res.status(204).send();
+      res.status(200).json({ success: true, message: "Chapter content deleted successfully" });
     } catch (error) {
       res.status(500).json({ message: "Error deleting chapter content", error });
     }
@@ -574,7 +574,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(500).json({ message: "Failed to delete comment" });
       }
       
-      res.status(204).send();
+      res.status(200).json({ success: true, message: "Comment deleted successfully" });
     } catch (error) {
       res.status(500).json({ message: "Error deleting comment", error });
     }
@@ -613,7 +613,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!success) {
         return res.status(404).json({ message: "Report not found" });
       }
-      res.status(204).send();
+      res.status(200).json({ success: true, message: "Report deleted successfully" });
     } catch (error) {
       res.status(500).json({ message: "Error deleting report", error });
     }
@@ -744,7 +744,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!success) {
         return res.status(404).json({ message: "User not found" });
       }
-      res.status(204).send();
+      res.status(200).json({ success: true, message: "User deleted successfully" });
     } catch (error) {
       res.status(500).json({ message: "Error deleting user", error });
     }
@@ -892,7 +892,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!success) {
         return res.status(404).json({ message: "Advertisement not found" });
       }
-      res.status(204).send();
+      res.status(200).json({ success: true, message: "Advertisement deleted successfully" });
     } catch (error) {
       res.status(500).json({ message: "Error deleting advertisement", error });
     }

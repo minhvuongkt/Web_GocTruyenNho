@@ -1185,6 +1185,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Public route to get just the pricing configuration
+  // Endpoint to provide VietQR configuration
+  app.get("/api/payment-settings/vietqr-config", async (req, res) => {
+    try {
+      res.json({
+        clientId: process.env.VIETQR_CLIENT_ID || '',
+        apiKey: process.env.VIETQR_API_KEY || ''
+      });
+    } catch (error) {
+      res.status(500).json({ message: "Error fetching VietQR configuration", error });
+    }
+  });
+
   app.get("/api/payment-settings/pricing", async (req, res) => {
     try {
       // Get payment settings

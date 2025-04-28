@@ -5,7 +5,6 @@ import { nanoid } from "nanoid";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { formatCurrency } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
-import { generateQRCode, generateBankingQR } from "@/utils/qrcode-generator";
 import { QRCode } from "@/components/shared/qr-code";
 import {
   Dialog,

@@ -17,7 +17,7 @@ import MangaReaderPage from "@/pages/manga-reader-page";
 import NovelReaderPage from "@/pages/novel-reader-page";
 import ProfilePage from "@/pages/profile-page";
 import PaymentPage from "@/pages/payment-page";
-import { SearchPage } from "@/pages/search-page";
+import SearchPage from "@/pages/search-page";
 
 // Admin Pages
 import DashboardPage from "@/pages/admin/dashboard-page";

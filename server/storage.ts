@@ -183,8 +183,7 @@ export class MemStorage implements IStorage {
       role: 'admin'
     });
 
-    // Seed some initial data
-    this.seedInitialData();
+    // No seed data - we'll load everything from the database
   }
 
   private seedInitialData(): void {

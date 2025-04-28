@@ -1,9 +1,12 @@
-import type { Express, Request, Response } from "express";
+import express, { type Express, type Request, type Response } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth } from "./auth";
 import { z } from "zod";
 import { nanoid } from "nanoid";
+import path from "path";
+import fs from "fs";
+import multer from "multer";
 import {
   insertGenreSchema,
   insertAuthorSchema, 
@@ -34,9 +37,41 @@ const ensureAdmin = (req: Request, res: Response, next: Function) => {
   res.status(403).json({ message: "Forbidden - Admin access required" });
 };
 
+// Configure multer storage for cover image uploads
+const coverStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, 'public/uploads/covers');
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+    const ext = path.extname(file.originalname);
+    cb(null, 'cover-' + uniqueSuffix + ext);
+  }
+});
+
+// File filter for images
+const imageFilter = (req: any, file: Express.Multer.File, cb: Function) => {
+  // Accept only image files
+  if (file.mimetype.startsWith('image/')) {
+    cb(null, true);
+  } else {
+    cb(new Error('Chỉ chấp nhận tệp hình ảnh!'), false);
+  }
+};
+
+// Create the upload middleware
+const uploadCover = multer({ 
+  storage: coverStorage, 
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+  fileFilter: imageFilter
+});
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // Setup auth routes
   setupAuth(app);
+
+  // Serve static files from public folder
+  app.use(express.static('public'));
 
   // API routes
   
@@ -227,6 +262,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(result);
     } catch (error) {
       res.status(500).json({ message: "Error fetching content", error });
+    }
+  });
+
+  // Upload cover image
+  app.post("/api/upload/cover", ensureAdmin, uploadCover.single('coverImage'), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "Không có file được tải lên" });
+      }
+      
+      // Return the path to the uploaded file
+      const filePath = `/uploads/covers/${req.file.filename}`;
+      res.status(200).json({ coverImagePath: filePath });
+    } catch (error) {
+      res.status(500).json({ message: "Lỗi khi tải file", error });
     }
   });
 

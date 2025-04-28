@@ -557,7 +557,7 @@ export function MangaManagementPage() {
                           <SelectValue placeholder="Chọn nhóm dịch" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">Không có</SelectItem>
+                          <SelectItem value="0">Không có</SelectItem>
                           {/* Thay thế bằng dữ liệu thực từ API */}
                           <SelectItem value="1">Nhóm dịch A</SelectItem>
                           <SelectItem value="2">Nhóm dịch B</SelectItem>
@@ -1182,7 +1182,7 @@ export function MangaManagementPage() {
                         <SelectValue placeholder="Chọn nhóm dịch" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">Không có</SelectItem>
+                        <SelectItem value="0">Không có</SelectItem>
                         {/* Thay thế bằng dữ liệu thực từ API */}
                         <SelectItem value="1">Nhóm dịch A</SelectItem>
                         <SelectItem value="2">Nhóm dịch B</SelectItem>

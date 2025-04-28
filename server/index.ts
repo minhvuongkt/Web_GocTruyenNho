@@ -43,8 +43,17 @@ app.use((req, res, next) => {
     const status = err.status || err.statusCode || 500;
     const message = err.message || "Internal Server Error";
 
+    // Log database errors with more details
+    if (err.code && (err.code.startsWith('23') || err.code.startsWith('42'))) {
+      console.error("Database error:", err.code, err.message);
+      console.error("Error details:", err);
+    } else {
+      console.error("Application error:", err);
+    }
+
     res.status(status).json({ message });
-    throw err;
+    // Don't throw the error again as it will crash the server
+    // Instead, let the error handler middleware deal with it
   });
 
   // importantly only setup vite in development and after

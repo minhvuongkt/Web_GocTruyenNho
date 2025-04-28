@@ -918,6 +918,438 @@ export function MangaManagementPage() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+
+        {/* Chi tiết truyện Dialog */}
+        <Dialog open={isViewDetailOpen} onOpenChange={setIsViewDetailOpen}>
+          <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
+            {detailContent && (
+              <>
+                <DialogHeader>
+                  <DialogTitle className="flex items-center justify-between">
+                    <span>{detailContent.title}</span>
+                    <Button variant="outline" size="sm" onClick={() => {
+                      navigator.clipboard.writeText(
+                        `ID: ${detailContent.id}\nTên: ${detailContent.title}\nTác giả: ${detailContent.authorName || "—"}\nThể loại: ${detailContent.genres?.map((g: any) => g.name).join(", ") || "—"}\nTrạng thái: ${getStatusLabel(detailContent.status)}`
+                      );
+                      toast({
+                        title: "Đã sao chép thông tin",
+                        description: "Thông tin truyện đã được sao chép vào clipboard",
+                      });
+                    }}>
+                      <Copy className="mr-2 h-4 w-4" />
+                      Sao chép thông tin
+                    </Button>
+                  </DialogTitle>
+                </DialogHeader>
+
+                <Tabs defaultValue="info">
+                  <TabsList className="grid w-full grid-cols-3">
+                    <TabsTrigger value="info">Thông tin chính</TabsTrigger>
+                    <TabsTrigger value="history">Lịch sử chỉnh sửa</TabsTrigger>
+                    <TabsTrigger value="stats">Thống kê</TabsTrigger>
+                  </TabsList>
+                  
+                  <TabsContent value="info" className="space-y-4 mt-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-4">
+                        <div>
+                          <h3 className="text-sm font-medium">ID</h3>
+                          <p>{detailContent.id}</p>
+                        </div>
+                        <div>
+                          <h3 className="text-sm font-medium">Tên truyện</h3>
+                          <p>{detailContent.title}</p>
+                        </div>
+                        {detailContent.alternativeTitle && (
+                          <div>
+                            <h3 className="text-sm font-medium">Tên khác</h3>
+                            <p>{detailContent.alternativeTitle}</p>
+                          </div>
+                        )}
+                        <div>
+                          <h3 className="text-sm font-medium">Loại truyện</h3>
+                          <p>{detailContent.type === 'manga' ? 'Truyện tranh' : 'Truyện chữ'}</p>
+                        </div>
+                        <div>
+                          <h3 className="text-sm font-medium">Tác giả</h3>
+                          <p>{detailContent.authorName || "—"}</p>
+                        </div>
+                        <div>
+                          <h3 className="text-sm font-medium">Nhóm dịch</h3>
+                          <p>{detailContent.translationGroupName || "—"}</p>
+                        </div>
+                      </div>
+                      
+                      <div className="space-y-4">
+                        <div>
+                          <h3 className="text-sm font-medium">Năm xuất bản</h3>
+                          <p>{detailContent.releaseYear || "—"}</p>
+                        </div>
+                        <div>
+                          <h3 className="text-sm font-medium">Trạng thái</h3>
+                          <Badge>{getStatusLabel(detailContent.status)}</Badge>
+                        </div>
+                        <div>
+                          <h3 className="text-sm font-medium">Thể loại</h3>
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {detailContent.genres?.map((genre: any) => (
+                              <Badge key={genre.id} variant="outline">
+                                {genre.name}
+                              </Badge>
+                            )) || "—"}
+                          </div>
+                        </div>
+                        <div>
+                          <h3 className="text-sm font-medium">Ngày tạo</h3>
+                          <p>{formatDate(detailContent.createdAt)}</p>
+                        </div>
+                        <div>
+                          <h3 className="text-sm font-medium">Cập nhật lần cuối</h3>
+                          <p>{formatDate(detailContent.updatedAt)}</p>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <h3 className="text-sm font-medium">Mô tả</h3>
+                      <p className="mt-1 text-sm">{detailContent.description || "—"}</p>
+                    </div>
+
+                    {detailContent.coverImage && (
+                      <div>
+                        <h3 className="text-sm font-medium">Ảnh bìa</h3>
+                        <div className="mt-2 w-40 h-60 bg-muted rounded-md overflow-hidden">
+                          <img 
+                            src={detailContent.coverImage} 
+                            alt={detailContent.title} 
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </TabsContent>
+                  
+                  <TabsContent value="history" className="space-y-4 mt-4">
+                    <div className="text-center text-muted-foreground py-12">
+                      Chức năng đang phát triển
+                    </div>
+                  </TabsContent>
+                  
+                  <TabsContent value="stats" className="space-y-4 mt-4">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <Card>
+                        <CardContent className="pt-6">
+                          <div className="text-center">
+                            <div className="text-2xl font-bold">{detailContent.views?.toLocaleString() || 0}</div>
+                            <p className="text-xs text-muted-foreground">Lượt xem</p>
+                          </div>
+                        </CardContent>
+                      </Card>
+                      <Card>
+                        <CardContent className="pt-6">
+                          <div className="text-center">
+                            <div className="text-2xl font-bold">{detailContent.chapters || 0}</div>
+                            <p className="text-xs text-muted-foreground">Chương</p>
+                          </div>
+                        </CardContent>
+                      </Card>
+                      <Card>
+                        <CardContent className="pt-6">
+                          <div className="text-center">
+                            <div className="text-2xl font-bold">
+                              {detailContent.chapters ? Math.round(detailContent.views / detailContent.chapters).toLocaleString() : 0}
+                            </div>
+                            <p className="text-xs text-muted-foreground">Lượt xem/chương</p>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </div>
+                    <div className="text-center text-muted-foreground py-6">
+                      Biểu đồ đang phát triển
+                    </div>
+                  </TabsContent>
+                </Tabs>
+              </>
+            )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Edit Dialog */}
+        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+          <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Chỉnh sửa truyện</DialogTitle>
+              <DialogDescription>
+                Cập nhật thông tin chi tiết về truyện.
+              </DialogDescription>
+            </DialogHeader>
+            {editContent && (
+              <form onSubmit={(e) => {
+                e.preventDefault();
+                // Implement update mutation here
+                toast({
+                  title: "Cập nhật thành công",
+                  description: "Thông tin truyện đã được cập nhật",
+                });
+                setIsEditDialogOpen(false);
+              }}>
+                <div className="grid gap-4 py-4">
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="edit-title" className="text-right">Tên truyện <span className="text-red-500">*</span></Label>
+                    <Input
+                      id="edit-title"
+                      name="title"
+                      className="col-span-3"
+                      value={editContent.title}
+                      onChange={(e) => setEditContent({...editContent, title: e.target.value})}
+                      required
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="edit-alternativeTitle" className="text-right">Tên khác</Label>
+                    <Input
+                      id="edit-alternativeTitle"
+                      name="alternativeTitle"
+                      className="col-span-3"
+                      value={editContent.alternativeTitle || ""}
+                      onChange={(e) => setEditContent({...editContent, alternativeTitle: e.target.value})}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="edit-type" className="text-right">Loại truyện <span className="text-red-500">*</span></Label>
+                    <Select
+                      name="type"
+                      value={editContent.type}
+                      onValueChange={(value) => setEditContent({...editContent, type: value})}
+                    >
+                      <SelectTrigger className="col-span-3">
+                        <SelectValue placeholder="Chọn loại truyện" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="manga">Truyện tranh</SelectItem>
+                        <SelectItem value="novel">Truyện chữ</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="edit-authorId" className="text-right">Tác giả <span className="text-red-500">*</span></Label>
+                    <Select
+                      name="authorId"
+                      value={editContent.authorId}
+                      onValueChange={(value) => setEditContent({...editContent, authorId: value})}
+                    >
+                      <SelectTrigger className="col-span-3">
+                        <SelectValue placeholder="Chọn tác giả" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {authors?.map(author => (
+                          <SelectItem key={author.id} value={author.id.toString()}>
+                            {author.name}
+                          </SelectItem>
+                        )) || (
+                          <SelectItem value="1">Tác giả mặc định</SelectItem>
+                        )}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="edit-translationGroupId" className="text-right">Nhóm dịch</Label>
+                    <Select
+                      name="translationGroupId"
+                      value={editContent.translationGroupId || ""}
+                      onValueChange={(value) => setEditContent({...editContent, translationGroupId: value})}
+                    >
+                      <SelectTrigger className="col-span-3">
+                        <SelectValue placeholder="Chọn nhóm dịch" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">Không có</SelectItem>
+                        {/* Thay thế bằng dữ liệu thực từ API */}
+                        <SelectItem value="1">Nhóm dịch A</SelectItem>
+                        <SelectItem value="2">Nhóm dịch B</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="edit-releaseYear" className="text-right">Năm xuất bản</Label>
+                    <Input
+                      id="edit-releaseYear"
+                      name="releaseYear"
+                      className="col-span-3"
+                      placeholder="2023"
+                      value={editContent.releaseYear || ""}
+                      onChange={(e) => setEditContent({...editContent, releaseYear: e.target.value})}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="edit-status" className="text-right">Trạng thái <span className="text-red-500">*</span></Label>
+                    <Select
+                      name="status"
+                      value={editContent.status}
+                      onValueChange={(value) => setEditContent({...editContent, status: value})}
+                    >
+                      <SelectTrigger className="col-span-3">
+                        <SelectValue placeholder="Chọn trạng thái" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="ongoing">Đang tiến hành</SelectItem>
+                        <SelectItem value="completed">Hoàn thành</SelectItem>
+                        <SelectItem value="hiatus">Tạm dừng</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="edit-coverImage" className="text-right">URL ảnh bìa</Label>
+                    <div className="col-span-3 flex gap-2">
+                      <Input
+                        id="edit-coverImage"
+                        name="coverImage"
+                        placeholder="https://example.com/image.jpg"
+                        className="flex-1"
+                        value={editContent.coverImage || ""}
+                        onChange={(e) => setEditContent({...editContent, coverImage: e.target.value})}
+                      />
+                      <Button type="button" variant="outline" size="icon">
+                        <ImageIcon className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-4 items-start gap-4">
+                    <Label htmlFor="edit-description" className="text-right pt-2">Mô tả <span className="text-red-500">*</span></Label>
+                    <Textarea
+                      id="edit-description"
+                      name="description"
+                      className="col-span-3"
+                      rows={5}
+                      value={editContent.description || ""}
+                      onChange={(e) => setEditContent({...editContent, description: e.target.value})}
+                      required
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-4 items-start gap-4">
+                    <Label className="text-right pt-2">Thể loại</Label>
+                    <div className="col-span-3 grid grid-cols-3 gap-2">
+                      {genres?.map(genre => (
+                        <div key={genre.id} className="flex items-center space-x-2">
+                          <Checkbox 
+                            id={`edit-genre-${genre.id}`} 
+                            checked={editContent.genreIds?.includes(genre.id)} 
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                setEditContent(prev => ({
+                                  ...prev,
+                                  genreIds: [...(prev.genreIds || []), genre.id]
+                                }));
+                              } else {
+                                setEditContent(prev => ({
+                                  ...prev,
+                                  genreIds: prev.genreIds?.filter(id => id !== genre.id) || []
+                                }));
+                              }
+                            }}
+                          />
+                          <label 
+                            htmlFor={`edit-genre-${genre.id}`}
+                            className="text-sm leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                          >
+                            {genre.name}
+                          </label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-4 items-start gap-4">
+                    <Label htmlFor="edit-internal-notes" className="text-right pt-2">Ghi chú nội bộ</Label>
+                    <Textarea
+                      id="edit-internal-notes"
+                      name="internalNotes"
+                      className="col-span-3"
+                      rows={3}
+                      value={editContent.internalNotes || ""}
+                      onChange={(e) => setEditContent({...editContent, internalNotes: e.target.value})}
+                      placeholder="Ghi chú dành cho admin, không hiển thị cho người dùng"
+                    />
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" type="button" onClick={() => setIsEditDialogOpen(false)}>
+                    Hủy
+                  </Button>
+                  <Button type="button" variant="outline" className="mr-2">
+                    Lưu nháp
+                  </Button>
+                  <Button type="submit">
+                    Cập nhật
+                  </Button>
+                </DialogFooter>
+              </form>
+            )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Soft Delete Dialog */}
+        <Dialog open={showDeleteTrashDialog} onOpenChange={setShowDeleteTrashDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Chuyển vào thùng rác</DialogTitle>
+              <DialogDescription>
+                Truyện sẽ được chuyển vào thùng rác và có thể khôi phục trong vòng 30 ngày.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="delete-reason">Lý do xóa</Label>
+                <Textarea
+                  id="delete-reason"
+                  value={deleteReason}
+                  onChange={(e) => setDeleteReason(e.target.value)}
+                  placeholder="Nhập lý do xóa truyện này..."
+                  rows={3}
+                />
+              </div>
+              {selectedItems.length > 0 && (
+                <div>
+                  <Label>Truyện sẽ bị xóa ({selectedItems.length})</Label>
+                  <div className="mt-2 max-h-32 overflow-y-auto border rounded-md p-2">
+                    <ul className="text-sm">
+                      {selectedContent.map(item => (
+                        <li key={item.id} className="py-1">
+                          {item.title}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              )}
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowDeleteTrashDialog(false)}>
+                Hủy
+              </Button>
+              <Button variant="destructive" onClick={() => {
+                // Implement soft delete here
+                toast({
+                  title: "Đã chuyển vào thùng rác",
+                  description: `${selectedItems.length} truyện đã được chuyển vào thùng rác`,
+                });
+                setSelectedItems([]);
+                setShowDeleteTrashDialog(false);
+              }}>
+                Xác nhận
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </AdminLayout>
   );

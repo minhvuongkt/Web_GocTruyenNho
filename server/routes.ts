@@ -346,6 +346,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Increment view count if chapter is being read
       await storage.incrementChapterViews(chapterId);
+    
       
       // Chapter is unlocked or free, so get the content
       const chapterContent = await storage.getChapterContentByChapter(chapterId);
@@ -487,6 +488,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error) {
       res.status(500).json({ message: "Error unlocking chapter", error });
+    }
+  });
+
+  // Chapter lock/unlock API (admin only)
+  app.patch("/api/chapters/:id/lock", ensureAdmin, async (req, res) => {
+    try {
+      const chapterId = parseInt(req.params.id);
+      const { isLocked, unlockPrice } = req.body;
+      
+      // Validate data
+      if (typeof isLocked !== 'boolean') {
+        return res.status(400).json({ message: "isLocked must be a boolean" });
+      }
+      
+      // If locking, require a price
+      if (isLocked && (typeof unlockPrice !== 'number' || unlockPrice <= 0)) {
+        return res.status(400).json({ message: "unlockPrice must be a positive number when locking a chapter" });
+      }
+      
+      // Get the current chapter
+      const chapter = await storage.getChapter(chapterId);
+      if (!chapter) {
+        return res.status(404).json({ message: "Chapter not found" });
+      }
+      
+      // Update the chapter
+      const updateData: any = { isLocked };
+      if (isLocked) {
+        updateData.unlockPrice = unlockPrice;
+      } else {
+        updateData.unlockPrice = null;
+      }
+      
+      const updatedChapter = await storage.updateChapter(chapterId, updateData);
+      if (!updatedChapter) {
+        return res.status(500).json({ message: "Failed to update chapter" });
+      }
+      
+      res.json({
+        success: true,
+        chapter: updatedChapter,
+        message: isLocked ? "Chapter locked successfully" : "Chapter unlocked successfully"
+      });
+    } catch (error) {
+      res.status(500).json({ message: "Error updating chapter lock status", error });
     }
   });
 

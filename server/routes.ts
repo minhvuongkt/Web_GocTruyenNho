@@ -229,6 +229,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const result = await storage.getAllContent(page, limit, filter);
       res.json(result);
     } catch (error) {
+      console.error("Error fetching content:", error);
       res.status(500).json({ error: "Failed to get content" });
     }
   });

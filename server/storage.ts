@@ -1319,8 +1319,8 @@ export class DatabaseStorage implements IStorage {
         and(
           eq(advertisements.position, position),
           eq(advertisements.isActive, true),
-          lte(advertisements.startDate, now),
-          gte(advertisements.endDate, now),
+          lt(advertisements.startDate, now),
+          gt(advertisements.endDate, now),
         ),
       );
   }

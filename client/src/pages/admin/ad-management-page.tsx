@@ -65,10 +65,15 @@ export function AdManagementPage() {
   });
 
   // Filter ads based on search term
-  const filteredAds = data?.ads.filter(ad => 
-    ad.title.toLowerCase().includes(search.toLowerCase()) ||
-    ad.targetUrl.toLowerCase().includes(search.toLowerCase())
-  ) || [];
+  const filteredAds = Array.isArray(data) 
+    ? data.filter(ad => 
+        ad.title.toLowerCase().includes(search.toLowerCase()) ||
+        ad.targetUrl.toLowerCase().includes(search.toLowerCase())
+      ) 
+    : data?.ads?.filter(ad => 
+        ad.title.toLowerCase().includes(search.toLowerCase()) ||
+        ad.targetUrl.toLowerCase().includes(search.toLowerCase())
+      ) || [];
 
   // Get position label
   const getPositionLabel = (position: string) => {

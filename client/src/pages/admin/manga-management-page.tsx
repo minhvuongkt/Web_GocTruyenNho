@@ -148,6 +148,20 @@ export function MangaManagementPage() {
       }
     }
   });
+  
+  // Fetch translation groups for select dropdown
+  const { data: translationGroups } = useQuery({
+    queryKey: ["/api/translation-groups"],
+    queryFn: async () => {
+      try {
+        const response = await apiRequest("GET", "/api/translation-groups");
+        return await response.json();
+      } catch (error) {
+        console.error("Failed to fetch translation groups:", error);
+        return [];
+      }
+    }
+  });
 
   // Create content mutation
   const createContentMutation = useMutation({
@@ -475,12 +489,14 @@ export function MangaManagementPage() {
                           <SelectValue placeholder="Chọn tác giả" />
                         </SelectTrigger>
                         <SelectContent>
-                          {authors?.map(author => (
-                            <SelectItem key={author.id} value={author.id.toString()}>
-                              {author.name}
-                            </SelectItem>
-                          )) || (
-                            <SelectItem value="1">Tác giả mặc định</SelectItem>
+                          {authors && authors.length > 0 ? (
+                            authors.map(author => (
+                              <SelectItem key={author.id} value={author.id.toString()}>
+                                {author.name}
+                              </SelectItem>
+                            ))
+                          ) : (
+                            <SelectItem value="1">Không có tác giả</SelectItem>
                           )}
                         </SelectContent>
                       </Select>
@@ -498,9 +514,14 @@ export function MangaManagementPage() {
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="0">Không có</SelectItem>
-                          {/* Thay thế bằng dữ liệu thực từ API */}
-                          <SelectItem value="1">Nhóm dịch A</SelectItem>
-                          <SelectItem value="2">Nhóm dịch B</SelectItem>
+                          {/* Lấy dữ liệu từ API */}
+                          {translationGroups && translationGroups.length > 0 && 
+                            translationGroups.map(group => (
+                              <SelectItem key={group.id} value={group.id.toString()}>
+                                {group.name}
+                              </SelectItem>
+                            ))
+                          }
                         </SelectContent>
                       </Select>
                     </div>

@@ -13,10 +13,7 @@ import {
   contentGenres, userFavorites, readingHistory, unlockedChapters
 } from "@shared/schema";
 import session from "express-session";
-import createMemoryStore from "memorystore";
-import { nanoid } from "nanoid";
-
-const MemoryStore = createMemoryStore(session);
+import { DatabaseStorage } from "./database-storage";
 
 export interface IStorage {
   // User management
@@ -113,7 +110,7 @@ export interface IStorage {
   incrementAdClicks(id: number): Promise<boolean>;
 
   // Session store
-  sessionStore: session.SessionStore;
+  sessionStore: session.Store;
 }
 
 export class MemStorage implements IStorage {
@@ -923,4 +920,4 @@ export class MemStorage implements IStorage {
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();

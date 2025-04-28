@@ -1,0 +1,836 @@
+import type { Express, Request, Response } from "express";
+import { createServer, type Server } from "http";
+import { storage } from "./storage";
+import { setupAuth } from "./auth";
+import { z } from "zod";
+import { nanoid } from "nanoid";
+import {
+  insertGenreSchema,
+  insertAuthorSchema, 
+  insertTranslationGroupSchema,
+  insertContentSchema,
+  insertChapterSchema,
+  insertChapterContentSchema,
+  insertCommentSchema,
+  insertReportSchema,
+  insertPaymentSchema,
+  insertAdvertisementSchema
+} from "@shared/schema";
+
+// Middleware to ensure user is authenticated
+const ensureAuthenticated = (req: Request, res: Response, next: Function) => {
+  if (req.isAuthenticated()) {
+    return next();
+  }
+  res.status(401).json({ message: "Unauthorized" });
+};
+
+// Middleware to ensure user is admin
+const ensureAdmin = (req: Request, res: Response, next: Function) => {
+  if (req.isAuthenticated() && req.user && req.user.role === 'admin') {
+    return next();
+  }
+  res.status(403).json({ message: "Forbidden - Admin access required" });
+};
+
+export async function registerRoutes(app: Express): Promise<Server> {
+  // Setup auth routes
+  setupAuth(app);
+
+  // API routes
+  
+  // Genre routes
+  app.get("/api/genres", async (req, res) => {
+    try {
+      const genres = await storage.getAllGenres();
+      res.json(genres);
+    } catch (error) {
+      res.status(500).json({ message: "Error fetching genres", error });
+    }
+  });
+
+  app.post("/api/genres", ensureAdmin, async (req, res) => {
+    try {
+      const validData = insertGenreSchema.parse(req.body);
+      const genre = await storage.createGenre(validData);
+      res.status(201).json(genre);
+    } catch (error) {
+      res.status(400).json({ message: "Invalid data", error });
+    }
+  });
+
+  app.get("/api/genres/:id", async (req, res) => {
+    try {
+      const genre = await storage.getGenre(parseInt(req.params.id));
+      if (!genre) {
+        return res.status(404).json({ message: "Genre not found" });
+      }
+      res.json(genre);
+    } catch (error) {
+      res.status(500).json({ message: "Error fetching genre", error });
+    }
+  });
+
+  app.put("/api/genres/:id", ensureAdmin, async (req, res) => {
+    try {
+      const validData = insertGenreSchema.partial().parse(req.body);
+      const genre = await storage.updateGenre(parseInt(req.params.id), validData);
+      if (!genre) {
+        return res.status(404).json({ message: "Genre not found" });
+      }
+      res.json(genre);
+    } catch (error) {
+      res.status(400).json({ message: "Invalid data", error });
+    }
+  });
+
+  app.delete("/api/genres/:id", ensureAdmin, async (req, res) => {
+    try {
+      const success = await storage.deleteGenre(parseInt(req.params.id));
+      if (!success) {
+        return res.status(404).json({ message: "Genre not found" });
+      }
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ message: "Error deleting genre", error });
+    }
+  });
+
+  // Author routes
+  app.get("/api/authors", async (req, res) => {
+    try {
+      const authors = await storage.getAllAuthors();
+      res.json(authors);
+    } catch (error) {
+      res.status(500).json({ message: "Error fetching authors", error });
+    }
+  });
+
+  app.post("/api/authors", ensureAdmin, async (req, res) => {
+    try {
+      const validData = insertAuthorSchema.parse(req.body);
+      const author = await storage.createAuthor(validData);
+      res.status(201).json(author);
+    } catch (error) {
+      res.status(400).json({ message: "Invalid data", error });
+    }
+  });
+
+  app.get("/api/authors/:id", async (req, res) => {
+    try {
+      const author = await storage.getAuthor(parseInt(req.params.id));
+      if (!author) {
+        return res.status(404).json({ message: "Author not found" });
+      }
+      res.json(author);
+    } catch (error) {
+      res.status(500).json({ message: "Error fetching author", error });
+    }
+  });
+
+  app.put("/api/authors/:id", ensureAdmin, async (req, res) => {
+    try {
+      const validData = insertAuthorSchema.partial().parse(req.body);
+      const author = await storage.updateAuthor(parseInt(req.params.id), validData);
+      if (!author) {
+        return res.status(404).json({ message: "Author not found" });
+      }
+      res.json(author);
+    } catch (error) {
+      res.status(400).json({ message: "Invalid data", error });
+    }
+  });
+
+  app.delete("/api/authors/:id", ensureAdmin, async (req, res) => {
+    try {
+      const success = await storage.deleteAuthor(parseInt(req.params.id));
+      if (!success) {
+        return res.status(404).json({ message: "Author not found" });
+      }
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ message: "Error deleting author", error });
+    }
+  });
+
+  // Translation Group routes
+  app.get("/api/translation-groups", async (req, res) => {
+    try {
+      const groups = await storage.getAllTranslationGroups();
+      res.json(groups);
+    } catch (error) {
+      res.status(500).json({ message: "Error fetching translation groups", error });
+    }
+  });
+
+  app.post("/api/translation-groups", ensureAdmin, async (req, res) => {
+    try {
+      const validData = insertTranslationGroupSchema.parse(req.body);
+      const group = await storage.createTranslationGroup(validData);
+      res.status(201).json(group);
+    } catch (error) {
+      res.status(400).json({ message: "Invalid data", error });
+    }
+  });
+
+  app.get("/api/translation-groups/:id", async (req, res) => {
+    try {
+      const group = await storage.getTranslationGroup(parseInt(req.params.id));
+      if (!group) {
+        return res.status(404).json({ message: "Translation group not found" });
+      }
+      res.json(group);
+    } catch (error) {
+      res.status(500).json({ message: "Error fetching translation group", error });
+    }
+  });
+
+  app.put("/api/translation-groups/:id", ensureAdmin, async (req, res) => {
+    try {
+      const validData = insertTranslationGroupSchema.partial().parse(req.body);
+      const group = await storage.updateTranslationGroup(parseInt(req.params.id), validData);
+      if (!group) {
+        return res.status(404).json({ message: "Translation group not found" });
+      }
+      res.json(group);
+    } catch (error) {
+      res.status(400).json({ message: "Invalid data", error });
+    }
+  });
+
+  app.delete("/api/translation-groups/:id", ensureAdmin, async (req, res) => {
+    try {
+      const success = await storage.deleteTranslationGroup(parseInt(req.params.id));
+      if (!success) {
+        return res.status(404).json({ message: "Translation group not found" });
+      }
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ message: "Error deleting translation group", error });
+    }
+  });
+
+  // Content routes
+  app.get("/api/content", async (req, res) => {
+    try {
+      const page = req.query.page ? parseInt(req.query.page as string) : 1;
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 10;
+      
+      // Handle filters
+      const filter: any = {};
+      if (req.query.type) filter.type = req.query.type;
+      if (req.query.authorId) filter.authorId = parseInt(req.query.authorId as string);
+      if (req.query.status) filter.status = req.query.status;
+      
+      const result = await storage.getAllContent(page, limit, filter);
+      res.json(result);
+    } catch (error) {
+      res.status(500).json({ message: "Error fetching content", error });
+    }
+  });
+
+  app.post("/api/content", ensureAdmin, async (req, res) => {
+    try {
+      const { genreIds, ...contentData } = req.body;
+      const validData = insertContentSchema.parse(contentData);
+      
+      if (!Array.isArray(genreIds) || genreIds.length === 0) {
+        return res.status(400).json({ message: "At least one genre is required" });
+      }
+      
+      const content = await storage.createContent(validData, genreIds);
+      res.status(201).json(content);
+    } catch (error) {
+      res.status(400).json({ message: "Invalid data", error });
+    }
+  });
+
+  app.get("/api/content/:id", async (req, res) => {
+    try {
+      // Increment view count
+      await storage.incrementContentViews(parseInt(req.params.id));
+      
+      const contentDetails = await storage.getContentWithDetails(parseInt(req.params.id));
+      if (!contentDetails) {
+        return res.status(404).json({ message: "Content not found" });
+      }
+      
+      // Get chapters for this content
+      const chapters = await storage.getChaptersByContent(parseInt(req.params.id));
+      
+      // Include chapters in the response
+      const response = {
+        ...contentDetails,
+        chapters
+      };
+      
+      res.json(response);
+    } catch (error) {
+      res.status(500).json({ message: "Error fetching content", error });
+    }
+  });
+
+  app.put("/api/content/:id", ensureAdmin, async (req, res) => {
+    try {
+      const { genreIds, ...contentData } = req.body;
+      const validData = insertContentSchema.partial().parse(contentData);
+      
+      const content = await storage.updateContent(parseInt(req.params.id), validData, genreIds);
+      if (!content) {
+        return res.status(404).json({ message: "Content not found" });
+      }
+      res.json(content);
+    } catch (error) {
+      res.status(400).json({ message: "Invalid data", error });
+    }
+  });
+
+  app.delete("/api/content/:id", ensureAdmin, async (req, res) => {
+    try {
+      const success = await storage.deleteContent(parseInt(req.params.id));
+      if (!success) {
+        return res.status(404).json({ message: "Content not found" });
+      }
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ message: "Error deleting content", error });
+    }
+  });
+
+  // Chapters routes
+  app.get("/api/content/:contentId/chapters", async (req, res) => {
+    try {
+      const chapters = await storage.getChaptersByContent(parseInt(req.params.contentId));
+      res.json(chapters);
+    } catch (error) {
+      res.status(500).json({ message: "Error fetching chapters", error });
+    }
+  });
+
+  app.post("/api/chapters", ensureAdmin, async (req, res) => {
+    try {
+      const validData = insertChapterSchema.parse(req.body);
+      const chapter = await storage.createChapter(validData);
+      res.status(201).json(chapter);
+    } catch (error) {
+      res.status(400).json({ message: "Invalid data", error });
+    }
+  });
+
+  app.get("/api/chapters/:id", async (req, res) => {
+    try {
+      const chapterId = parseInt(req.params.id);
+      
+      // Get chapter details
+      const chapter = await storage.getChapter(chapterId);
+      if (!chapter) {
+        return res.status(404).json({ message: "Chapter not found" });
+      }
+
+      // Check if chapter is locked
+      let isUnlocked = !chapter.isLocked; // Free chapters are already unlocked
+      
+      if (chapter.isLocked && req.isAuthenticated() && req.user) {
+        // Check if user has unlocked this chapter
+        isUnlocked = await storage.isChapterUnlocked(req.user.id, chapterId);
+      }
+      
+      // If it's locked and the user hasn't unlocked it, return just the chapter info without content
+      if (!isUnlocked) {
+        return res.json({
+          chapter,
+          isUnlocked: false,
+          content: null
+        });
+      }
+      
+      // Increment view count if chapter is being read
+      await storage.incrementChapterViews(chapterId);
+      
+      // Chapter is unlocked or free, so get the content
+      const chapterContent = await storage.getChapterContentByChapter(chapterId);
+      
+      // Get comments
+      const comments = await storage.getCommentsByChapter(chapterId);
+      
+      // If authenticated, update reading history
+      if (req.isAuthenticated() && req.user) {
+        await storage.addReadingHistory(req.user.id, chapter.contentId, chapterId);
+      }
+      
+      res.json({
+        chapter,
+        isUnlocked: true,
+        content: chapterContent,
+        comments
+      });
+    } catch (error) {
+      res.status(500).json({ message: "Error fetching chapter", error });
+    }
+  });
+
+  app.put("/api/chapters/:id", ensureAdmin, async (req, res) => {
+    try {
+      const validData = insertChapterSchema.partial().parse(req.body);
+      const chapter = await storage.updateChapter(parseInt(req.params.id), validData);
+      if (!chapter) {
+        return res.status(404).json({ message: "Chapter not found" });
+      }
+      res.json(chapter);
+    } catch (error) {
+      res.status(400).json({ message: "Invalid data", error });
+    }
+  });
+
+  app.delete("/api/chapters/:id", ensureAdmin, async (req, res) => {
+    try {
+      const success = await storage.deleteChapter(parseInt(req.params.id));
+      if (!success) {
+        return res.status(404).json({ message: "Chapter not found" });
+      }
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ message: "Error deleting chapter", error });
+    }
+  });
+
+  // Chapter content routes
+  app.post("/api/chapter-content", ensureAdmin, async (req, res) => {
+    try {
+      const validData = insertChapterContentSchema.parse(req.body);
+      const content = await storage.createChapterContent(validData);
+      res.status(201).json(content);
+    } catch (error) {
+      res.status(400).json({ message: "Invalid data", error });
+    }
+  });
+
+  app.put("/api/chapter-content/:id", ensureAdmin, async (req, res) => {
+    try {
+      const validData = insertChapterContentSchema.partial().parse(req.body);
+      const content = await storage.updateChapterContent(parseInt(req.params.id), validData);
+      if (!content) {
+        return res.status(404).json({ message: "Chapter content not found" });
+      }
+      res.json(content);
+    } catch (error) {
+      res.status(400).json({ message: "Invalid data", error });
+    }
+  });
+
+  app.delete("/api/chapter-content/:id", ensureAdmin, async (req, res) => {
+    try {
+      const success = await storage.deleteChapterContent(parseInt(req.params.id));
+      if (!success) {
+        return res.status(404).json({ message: "Chapter content not found" });
+      }
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ message: "Error deleting chapter content", error });
+    }
+  });
+
+  // Chapter unlock route
+  app.post("/api/chapters/:id/unlock", ensureAuthenticated, async (req, res) => {
+    try {
+      const chapterId = parseInt(req.params.id);
+      const userId = req.user!.id;
+      
+      // Check if chapter is already unlocked
+      const isUnlocked = await storage.isChapterUnlocked(userId, chapterId);
+      if (isUnlocked) {
+        return res.status(400).json({ message: "Chapter is already unlocked" });
+      }
+      
+      // Get chapter details
+      const chapter = await storage.getChapter(chapterId);
+      if (!chapter) {
+        return res.status(404).json({ message: "Chapter not found" });
+      }
+      
+      // Check if chapter is locked and has price
+      if (!chapter.isLocked || !chapter.unlockPrice) {
+        return res.status(400).json({ message: "Chapter is either not locked or does not have an unlock price" });
+      }
+      
+      // Check if user has enough balance
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      if (user.balance < chapter.unlockPrice) {
+        return res.status(400).json({ 
+          message: "Insufficient balance", 
+          balance: user.balance, 
+          required: chapter.unlockPrice 
+        });
+      }
+      
+      // Deduct balance
+      const updatedUser = await storage.updateUserBalance(userId, -chapter.unlockPrice);
+      if (!updatedUser) {
+        return res.status(500).json({ message: "Failed to update balance" });
+      }
+      
+      // Unlock the chapter
+      const success = await storage.unlockChapter(userId, chapterId);
+      if (!success) {
+        // Refund if unlock fails
+        await storage.updateUserBalance(userId, chapter.unlockPrice);
+        return res.status(500).json({ message: "Failed to unlock chapter" });
+      }
+      
+      res.json({
+        message: "Chapter unlocked successfully",
+        newBalance: updatedUser.balance
+      });
+    } catch (error) {
+      res.status(500).json({ message: "Error unlocking chapter", error });
+    }
+  });
+
+  // User activity routes
+  app.post("/api/favorites/:contentId", ensureAuthenticated, async (req, res) => {
+    try {
+      const result = await storage.toggleFavorite(req.user!.id, parseInt(req.params.contentId));
+      res.json({ isFavorite: result });
+    } catch (error) {
+      res.status(500).json({ message: "Error toggling favorite", error });
+    }
+  });
+
+  app.get("/api/favorites", ensureAuthenticated, async (req, res) => {
+    try {
+      const favorites = await storage.getFavorites(req.user!.id);
+      res.json(favorites);
+    } catch (error) {
+      res.status(500).json({ message: "Error fetching favorites", error });
+    }
+  });
+
+  app.get("/api/reading-history", ensureAuthenticated, async (req, res) => {
+    try {
+      const history = await storage.getReadingHistory(req.user!.id);
+      res.json(history);
+    } catch (error) {
+      res.status(500).json({ message: "Error fetching reading history", error });
+    }
+  });
+
+  // Comments routes
+  app.post("/api/comments", ensureAuthenticated, async (req, res) => {
+    try {
+      const validData = insertCommentSchema.parse({
+        ...req.body,
+        userId: req.user!.id
+      });
+      
+      const comment = await storage.createComment(validData);
+      res.status(201).json(comment);
+    } catch (error) {
+      res.status(400).json({ message: "Invalid data", error });
+    }
+  });
+
+  app.get("/api/content/:contentId/comments", async (req, res) => {
+    try {
+      const comments = await storage.getCommentsByContent(parseInt(req.params.contentId));
+      
+      // Expand user info for each comment
+      const commentsWithUser = await Promise.all(comments.map(async (comment) => {
+        const user = await storage.getUser(comment.userId);
+        return {
+          ...comment,
+          user: user ? { 
+            id: user.id, 
+            username: user.username,
+            firstName: user.firstName,
+            lastName: user.lastName
+          } : undefined
+        };
+      }));
+      
+      res.json(commentsWithUser);
+    } catch (error) {
+      res.status(500).json({ message: "Error fetching comments", error });
+    }
+  });
+
+  app.delete("/api/comments/:id", ensureAuthenticated, async (req, res) => {
+    try {
+      const comment = await storage.getComment(parseInt(req.params.id));
+      if (!comment) {
+        return res.status(404).json({ message: "Comment not found" });
+      }
+      
+      // Only admin or comment author can delete
+      if (req.user!.role !== 'admin' && comment.userId !== req.user!.id) {
+        return res.status(403).json({ message: "Not authorized to delete this comment" });
+      }
+      
+      const success = await storage.deleteComment(parseInt(req.params.id));
+      if (!success) {
+        return res.status(500).json({ message: "Failed to delete comment" });
+      }
+      
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ message: "Error deleting comment", error });
+    }
+  });
+
+  // Reports routes
+  app.post("/api/reports", ensureAuthenticated, async (req, res) => {
+    try {
+      const validData = insertReportSchema.parse({
+        ...req.body,
+        userId: req.user!.id
+      });
+      
+      const report = await storage.createReport(validData);
+      res.status(201).json(report);
+    } catch (error) {
+      res.status(400).json({ message: "Invalid data", error });
+    }
+  });
+
+  app.get("/api/reports", ensureAdmin, async (req, res) => {
+    try {
+      const page = req.query.page ? parseInt(req.query.page as string) : 1;
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 10;
+      
+      const result = await storage.getAllReports(page, limit);
+      res.json(result);
+    } catch (error) {
+      res.status(500).json({ message: "Error fetching reports", error });
+    }
+  });
+
+  app.delete("/api/reports/:id", ensureAdmin, async (req, res) => {
+    try {
+      const success = await storage.deleteReport(parseInt(req.params.id));
+      if (!success) {
+        return res.status(404).json({ message: "Report not found" });
+      }
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ message: "Error deleting report", error });
+    }
+  });
+
+  // User management routes (admin only)
+  app.get("/api/users", ensureAdmin, async (req, res) => {
+    try {
+      const page = req.query.page ? parseInt(req.query.page as string) : 1;
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 10;
+      
+      const result = await storage.getAllUsers(page, limit);
+      
+      // Remove passwords from response
+      const usersWithoutPassword = result.users.map(user => {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { password, ...userWithoutPassword } = user;
+        return userWithoutPassword;
+      });
+      
+      res.json({
+        users: usersWithoutPassword,
+        total: result.total
+      });
+    } catch (error) {
+      res.status(500).json({ message: "Error fetching users", error });
+    }
+  });
+
+  app.delete("/api/users/:id", ensureAdmin, async (req, res) => {
+    try {
+      const userId = parseInt(req.params.id);
+      
+      // Prevent deleting yourself
+      if (req.user!.id === userId) {
+        return res.status(400).json({ message: "Cannot delete your own account" });
+      }
+      
+      const success = await storage.deleteUser(userId);
+      if (!success) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ message: "Error deleting user", error });
+    }
+  });
+
+  // Payment routes
+  app.post("/api/payments", ensureAuthenticated, async (req, res) => {
+    try {
+      // Validate the amount
+      const amount = parseInt(req.body.amount);
+      if (isNaN(amount) || amount < 10000 || amount % 1000 !== 0) {
+        return res.status(400).json({ 
+          message: "Invalid amount. Must be at least 10,000 VND and divisible by 1,000" 
+        });
+      }
+      
+      // Generate transaction ID
+      const transactionId = `TRX-${nanoid(10)}`;
+      
+      const validData = insertPaymentSchema.parse({
+        userId: req.user!.id,
+        transactionId,
+        amount,
+        method: req.body.method || 'bank_transfer',
+        status: 'pending'
+      });
+      
+      const payment = await storage.createPayment(validData);
+      res.status(201).json(payment);
+    } catch (error) {
+      res.status(400).json({ message: "Invalid data", error });
+    }
+  });
+
+  app.get("/api/payments", ensureAuthenticated, async (req, res) => {
+    try {
+      // Admin can view all payments, users can only view their own
+      if (req.user!.role === 'admin' && req.query.all === 'true') {
+        const page = req.query.page ? parseInt(req.query.page as string) : 1;
+        const limit = req.query.limit ? parseInt(req.query.limit as string) : 10;
+        
+        const result = await storage.getAllPayments(page, limit);
+        res.json(result);
+      } else {
+        const payments = await storage.getPaymentsByUser(req.user!.id);
+        res.json(payments);
+      }
+    } catch (error) {
+      res.status(500).json({ message: "Error fetching payments", error });
+    }
+  });
+
+  // Admin route to update payment status
+  app.put("/api/payments/:id/status", ensureAdmin, async (req, res) => {
+    try {
+      const paymentId = parseInt(req.params.id);
+      const statusSchema = z.enum(['pending', 'completed', 'failed']);
+      const { status } = statusSchema.parse(req.body);
+      
+      // Get payment info
+      const payment = await storage.getPayment(paymentId);
+      if (!payment) {
+        return res.status(404).json({ message: "Payment not found" });
+      }
+      
+      // Update the payment status
+      const updatedPayment = await storage.updatePaymentStatus(paymentId, status as 'pending' | 'completed' | 'failed');
+      if (!updatedPayment) {
+        return res.status(500).json({ message: "Failed to update payment status" });
+      }
+      
+      // If payment is completed, add amount to user's balance
+      if (status === 'completed' && payment.status !== 'completed') {
+        const updatedUser = await storage.updateUserBalance(payment.userId, payment.amount);
+        if (!updatedUser) {
+          return res.status(500).json({ message: "Failed to update user balance" });
+        }
+        
+        res.json({
+          payment: updatedPayment,
+          userBalance: updatedUser.balance
+        });
+      } else {
+        res.json({ payment: updatedPayment });
+      }
+    } catch (error) {
+      res.status(400).json({ message: "Invalid data", error });
+    }
+  });
+
+  // Advertisement routes
+  app.post("/api/ads", ensureAdmin, async (req, res) => {
+    try {
+      const validData = insertAdvertisementSchema.parse(req.body);
+      const ad = await storage.createAdvertisement(validData);
+      res.status(201).json(ad);
+    } catch (error) {
+      res.status(400).json({ message: "Invalid data", error });
+    }
+  });
+
+  app.get("/api/ads", async (req, res) => {
+    try {
+      if (req.query.position) {
+        // Get active ads for a specific position
+        const positionSchema = z.enum(['banner', 'sidebar', 'popup']);
+        const position = positionSchema.parse(req.query.position);
+        const ads = await storage.getActiveAdvertisements(position as 'banner' | 'sidebar' | 'popup');
+        
+        // Record ad views
+        ads.forEach(async (ad) => {
+          await storage.incrementAdViews(ad.id);
+        });
+        
+        res.json(ads);
+      } else {
+        // Admin view of all ads
+        const page = req.query.page ? parseInt(req.query.page as string) : 1;
+        const limit = req.query.limit ? parseInt(req.query.limit as string) : 10;
+        
+        const result = await storage.getAllAdvertisements(page, limit);
+        res.json(result);
+      }
+    } catch (error) {
+      res.status(500).json({ message: "Error fetching advertisements", error });
+    }
+  });
+
+  app.put("/api/ads/:id", ensureAdmin, async (req, res) => {
+    try {
+      const validData = insertAdvertisementSchema.partial().parse(req.body);
+      const ad = await storage.updateAdvertisement(parseInt(req.params.id), validData);
+      if (!ad) {
+        return res.status(404).json({ message: "Advertisement not found" });
+      }
+      res.json(ad);
+    } catch (error) {
+      res.status(400).json({ message: "Invalid data", error });
+    }
+  });
+
+  app.delete("/api/ads/:id", ensureAdmin, async (req, res) => {
+    try {
+      const success = await storage.deleteAdvertisement(parseInt(req.params.id));
+      if (!success) {
+        return res.status(404).json({ message: "Advertisement not found" });
+      }
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ message: "Error deleting advertisement", error });
+    }
+  });
+
+  // Record ad clicks
+  app.post("/api/ads/:id/click", async (req, res) => {
+    try {
+      const adId = parseInt(req.params.id);
+      
+      // Get ad details
+      const ad = await storage.getAdvertisement(adId);
+      if (!ad) {
+        return res.status(404).json({ message: "Advertisement not found" });
+      }
+      
+      // Increment click count
+      await storage.incrementAdClicks(adId);
+      
+      // Return target URL for redirection
+      res.json({ targetUrl: ad.targetUrl });
+    } catch (error) {
+      res.status(500).json({ message: "Error processing advertisement click", error });
+    }
+  });
+
+  const httpServer = createServer(app);
+  return httpServer;
+}

@@ -1,4 +1,4 @@
-import express, { type Express, type Request, type Response } from "express";
+import express, { type Express, type Request, type Response, type NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth } from "./auth";
@@ -22,7 +22,7 @@ import {
 } from "@shared/schema";
 
 // Middleware to ensure user is authenticated
-const ensureAuthenticated = (req: Request, res: Response, next: Function) => {
+const ensureAuthenticated = (req: Request, res: Response, next: NextFunction) => {
   if (req.isAuthenticated()) {
     return next();
   }
@@ -30,7 +30,7 @@ const ensureAuthenticated = (req: Request, res: Response, next: Function) => {
 };
 
 // Middleware to ensure user is admin
-const ensureAdmin = (req: Request, res: Response, next: Function) => {
+const ensureAdmin = (req: Request, res: Response, next: NextFunction) => {
   if (req.isAuthenticated() && req.user && req.user.role === 'admin') {
     return next();
   }

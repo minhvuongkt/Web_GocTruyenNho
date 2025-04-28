@@ -145,7 +145,9 @@ export default function ChapterManagementPage() {
         number: chapters ? Math.max(...chapters.map((c: any) => c.number), 0) + 1 : 1,
         title: "",
         isLocked: false,
-        unlockPrice: 0
+        unlockPrice: 0,
+        content: "",
+        releaseDate: new Date().toISOString().split('T')[0]
       });
       
       setIsAddDialogOpen(false);
@@ -280,6 +282,26 @@ export default function ChapterManagementPage() {
   // Xử lý form submit
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (content.type === 'manga' && chapterImages.length === 0) {
+      toast({
+        title: "Thiếu ảnh",
+        description: "Vui lòng tải lên ít nhất một ảnh cho chương truyện tranh",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // Nếu là truyện tranh, chuẩn bị dữ liệu ảnh
+    if (content.type === 'manga') {
+      // Trong môi trường thực tế, ở đây sẽ gửi ảnh lên server và chuyển thành URLs
+      // Hiện tại chỉ mô phỏng việc gửi dữ liệu chương
+      toast({
+        title: "Chức năng đang hoàn thiện",
+        description: `Đang xử lý ${chapterImages.length} ảnh tải lên...`,
+      });
+    }
+    
     createChapterMutation.mutate(newChapter);
   };
   
@@ -594,10 +616,69 @@ export default function ChapterManagementPage() {
                           </Button>
                         </div>
                         
-                        <div className="border rounded-md p-4 text-center min-h-[200px] flex flex-col items-center justify-center bg-muted/30">
-                          <ImageIcon className="h-10 w-10 text-muted-foreground mb-2" />
-                          <p className="text-sm text-muted-foreground mb-2">Kéo thả ảnh vào đây hoặc nhấn nút để tải lên</p>
-                          <p className="text-xs text-muted-foreground">Hỗ trợ: JPG, PNG, WEBP (Tối đa 5MB mỗi ảnh)</p>
+                        <div
+                          className="border rounded-md p-4 text-center min-h-[200px] flex flex-col items-center justify-center bg-muted/30 relative"
+                          onDragOver={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                          }}
+                          onDrop={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            
+                            if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                              const files = Array.from(e.dataTransfer.files);
+                              const imageFiles = files.filter(file => 
+                                ['image/jpeg', 'image/png', 'image/webp'].includes(file.type)
+                              );
+                              
+                              if (imageFiles.length > 0) {
+                                const changeEvent = {
+                                  target: {
+                                    files: Object.assign([], imageFiles)
+                                  }
+                                } as React.ChangeEvent<HTMLInputElement>;
+                                
+                                handleImageUpload(changeEvent);
+                              }
+                            }
+                          }}
+                        >
+                          {chapterImages.length > 0 ? (
+                            <div className="w-full">
+                              <div className="grid grid-cols-3 gap-2">
+                                {chapterImages.map((file, index) => (
+                                  <div key={index} className="relative group">
+                                    <img 
+                                      src={URL.createObjectURL(file)} 
+                                      alt={`Ảnh ${index + 1}`}
+                                      className="w-full h-24 object-cover rounded border"
+                                    />
+                                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity rounded">
+                                      <Button
+                                        type="button"
+                                        size="icon"
+                                        variant="ghost"
+                                        className="text-white"
+                                        onClick={() => {
+                                          setChapterImages(prev => prev.filter((_, i) => i !== index));
+                                        }}
+                                      >
+                                        <Trash2 className="h-4 w-4" />
+                                      </Button>
+                                    </div>
+                                    <span className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-xs p-1 text-center">{index + 1}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          ) : (
+                            <>
+                              <ImageIcon className="h-10 w-10 text-muted-foreground mb-2" />
+                              <p className="text-sm text-muted-foreground mb-2">Kéo thả ảnh vào đây hoặc nhấn nút để tải lên</p>
+                              <p className="text-xs text-muted-foreground">Hỗ trợ: JPG, PNG, WEBP (Tối đa 5MB mỗi ảnh)</p>
+                            </>
+                          )}
                         </div>
                         
                         <div className="text-sm text-muted-foreground">

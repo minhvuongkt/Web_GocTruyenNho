@@ -62,12 +62,42 @@ export function PaymentPage() {
     processing: false,
   });
 
-  // Bank account details (in a real app, this would come from the backend)
+  // Fetch bank settings from backend
+  const { data: vietQRConfig, isLoading: loadingVietQRConfig } = useQuery({
+    queryKey: ["/api/payment-settings/vietqr-config"],
+    queryFn: async () => {
+      try {
+        const res = await apiRequest("GET", "/api/payment-settings/vietqr-config");
+        return res.json();
+      } catch (error) {
+        console.error("Failed to fetch VietQR config", error);
+        return null;
+      }
+    }
+  });
+  
+  // Bank account details from backend config
   const bankDetails = {
-    bankName: "MB Bank",
-    accountNumber: "9999123456789",
-    accountName: "GocTruyenNho",
+    bankName: vietQRConfig?.bankSettings?.bankId 
+              ? getBankName(vietQRConfig.bankSettings.bankId) 
+              : "MB Bank",
+    accountNumber: vietQRConfig?.bankSettings?.accountNumber || "9999123456789",
+    accountName: vietQRConfig?.bankSettings?.accountName || "GocTruyenNho",
   };
+  
+  // Helper function to get bank name from ID
+  function getBankName(bankId: string): string {
+    const bankNames: Record<string, string> = {
+      'MB': 'MB Bank',
+      'VCB': 'Vietcombank',
+      'TCB': 'Techcombank',
+      'VPB': 'VPBank',
+      'VIB': 'VIB',
+      'ACB': 'ACB',
+      'TPB': 'TPBank',
+    };
+    return bankNames[bankId] || bankId;
+  }
 
   // Fetch payment history
   const { data: payments, isLoading: loadingPayments } = useQuery({

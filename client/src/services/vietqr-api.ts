@@ -50,12 +50,18 @@ export async function generateVietQR(params: VietQRParams): Promise<string> {
   try {
     // First, get API credentials from our backend
     const configResponse = await apiRequest('GET', '/api/payment-settings/vietqr-config');
-    const { clientId, apiKey } = await configResponse.json();
+    const { clientId, apiKey, bankSettings } = await configResponse.json();
     
     if (!clientId || !apiKey) {
       throw new Error('Missing VietQR API credentials');
     }
 
+    // Use bank settings from database if available
+    const accountNo = bankSettings?.accountNumber || params.accountNo;
+    const accountName = bankSettings?.accountName || params.accountName;
+    const acqId = bankSettings && bankSettings.bankId ? 
+                 getBankAcqId(bankSettings.bankId) : params.acqId;
+    
     // API endpoint for QR code generation
     const apiUrl = 'https://api.vietqr.io/v2/generate';
     
@@ -63,9 +69,9 @@ export async function generateVietQR(params: VietQRParams): Promise<string> {
     const requestData = {
       clientId,
       apiKey,
-      accountNo: params.accountNo,
-      accountName: params.accountName,
-      acqId: params.acqId,
+      accountNo: accountNo,
+      accountName: accountName,
+      acqId: acqId,
       amount: params.amount,
       addInfo: params.addInfo || '',
       format: 'text',

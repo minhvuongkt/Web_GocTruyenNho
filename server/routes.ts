@@ -1188,14 +1188,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Endpoint to provide VietQR configuration
   app.get("/api/payment-settings/vietqr-config", async (req, res) => {
     try {
-      // Verify if the API keys are available
-      if (!process.env.VIETQR_CLIENT_ID || !process.env.VIETQR_API_KEY) {
-        console.warn("VietQR credentials are missing");
+      // Get from database settings
+      let settings = await storage.getPaymentSettings();
+      
+      // If no settings exist, create default ones
+      if (!settings) {
+        settings = await storage.createDefaultPaymentSettings();
       }
       
+      // Verify if API credentials are available
+      if (!process.env.VIETQR_CLIENT_ID || !process.env.VIETQR_API_KEY) {
+        console.warn("VietQR API credentials are not set in environment variables");
+      }
+      
+      // Return credentials and settings
       res.json({
+        // API credentials from environment
         clientId: process.env.VIETQR_CLIENT_ID || '',
-        apiKey: process.env.VIETQR_API_KEY || ''
+        apiKey: process.env.VIETQR_API_KEY || '',
+        
+        // Bank settings from database
+        bankSettings: settings.vietQRConfig || {}
       });
     } catch (error) {
       console.error("Error fetching VietQR configuration:", error);

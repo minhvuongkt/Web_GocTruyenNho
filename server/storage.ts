@@ -209,7 +209,7 @@ export class DatabaseStorage implements IStorage {
 
   async deleteUser(id: number): Promise<boolean> {
     const result = await db.delete(users).where(eq(users.id, id));
-    return result.rowCount > 0;
+    return result.rowCount !== null && result.rowCount > 0;
   }
 
   // Genre management methods
@@ -247,7 +247,7 @@ export class DatabaseStorage implements IStorage {
     
     // Then delete the genre
     const result = await db.delete(genres).where(eq(genres.id, id));
-    return result.rowCount > 0;
+    return result.rowCount !== null && result.rowCount > 0;
   }
 
   // Author management methods
@@ -276,7 +276,7 @@ export class DatabaseStorage implements IStorage {
 
   async deleteAuthor(id: number): Promise<boolean> {
     const result = await db.delete(authors).where(eq(authors.id, id));
-    return result.rowCount > 0;
+    return result.rowCount !== null && result.rowCount > 0;
   }
 
   // Translation group management methods
@@ -305,7 +305,7 @@ export class DatabaseStorage implements IStorage {
 
   async deleteTranslationGroup(id: number): Promise<boolean> {
     const result = await db.delete(translationGroups).where(eq(translationGroups.id, id));
-    return result.rowCount > 0;
+    return result.rowCount !== null && result.rowCount > 0;
   }
 
   // Content management methods
@@ -459,7 +459,7 @@ export class DatabaseStorage implements IStorage {
       
       for (const chapter of chaptersList) {
         // Delete chapter content
-        await tx.delete(chapterContents).where(eq(chapterContents.chapterId, chapter.id));
+        await tx.delete(chapterContent).where(eq(chapterContent.chapterId, chapter.id));
         
         // Delete unlocked chapters
         await tx.delete(unlockedChapters).where(eq(unlockedChapters.chapterId, chapter.id));
@@ -481,14 +481,14 @@ export class DatabaseStorage implements IStorage {
       await tx.delete(reports).where(eq(reports.contentId, id));
       
       // Delete favorites
-      await tx.delete(favorites).where(eq(favorites.contentId, id));
+      await tx.delete(userFavorites).where(eq(userFavorites.contentId, id));
       
       // Delete reading history
       await tx.delete(readingHistory).where(eq(readingHistory.contentId, id));
       
       // Finally, delete the content
       const result = await tx.delete(content).where(eq(content.id, id));
-      return result.rowCount > 0;
+      return result.rowCount !== null && result.rowCount > 0;
     });
   }
 
@@ -499,7 +499,7 @@ export class DatabaseStorage implements IStorage {
       })
       .where(eq(content.id, id));
     
-    return result.rowCount > 0;
+    return result.rowCount !== null && result.rowCount > 0;
   }
 
   async searchContent(query: string, page: number = 1, limit: number = 10): Promise<{ content: Content[], total: number }> {
@@ -696,7 +696,7 @@ export class DatabaseStorage implements IStorage {
       })
       .where(eq(chapters.id, id));
     
-    return result.rowCount > 0;
+    return result.rowCount !== null && result.rowCount > 0;
   }
 
   // Chapter content management methods
@@ -748,7 +748,7 @@ export class DatabaseStorage implements IStorage {
     return db.select().from(comments)
       .where(and(
         eq(comments.contentId, contentId),
-        eq(comments.chapterId, null)
+        isNull(comments.chapterId)
       ))
       .orderBy(desc(comments.createdAt));
   }
@@ -765,7 +765,7 @@ export class DatabaseStorage implements IStorage {
     
     // Delete the comment
     const result = await db.delete(comments).where(eq(comments.id, id));
-    return result.rowCount > 0;
+    return result.rowCount !== null && result.rowCount > 0;
   }
 
   // Report management methods
@@ -799,7 +799,7 @@ export class DatabaseStorage implements IStorage {
 
   async deleteReport(id: number): Promise<boolean> {
     const result = await db.delete(reports).where(eq(reports.id, id));
-    return result.rowCount > 0;
+    return result.rowCount !== null && result.rowCount > 0;
   }
 
   // User content interaction methods
@@ -857,7 +857,7 @@ export class DatabaseStorage implements IStorage {
       await db.update(readingHistory)
         .set({
           chapterId,
-          updatedAt: new Date()
+          lastReadAt: new Date()
         })
         .where(eq(readingHistory.id, existingEntry.id));
     } else {
@@ -866,8 +866,7 @@ export class DatabaseStorage implements IStorage {
         userId,
         contentId,
         chapterId,
-        createdAt: new Date(),
-        updatedAt: new Date()
+        lastReadAt: new Date()
       });
     }
     
@@ -1022,7 +1021,7 @@ export class DatabaseStorage implements IStorage {
 
   async deleteAdvertisement(id: number): Promise<boolean> {
     const result = await db.delete(advertisements).where(eq(advertisements.id, id));
-    return result.rowCount > 0;
+    return result.rowCount !== null && result.rowCount > 0;
   }
 
   async incrementAdViews(id: number): Promise<boolean> {
@@ -1032,7 +1031,7 @@ export class DatabaseStorage implements IStorage {
       })
       .where(eq(advertisements.id, id));
     
-    return result.rowCount > 0;
+    return result.rowCount !== null && result.rowCount > 0;
   }
 
   async incrementAdClicks(id: number): Promise<boolean> {
@@ -1042,7 +1041,7 @@ export class DatabaseStorage implements IStorage {
       })
       .where(eq(advertisements.id, id));
     
-    return result.rowCount > 0;
+    return result.rowCount !== null && result.rowCount > 0;
   }
 
   // Payment settings methods

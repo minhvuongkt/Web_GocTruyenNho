@@ -36,8 +36,8 @@ export function ContentCard({ content }: ContentCardProps) {
 
   return (
     <Card className="overflow-hidden h-full flex flex-col hover:shadow-md transition-shadow">
-      <Link href={`/${content.type}/${content.id}`}>
-        <a className="block relative pt-[140%] overflow-hidden">
+      <Link to={`/${content.type}/${content.id}`}>
+        <div className="block relative pt-[140%] overflow-hidden cursor-pointer">
           <img
             src={content.thumbnail || defaultThumbnail}
             alt={content.title}
@@ -52,16 +52,16 @@ export function ContentCard({ content }: ContentCardProps) {
               {statusLabel}
             </Badge>
           </div>
-        </a>
+        </div>
       </Link>
       
       <CardContent className="flex-1 pt-3 pb-0">
-        <Link href={`/${content.type}/${content.id}`}>
-          <a className="no-underline">
+        <Link to={`/${content.type}/${content.id}`}>
+          <div className="cursor-pointer">
             <h3 className="font-semibold text-sm line-clamp-2 hover:text-primary transition-colors mb-1">
               {content.title}
             </h3>
-          </a>
+          </div>
         </Link>
       </CardContent>
       

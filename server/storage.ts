@@ -9,6 +9,7 @@ import {
   comments, type Comment, type InsertComment,
   reports, type Report, type InsertReport,
   payments, type Payment, type InsertPayment,
+  paymentSettings, type PaymentSettings, type InsertPaymentSettings,
   advertisements, type Advertisement, type InsertAdvertisement,
   contentGenres, userFavorites, readingHistory, unlockedChapters
 } from "@shared/schema";
@@ -109,6 +110,11 @@ export interface IStorage {
   deleteAdvertisement(id: number): Promise<boolean>;
   incrementAdViews(id: number): Promise<boolean>;
   incrementAdClicks(id: number): Promise<boolean>;
+  
+  // Payment Settings
+  getPaymentSettings(): Promise<PaymentSettings | undefined>;
+  createDefaultPaymentSettings(): Promise<PaymentSettings>;
+  updatePaymentSettings(settings: Partial<InsertPaymentSettings>): Promise<PaymentSettings | undefined>;
 
   // Session store
   sessionStore: session.Store;
@@ -130,6 +136,7 @@ export class MemStorage implements IStorage {
   private unlockedChapters: Map<string, { unlockedAt: Date }>;
   private payments: Map<number, Payment>;
   private advertisements: Map<number, Advertisement>;
+  private paymentSettings: PaymentSettings | null = null;
   
   private userId: number = 1;
   private genreId: number = 1;
@@ -143,6 +150,7 @@ export class MemStorage implements IStorage {
   private readingHistoryId: number = 1;
   private paymentId: number = 1;
   private advertisementId: number = 1;
+  private paymentSettingsId: number = 1;
 
   sessionStore: session.Store;
 

@@ -9,6 +9,7 @@ import {
   comments, type Comment, type InsertComment,
   reports, type Report, type InsertReport,
   payments, type Payment, type InsertPayment,
+  paymentSettings, type PaymentSettings, type InsertPaymentSettings,
   advertisements, type Advertisement, type InsertAdvertisement,
   contentGenres, userFavorites, readingHistory, unlockedChapters
 } from "@shared/schema";
@@ -937,5 +938,66 @@ export class DatabaseStorage implements IStorage {
       .returning({ updatedId: advertisements.id });
     
     return result.length > 0;
+  }
+
+  // Payment Settings management
+  async getPaymentSettings(): Promise<PaymentSettings | undefined> {
+    const [settings] = await db.select().from(paymentSettings).limit(1);
+    return settings;
+  }
+
+  async createDefaultPaymentSettings(): Promise<PaymentSettings> {
+    // Create default payment settings if none exist
+    const defaultSettings: InsertPaymentSettings = {
+      bankConfig: {
+        enabled: true,
+        accountNumber: "0123456789",
+        accountName: "CONG TY TNHH GOC TRUYEN NHO",
+        bankName: "Vietcombank",
+        bankBranch: "Ho Chi Minh",
+        transferContent: "GTN_{username}_{amount}"
+      },
+      vietQRConfig: {
+        enabled: true,
+        accountNumber: "0123456789",
+        accountName: "CONG TY TNHH GOC TRUYEN NHO",
+        bankId: "VCB",
+        template: "GTN_{username}_{amount}"
+      },
+      priceConfig: {
+        coinConversionRate: 1000,
+        minimumDeposit: 10000,
+        chapterUnlockPrice: 5,
+        discountTiers: [
+          { amount: 50000, discountPercent: 5 },
+          { amount: 100000, discountPercent: 10 },
+          { amount: 200000, discountPercent: 15 },
+        ]
+      }
+    };
+
+    const [newSettings] = await db.insert(paymentSettings).values(defaultSettings).returning();
+    return newSettings;
+  }
+
+  async updatePaymentSettings(settingsData: Partial<InsertPaymentSettings>): Promise<PaymentSettings | undefined> {
+    // Get existing settings or create default
+    const existingSettings = await this.getPaymentSettings();
+    
+    if (!existingSettings) {
+      return this.createDefaultPaymentSettings();
+    }
+    
+    // Update existing settings
+    const [updatedSettings] = await db
+      .update(paymentSettings)
+      .set({
+        ...settingsData,
+        updatedAt: new Date()
+      })
+      .where(eq(paymentSettings.id, existingSettings.id))
+      .returning();
+    
+    return updatedSettings;
   }
 }

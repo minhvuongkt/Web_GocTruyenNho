@@ -14,6 +14,7 @@ import {
   insertCommentSchema,
   insertReportSchema,
   insertPaymentSchema,
+  insertPaymentSettingsSchema,
   insertAdvertisementSchema
 } from "@shared/schema";
 
@@ -1029,36 +1030,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/payment-settings", ensureAdmin, async (req, res) => {
     try {
       // Get payment settings from database or create default
-      // For now, we'll return default settings
-      const paymentSettings = {
-        bankConfig: {
-          enabled: true,
-          accountNumber: "0123456789",
-          accountName: "CONG TY TNHH GOC TRUYEN NHO",
-          bankName: "Vietcombank",
-          bankBranch: "Ho Chi Minh",
-          transferContent: "GTN_{username}_{amount}"
-        },
-        vietQRConfig: {
-          enabled: true,
-          accountNumber: "0123456789",
-          accountName: "CONG TY TNHH GOC TRUYEN NHO",
-          bankId: "VCB",
-          template: "GTN_{username}_{amount}"
-        },
-        priceConfig: {
-          coinConversionRate: 1000,
-          minimumDeposit: 10000,
-          chapterUnlockPrice: 5,
-          discountTiers: [
-            { amount: 50000, discountPercent: 5 },
-            { amount: 100000, discountPercent: 10 },
-            { amount: 200000, discountPercent: 15 },
-          ]
-        }
-      };
+      let settings = await storage.getPaymentSettings();
       
-      res.json(paymentSettings);
+      // If no settings exist, create default ones
+      if (!settings) {
+        settings = await storage.createDefaultPaymentSettings();
+      }
+      
+      res.json(settings);
     } catch (error) {
       res.status(500).json({ message: "Error fetching payment settings", error });
     }
@@ -1066,11 +1045,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   app.put("/api/payment-settings", ensureAdmin, async (req, res) => {
     try {
-      // In a real implementation, save settings to database
-      // For now, just return the received settings
-      res.json(req.body);
+      // Validate data
+      const validData = insertPaymentSettingsSchema.partial().parse(req.body);
+      
+      // Update settings in database
+      const updatedSettings = await storage.updatePaymentSettings(validData);
+      
+      if (!updatedSettings) {
+        return res.status(404).json({ message: "Payment settings not found" });
+      }
+      
+      res.json(updatedSettings);
     } catch (error) {
-      res.status(500).json({ message: "Error updating payment settings", error });
+      res.status(400).json({ message: "Error updating payment settings", error });
+    }
+  });
+  
+  // Public route to get just the pricing configuration
+  app.get("/api/payment-settings/pricing", async (req, res) => {
+    try {
+      // Get payment settings
+      let settings = await storage.getPaymentSettings();
+      
+      // If no settings exist, create default ones
+      if (!settings) {
+        settings = await storage.createDefaultPaymentSettings();
+      }
+      
+      // Only return the pricing configuration part
+      res.json({
+        priceConfig: settings.priceConfig
+      });
+    } catch (error) {
+      res.status(500).json({ message: "Error fetching price configuration", error });
     }
   });
 

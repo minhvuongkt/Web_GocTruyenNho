@@ -894,6 +894,79 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // User route to confirm a payment (sends notification to admin)
+  app.post("/api/payments/:transactionId/confirm", ensureAuthenticated, async (req, res) => {
+    try {
+      const transactionId = req.params.transactionId;
+      
+      // Get payment by transaction ID
+      const payment = await storage.getPaymentByTransactionId(transactionId);
+      if (!payment) {
+        return res.status(404).json({ message: "Giao dịch không tồn tại" });
+      }
+      
+      // Check if payment belongs to the user
+      if (payment.userId !== req.user!.id) {
+        return res.status(403).json({ message: "Không có quyền xác nhận giao dịch này" });
+      }
+      
+      // Check if payment is already completed or failed
+      if (payment.status === 'completed') {
+        return res.status(400).json({ message: "Giao dịch đã được xác nhận trước đó" });
+      }
+      
+      if (payment.status === 'failed') {
+        return res.status(400).json({ message: "Giao dịch đã bị hủy hoặc thất bại" });
+      }
+      
+      // Get user data
+      const user = await storage.getUser(payment.userId);
+      if (!user) {
+        return res.status(404).json({ message: "Không tìm thấy thông tin người dùng" });
+      }
+
+      // Send notification to admin (in a real app, this would send an email)
+      const adminEmail = "hlmvuong123@gmail.com";
+      
+      // Log notification information for testing purposes
+      console.log(`[PAYMENT CONFIRMATION]
+        Transaction ID: ${transactionId}
+        User: ${user.username} (ID: ${user.id})
+        Amount: ${payment.amount} VND
+        Method: ${payment.method}
+        Time: ${new Date().toISOString()}
+        Status: Waiting for admin confirmation
+        Admin Email: ${adminEmail}
+      `);
+      
+      // In a real app with SendGrid integration:
+      // await sendEmail({
+      //   to: adminEmail,
+      //   from: "no-reply@goctruyennho.com",
+      //   subject: `[Xác nhận thanh toán] Giao dịch #${transactionId}`,
+      //   html: `
+      //     <h2>Thông báo xác nhận thanh toán</h2>
+      //     <p>Một người dùng đã xác nhận đã thanh toán và đang chờ duyệt.</p>
+      //     <p><strong>Mã giao dịch:</strong> ${transactionId}</p>
+      //     <p><strong>Người dùng:</strong> ${user.username} (ID: ${user.id})</p>
+      //     <p><strong>Số tiền:</strong> ${payment.amount.toLocaleString('vi-VN')} VND</p>
+      //     <p><strong>Phương thức:</strong> ${payment.method === 'bank_transfer' ? 'Chuyển khoản ngân hàng' : payment.method}</p>
+      //     <p><strong>Thời gian:</strong> ${new Date().toLocaleString('vi-VN')}</p>
+      //     <p>Vui lòng đăng nhập vào trang quản trị để xác nhận giao dịch này.</p>
+      //   `
+      // });
+      
+      res.json({ 
+        success: true, 
+        message: "Xác nhận thanh toán đã được gửi đến quản trị viên", 
+        payment 
+      });
+    } catch (error) {
+      console.error("Error confirming payment:", error);
+      res.status(500).json({ message: "Lỗi khi xác nhận thanh toán", error });
+    }
+  });
+
   // Admin route to update payment status
   app.put("/api/payments/:id/status", ensureAdmin, async (req, res) => {
     try {

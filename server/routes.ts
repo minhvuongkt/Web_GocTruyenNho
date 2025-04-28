@@ -10,6 +10,7 @@ import * as schema from '@shared/schema';
 import { createInsertSchema } from 'drizzle-zod';
 import { z } from 'zod';
 import { generateVietQRURL } from './payment-utils';
+import { setupAuth } from './auth';
 
 const ensureAuthenticated = (req: Request, res: Response, next: NextFunction) => {
   if (req.isAuthenticated()) {
@@ -34,6 +35,9 @@ const imageFilter = (req: any, file: Express.Multer.File, cb: Function) => {
 };
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Setup authentication
+  setupAuth(app);
+  
   // Setup multer for file uploads
   const upload = multer({
     storage: multer.diskStorage({

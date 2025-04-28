@@ -13,7 +13,10 @@ import {
   contentGenres, userFavorites, readingHistory, unlockedChapters
 } from "@shared/schema";
 import session from "express-session";
+import createMemoryStore from "memorystore";
 import { DatabaseStorage } from "./database-storage";
+
+const MemoryStore = createMemoryStore(session);
 
 export interface IStorage {
   // User management
@@ -143,7 +146,7 @@ export class MemStorage implements IStorage {
   private paymentId: number = 1;
   private advertisementId: number = 1;
 
-  sessionStore: session.SessionStore;
+  sessionStore: session.Store;
 
   constructor() {
     this.users = new Map();

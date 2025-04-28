@@ -24,7 +24,7 @@ const PostgresSessionStore = connectPg(session);
 type SessionStore = session.Store;
 
 export class DatabaseStorage implements IStorage {
-  sessionStore: session.SessionStore;
+  sessionStore: session.Store;
 
   constructor() {
     this.sessionStore = new PostgresSessionStore({ 
@@ -226,8 +226,8 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getContent(id: number): Promise<Content | undefined> {
-    const [content] = await db.select().from(content).where(eq(content.id, id));
-    return content;
+    const [contentItem] = await db.select().from(content).where(eq(content.id, id));
+    return contentItem;
   }
 
   async getContentWithDetails(id: number): Promise<{ content: Content, genres: Genre[], author: Author, translationGroup?: TranslationGroup } | undefined> {
@@ -279,43 +279,34 @@ export class DatabaseStorage implements IStorage {
   async getAllContent(page: number = 1, limit: number = 10, filter?: Partial<Content>): Promise<{ content: Content[], total: number }> {
     const offset = (page - 1) * limit;
     
-    // Build the query conditions based on the filter
-    let conditions = true; // Default condition is true (no filter)
+    // Build the base query
+    let query = db.select().from(content);
+    let countQuery = db.select({ count: count() }).from(content);
     
+    // Apply filters if any
     if (filter) {
-      const filterConditions = [];
-      
       if (filter.type) {
-        filterConditions.push(eq(content.type, filter.type));
+        query = query.where(eq(content.type, filter.type));
+        countQuery = countQuery.where(eq(content.type, filter.type));
       }
       
       if (filter.authorId) {
-        filterConditions.push(eq(content.authorId, filter.authorId));
+        query = query.where(eq(content.authorId, filter.authorId));
+        countQuery = countQuery.where(eq(content.authorId, filter.authorId));
       }
       
       if (filter.status) {
-        filterConditions.push(eq(content.status, filter.status));
-      }
-      
-      // If we have any filter conditions, combine them with AND
-      if (filterConditions.length > 0) {
-        conditions = and(...filterConditions);
+        query = query.where(eq(content.status, filter.status));
+        countQuery = countQuery.where(eq(content.status, filter.status));
       }
     }
     
     // Get the total count
-    const [countResult] = await db
-      .select({ count: count() })
-      .from(content)
-      .where(conditions);
-    
+    const [countResult] = await countQuery;
     const total = Number(countResult?.count || 0);
     
-    // Get the filtered content
-    const contentList = await db
-      .select()
-      .from(content)
-      .where(conditions)
+    // Complete the query with pagination and order
+    const contentList = await query
       .limit(limit)
       .offset(offset)
       .orderBy(desc(content.createdAt));
@@ -366,12 +357,12 @@ export class DatabaseStorage implements IStorage {
         .where(eq(contentGenres.contentId, id));
       
       // Delete all chapters and their content
-      const chapters = await tx
+      const chaptersList = await tx
         .select({ id: chapters.id })
         .from(chapters)
         .where(eq(chapters.contentId, id));
       
-      const chapterIds = chapters.map(c => c.id);
+      const chapterIds = chaptersList.map(c => c.id);
       
       if (chapterIds.length > 0) {
         // Delete chapter content
@@ -700,34 +691,27 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getReadingHistory(userId: number): Promise<{ content: Content, chapter: Chapter }[]> {
-    // Get the latest chapter read for each content
-    const subquery = db
-      .select({
-        maxId: sql<number>`max(${readingHistory.id})`,
-        contentId: readingHistory.contentId
-      })
-      .from(readingHistory)
-      .where(eq(readingHistory.userId, userId))
-      .groupBy(readingHistory.contentId);
-    
-    const latestHistories = await db
+    // Get all reading history for this user
+    const histories = await db
       .select()
       .from(readingHistory)
-      .innerJoin(
-        subquery,
-        and(
-          eq(readingHistory.id, subquery.maxId),
-          eq(readingHistory.contentId, subquery.contentId)
-        )
-      )
       .where(eq(readingHistory.userId, userId))
       .orderBy(desc(readingHistory.lastReadAt))
       .limit(20); // Limit to 20 most recent items
     
+    // Group by content and get only the latest chapter read for each content
+    const contentIdToHistory = new Map<number, typeof histories[0]>();
+    for (const history of histories) {
+      const existingHistory = contentIdToHistory.get(history.contentId);
+      if (!existingHistory || history.lastReadAt > existingHistory.lastReadAt) {
+        contentIdToHistory.set(history.contentId, history);
+      }
+    }
+    
     // Get content and chapter details
     const result: { content: Content, chapter: Chapter }[] = [];
     
-    for (const history of latestHistories) {
+    for (const history of contentIdToHistory.values()) {
       const [contentItem] = await db
         .select()
         .from(content)
@@ -745,6 +729,14 @@ export class DatabaseStorage implements IStorage {
         });
       }
     }
+    
+    // Sort by last read time
+    result.sort((a, b) => {
+      const historyA = contentIdToHistory.get(a.content.id);
+      const historyB = contentIdToHistory.get(b.content.id);
+      if (!historyA || !historyB) return 0;
+      return historyB.lastReadAt.getTime() - historyA.lastReadAt.getTime();
+    });
     
     return result;
   }

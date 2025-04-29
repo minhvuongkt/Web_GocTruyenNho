@@ -79,11 +79,12 @@ export function PaymentPage() {
   
   // Bank account details from backend config
   const bankDetails = {
-    bankName: vietQRConfig?.bankSettings?.bankId 
-              ? getBankName(vietQRConfig.bankSettings.bankId) 
+    bankName: vietQRConfig?.bankId 
+              ? getBankName(vietQRConfig.bankId) 
               : "MB Bank",
-    accountNumber: vietQRConfig?.bankSettings?.accountNumber || "9999123456789",
-    accountName: vietQRConfig?.bankSettings?.accountName || "GocTruyenNho",
+    accountNumber: vietQRConfig?.accountNumber || "9999123456789",
+    accountName: vietQRConfig?.accountName || "GocTruyenNho",
+    bankBin: vietQRConfig?.bankId || "970422" // MB Bank BIN
   };
   
   // Helper function to get bank name from ID
@@ -384,7 +385,7 @@ export function PaymentPage() {
                             amount={parseInt(amount)}
                             accountNo={bankDetails.accountNumber}
                             accountName={bankDetails.accountName}
-                            bankId={vietQRConfig?.bankSettings?.bankId || "MB"}
+                            bankId={bankDetails.bankBin}
                             addInfo={`NAPTIEN admin ${amount}`}
                           />
                         )}

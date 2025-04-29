@@ -331,19 +331,32 @@ export function PaymentPage() {
     queryClient,
   ]);
 
-  // Format remaining time
-  const getRemainingTimeText = () => {
-    if (!paymentDate) return "-";
+  // State to hold formatted time
+  const [remainingTime, setRemainingTime] = useState("-");
 
-    const now = new Date();
-    const expiry = new Date(paymentDate.getTime() + 10 * 60 * 1000);
-    const diff = Math.max(0, expiry.getTime() - now.getTime());
+  // Update remaining time every second
+  useEffect(() => {
+    if (!paymentDate) return;
 
-    const minutes = Math.floor(diff / 60000);
-    const seconds = Math.floor((diff % 60000) / 1000);
+    const updateTime = () => {
+      const now = new Date();
+      const expiry = new Date(paymentDate.getTime() + 10 * 60 * 1000);
+      const diff = Math.max(0, expiry.getTime() - now.getTime());
 
-    return `${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
-  };
+      const minutes = Math.floor(diff / 60000);
+      const seconds = Math.floor((diff % 60000) / 1000);
+
+      setRemainingTime(`${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`);
+    };
+
+    // Update immediately
+    updateTime();
+
+    // Then update every second
+    const interval = setInterval(updateTime, 1000);
+
+    return () => clearInterval(interval);
+  }, [paymentDate]);
 
   // Handle text copying
   const handleCopyText = (text: string, type: "account" | "content") => {
@@ -700,7 +713,7 @@ export function PaymentPage() {
                                       Thời gian còn lại:
                                     </div>
                                     <div className="font-medium text-amber-500">
-                                      {getRemainingTimeText()}
+                                      {remainingTime}
                                     </div>
                                   </div>
                                   <p className="text-xs text-muted-foreground">

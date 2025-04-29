@@ -532,42 +532,6 @@ export function PaymentSettingsPage() {
                 
                 <Separator />
                 
-                {/* Thêm cấu hình thời gian hết hạn */}
-                <div className="space-y-4">
-                  <Label className="text-base">Thời gian hết hạn thanh toán (phút)</Label>
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <div className="space-y-2">
-                      <Label htmlFor="bank-expiry">Chuyển khoản ngân hàng/VietQR</Label>
-                      <Input 
-                        id="bank-expiry"
-                        type="number"
-                        placeholder="Ví dụ: 10 phút"
-                        value={expiryConfig.bankTransfer}
-                        onChange={(e) => setExpiryConfig({
-                          ...expiryConfig, 
-                          bankTransfer: parseInt(e.target.value) || 10
-                        })}
-                      />
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor="payos-expiry">PayOS</Label>
-                      <Input 
-                        id="payos-expiry"
-                        type="number"
-                        placeholder="Ví dụ: 15 phút"
-                        value={expiryConfig.payos}
-                        onChange={(e) => setExpiryConfig({
-                          ...expiryConfig, 
-                          payos: parseInt(e.target.value) || 15
-                        })}
-                      />
-                    </div>
-                  </div>
-                </div>
-                
-                <Separator />
-                
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <Label className="text-base">Khuyến mãi theo mức nạp</Label>

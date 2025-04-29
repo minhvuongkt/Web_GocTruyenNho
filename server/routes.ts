@@ -337,21 +337,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const updateContentHandler = async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
-      const contentData = req.body;
-      const genreIds = contentData.genreIds;
+      const contentData = {...req.body}; // Tạo một bản sao để tránh thay đổi giá trị gốc
+      const genreIds = Array.isArray(contentData.genreIds) ? contentData.genreIds : undefined;
       delete contentData.genreIds;
+      
+      console.log("Updating content:", id, contentData, "Genre IDs:", genreIds);
 
       const updatedContent = await storage.updateContent(
         id,
         contentData,
-        genreIds,
+        genreIds
       );
+      
       if (!updatedContent) {
         return res.status(404).json({ error: "Content not found" });
       }
 
-      res.json(updatedContent);
+      // Lấy thông tin chi tiết của nội dung đã cập nhật để trả về đầy đủ
+      const contentWithDetails = await storage.getContentWithDetails(id);
+      res.json(contentWithDetails);
     } catch (error) {
+      console.error("Error updating content:", error);
       res.status(500).json({ error: "Failed to update content" });
     }
   };

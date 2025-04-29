@@ -564,45 +564,77 @@ export class DatabaseStorage implements IStorage {
     page: number = 1,
     limit: number = 10,
     filter: Partial<Content> = {},
-  ): Promise<{ content: Content[]; total: number }> {
+  ): Promise<{ content: any[]; total: number }> {
     const offset = (page - 1) * limit;
 
-    // Build the where clause based on filter
-    let query = db.select().from(content);
+    // Build the base query with joins for author and translation group
+    let baseQuery = db
+      .select({
+        content: content,
+        author: authors,
+        translationGroup: translationGroups,
+      })
+      .from(content)
+      .leftJoin(authors, eq(content.authorId, authors.id))
+      .leftJoin(translationGroups, eq(content.translationGroupId, translationGroups.id));
 
-    if (filter.type) {
-      query = query.where(eq(content.type, filter.type));
-    }
-
-    if (filter.status) {
-      query = query.where(eq(content.status, filter.status));
-    }
-
-    // Execute the query with limit and offset
-    const contentList = await query
-      .orderBy(desc(content.createdAt))
-      .limit(limit)
-      .offset(offset);
-
-    // Count the total matching items
+    // Build the count query
     let countQuery = db
       .select({
         count: sql<number>`count(*)`,
       })
       .from(content);
 
+    // Apply filters if provided
     if (filter.type) {
+      baseQuery = baseQuery.where(eq(content.type, filter.type));
       countQuery = countQuery.where(eq(content.type, filter.type));
     }
 
     if (filter.status) {
+      baseQuery = baseQuery.where(eq(content.status, filter.status));
       countQuery = countQuery.where(eq(content.status, filter.status));
     }
 
+    if (filter.authorId) {
+      baseQuery = baseQuery.where(eq(content.authorId, filter.authorId));
+      countQuery = countQuery.where(eq(content.authorId, filter.authorId));
+    }
+
+    // Get the total count
     const [{ count }] = await countQuery;
 
+    // Get the content data with pagination and ordering
+    const contentData = await baseQuery
+      .orderBy(desc(content.createdAt))
+      .limit(limit)
+      .offset(offset);
+
+    // For each content, get its genres
+    const contentWithDetails = await Promise.all(
+      contentData.map(async (item) => {
+        // Get genres for this content
+        const contentGenreList = await db
+          .select({
+            genre: genres,
+          })
+          .from(contentGenres)
+          .leftJoin(genres, eq(contentGenres.genreId, genres.id))
+          .where(eq(contentGenres.contentId, item.content.id));
+
+        const genresList = contentGenreList.map((g) => g.genre);
+
+        return {
+          ...item.content,
+          author: item.author,
+          translationGroup: item.translationGroup,
+          genres: genresList,
+        };
+      })
+    );
+
     return {
-      content: contentList,
+      content: contentWithDetails,
       total: count,
     };
   }
@@ -612,36 +644,41 @@ export class DatabaseStorage implements IStorage {
     contentData: Partial<InsertContent>,
     genreIds?: number[],
   ): Promise<Content | undefined> {
-    return await db.transaction(async (tx) => {
-      // Update the content
-      const [updatedContent] = await tx
-        .update(content)
-        .set(contentData)
-        .where(eq(content.id, id))
-        .returning();
+    try {
+      return await db.transaction(async (tx) => {
+        // Update the content
+        const [updatedContent] = await tx
+          .update(content)
+          .set(contentData)
+          .where(eq(content.id, id))
+          .returning();
 
-      if (!updatedContent) {
-        return undefined;
-      }
-
-      // Update genres if provided
-      if (genreIds !== undefined) {
-        // Delete existing associations
-        await tx.delete(contentGenres).where(eq(contentGenres.contentId, id));
-
-        // Add new associations
-        if (genreIds.length > 0) {
-          await tx.insert(contentGenres).values(
-            genreIds.map((genreId) => ({
-              contentId: id,
-              genreId,
-            })),
-          );
+        if (!updatedContent) {
+          return undefined;
         }
-      }
 
-      return updatedContent;
-    });
+        // Update genres if provided
+        if (genreIds !== undefined) {
+          // Delete existing associations
+          await tx.delete(contentGenres).where(eq(contentGenres.contentId, id));
+
+          // Add new associations
+          if (genreIds.length > 0) {
+            await tx.insert(contentGenres).values(
+              genreIds.map((genreId) => ({
+                contentId: id,
+                genreId,
+              })),
+            );
+          }
+        }
+
+        return updatedContent;
+      });
+    } catch (error) {
+      console.error("Error updating content:", error);
+      throw error;
+    }
   }
 
   async deleteContent(id: number): Promise<boolean> {

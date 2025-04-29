@@ -1170,23 +1170,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/ads", async (req, res) => {
     try {
       const position = req.query.position as "banner" | "sidebar" | "popup";
+      const isAdmin = req.isAuthenticated() && (req.user as any).role === "admin";
 
       if (position) {
         const ads = await storage.getActiveAdvertisements(position);
         return res.json(ads);
       }
 
-      // Default to admin view for testing
-      if (req.query.all === "true") {
+      // For admin view, always return all advertisements
+      if (isAdmin || req.query.all === "true") {
         const page = parseInt(req.query.page as string) || 1;
         const limit = parseInt(req.query.limit as string) || 10;
 
+        console.log("Fetching all advertisements for admin", { page, limit });
         const result = await storage.getAllAdvertisements(page, limit);
         return res.json(result);
       }
 
-      // Return empty array for any other request to avoid error
-      return res.json([]);
+      // Fallback for users without position specified
+      const allActiveAds = [];
+      const bannerAds = await storage.getActiveAdvertisements("banner");
+      const sidebarAds = await storage.getActiveAdvertisements("sidebar");
+      const popupAds = await storage.getActiveAdvertisements("popup");
+      return res.json([...bannerAds, ...sidebarAds, ...popupAds]);
     } catch (error) {
       console.error("Error fetching ads:", error);
       res.status(500).json({ error: "Failed to get ads" });

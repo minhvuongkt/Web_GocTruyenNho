@@ -393,7 +393,7 @@ export function PaymentPage() {
                             accountNo={bankDetails.accountNumber}
                             accountName={bankDetails.accountName}
                             bankId={bankDetails.bankBin}
-                            addInfo={`NAPTIEN admin ${amount}`}
+                            addInfo={`NAP_${user.username}`}
                           />
                         )}
                       </div>
@@ -436,12 +436,12 @@ export function PaymentPage() {
                             <div className="flex justify-between items-center">
                               <span className="text-muted-foreground">Nội dung CK:</span>
                               <div className="flex items-center">
-                                <span className="font-medium">NAPTIEN admin {amount}</span>
+                                <span className="font-medium">NAP_{user.username}</span>
                                 <Button
                                   variant="ghost"
                                   size="icon"
                                   className="h-7 w-7 ml-1"
-                                  onClick={() => handleCopyText(`NAPTIEN admin ${amount}`, 'content')}
+                                  onClick={() => handleCopyText(`NAP_${user.username}`, 'content')}
                                 >
                                   {copyStatus.content ? (
                                     <ClipboardCheck className="h-3.5 w-3.5 text-green-500" />

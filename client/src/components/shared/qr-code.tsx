@@ -27,7 +27,12 @@ export function QRCode({ amount, accountNo, accountName, bankId, addInfo }: QRCo
         
         try {
           // Sử dụng URL trực tiếp từ server thay vì gọi API
-          const qrData = `https://img.vietqr.io/image/${bankId}/${accountNo}/compact2?amount=${amount}&addInfo=${addInfo || `Nap tien ${amount}`}`;
+          // Encode nội dung thanh toán để tránh lỗi URL
+          const encodedAddInfo = encodeURIComponent(addInfo || `NAP_${accountName} ${amount}`);
+          
+          // Tạo URL VietQR trực tiếp
+          const qrData = `https://img.vietqr.io/image/${bankId}/${accountNo}/compact2?amount=${amount}&addInfo=${encodedAddInfo}`;
+          console.log("QR URL:", qrData);
           setQrImage(qrData);
           return;
         } catch (innerErr) {

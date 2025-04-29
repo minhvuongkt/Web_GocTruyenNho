@@ -1,69 +1,94 @@
 import { useState, useEffect } from 'react';
-import { createPayOSPaymentLink, checkPayOSPaymentStatus } from '@/services/payos-api';
-import { Loader2, ExternalLink, CheckCircle, AlertTriangle, Clock } from 'lucide-react';
+import { Loader2, ExternalLink, AlertTriangle, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent } from '@/components/ui/card';
+import { apiRequest } from "@/lib/queryClient";
+import { checkPayOSPaymentStatus } from '@/services/payos-api';
 
 interface PayOSPaymentProps {
-  payment: {
-    id: number;
-    transactionId: string;
-    amount: number;
-  };
-  onSuccess: () => void;
-  onError: (error: string) => void;
+  amount: number;
+  username: string;
+  onSuccess: (transId: string) => void;
+  onCancel?: () => void;
 }
 
-export function PayOSPayment({ payment, onSuccess, onError }: PayOSPaymentProps) {
+export function PayOSPayment({ amount, username, onSuccess, onCancel }: PayOSPaymentProps) {
   const [loading, setLoading] = useState(true);
   const [checking, setChecking] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null);
   const [qrCode, setQrCode] = useState<string | null>(null);
   const [orderCode, setOrderCode] = useState<string | null>(null);
-  const [statusText, setStatusText] = useState<string | null>(null);
-  const [statusColor, setStatusColor] = useState<string>('text-muted-foreground');
+  const [statusText, setStatusText] = useState<string>('Đang chờ thanh toán');
+  const [statusColor, setStatusColor] = useState<string>('text-amber-500');
   const { toast } = useToast();
 
-  // Create payment link on component mount
+  // Kiểm tra URL xem có callback từ PayOS không
   useEffect(() => {
-    async function createPayment() {
+    const paymentData = new URLSearchParams(window.location.search);
+    const status = paymentData.get('status');
+    const paymentId = paymentData.get('id');
+    
+    // Xử lý callback từ PayOS
+    if (status === 'success' && paymentId) {
+      toast({
+        title: "Đang xác nhận thanh toán",
+        description: "Vui lòng đợi trong giây lát..."
+      });
+      
+      // Thông báo thành công và chuyển về tab lịch sử
+      onSuccess(paymentId);
+      return;
+    } else if (status === 'cancel' && onCancel) {
+      onCancel();
+      return;
+    }
+  }, [onSuccess, onCancel, toast]);
+  
+  // Lấy thông tin thanh toán từ API
+  useEffect(() => {
+    const createPayment = async () => {
       try {
         setLoading(true);
         
-        const paymentData = {
-          amount: payment.amount,
-          orderCode: payment.transactionId,
-          description: `Nạp tiền vào tài khoản`,
-          returnUrl: `${window.location.origin}/payment?status=success`,
-          cancelUrl: `${window.location.origin}/payment?status=cancel`, 
-          expiredAt: Math.floor(Date.now() / 1000) + 600 // 10 minutes expiry
-        };
+        // Tạo thanh toán qua API
+        const response = await apiRequest('POST', '/api/payments', {
+          amount: amount,
+          method: 'payos'
+        });
         
-        const response = await createPayOSPaymentLink(paymentData);
-        
-        if (response.code !== '00') {
-          throw new Error(response.desc || 'Không thể tạo thanh toán');
+        if (!response.ok) {
+          throw new Error('Không thể tạo thanh toán. Vui lòng thử lại sau.');
         }
         
-        if (response.data) {
-          setOrderCode(response.data.orderCode);
-          setCheckoutUrl(response.data.checkoutUrl);
-          setQrCode(response.data.qrCode);
-          setStatusText('Đang chờ thanh toán');
-          setStatusColor('text-amber-500');
+        const data = await response.json();
+        
+        // Lưu thông tin thanh toán
+        if (data.paymentLink) {
+          setCheckoutUrl(data.paymentLink);
         }
+        
+        if (data.qrCode) {
+          setQrCode(data.qrCode);
+        }
+        
+        if (data.payment && data.payment.transactionId) {
+          setOrderCode(data.payment.transactionId);
+        }
+        
+        setStatusText('Đang chờ thanh toán');
+        setStatusColor('text-amber-500');
       } catch (err: any) {
-        setError(err.message || 'Lỗi khi tạo thanh toán');
-        onError(err.message || 'Lỗi khi tạo thanh toán');
+        setError(err.message || 'Đã xảy ra lỗi khi tạo thanh toán');
+        if (onCancel) onCancel();
       } finally {
         setLoading(false);
       }
-    }
-
+    };
+    
     createPayment();
-  }, [payment, onError]);
+  }, [amount, username, onCancel]);
 
   // Function to check payment status
   const checkPaymentStatus = async () => {
@@ -90,14 +115,14 @@ export function PayOSPayment({ payment, onSuccess, onError }: PayOSPaymentProps)
             description: "Tiền đã được cộng vào tài khoản của bạn",
             variant: "default"
           });
-          onSuccess();
+          onSuccess(orderCode);
         } else if (status === 'pending' || status === 'processing') {
           setStatusText('Đang chờ thanh toán');
           setStatusColor('text-amber-500');
         } else {
           setStatusText('Thanh toán thất bại');
           setStatusColor('text-destructive');
-          onError('Thanh toán thất bại hoặc bị hủy');
+          if (onCancel) onCancel();
         }
       }
     } catch (err: any) {

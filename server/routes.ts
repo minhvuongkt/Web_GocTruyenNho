@@ -1065,6 +1065,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Add API endpoint for fetching pricing settings
+  app.get("/api/payment-settings/pricing", async (req, res) => {
+    try {
+      let settings = await storage.getPaymentSettings();
+
+      if (!settings) {
+        settings = await storage.createDefaultPaymentSettings();
+      }
+
+      const priceConfig = settings.priceConfig as any;
+      
+      if (!priceConfig) {
+        return res.status(404).json({ error: "Price config not found" });
+      }
+
+      // Return pricing info including discount tiers
+      res.json({
+        coinConversionRate: priceConfig.coinConversionRate || 1000,
+        minimumDeposit: priceConfig.minimumDeposit || 10000,
+        chapterUnlockPrice: priceConfig.chapterUnlockPrice || 5,
+        discountTiers: priceConfig.discountTiers || [],
+        // Also include VietQR bank info for the payment form
+        bankBin: settings.vietQRConfig?.bankId || "MBBANK",
+        accountNumber: settings.vietQRConfig?.accountNumber || "0862713897",
+        accountName: settings.vietQRConfig?.accountName || "góc truyện nhỏ"
+      });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to get pricing settings" });
+    }
+  });
+  
   // PayOS routes
   app.post("/api/payos/create-payment", ensureAuthenticated, async (req, res) => {
     try {
@@ -1243,25 +1274,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.get("/api/payment-settings/pricing", async (req, res) => {
-    try {
-      let settings = await storage.getPaymentSettings();
 
-      if (!settings) {
-        settings = await storage.createDefaultPaymentSettings();
-      }
-
-      const priceConfig = settings.priceConfig as any;
-      
-      if (!priceConfig) {
-        return res.status(404).json({ error: "Price config not found" });
-      }
-
-      res.json(priceConfig);
-    } catch (error) {
-      res.status(500).json({ error: "Failed to get pricing settings" });
-    }
-  });
 
   // Genre Routes
   app.get("/api/genres", async (req, res) => {

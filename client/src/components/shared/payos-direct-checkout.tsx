@@ -41,13 +41,19 @@ export function PayOSDirectCheckout({
       const newOrderCode = `ORDER${Date.now().toString().slice(-6)}`;
       setOrderCode(newOrderCode);
       
-      // Call API to create payment
+      // Generate appropriate return/cancel URLs
+      const appUrl = window.location.origin;
+      const returnUrl = `${appUrl}/payment-callback?code=00&status=PAID&orderCode=${newOrderCode}`;
+      const cancelUrl = `${appUrl}/payment-callback?cancel=true&orderCode=${newOrderCode}`;
+      
+      // Call API to create payment with expiry time
       const response = await apiRequest("POST", "/api/payos/create-payment", {
         amount,
         orderCode: newOrderCode,
         description: description.length > 25 ? description.substring(0, 25) : description,
-        returnUrl: window.location.href,
-        cancelUrl: window.location.href
+        returnUrl,
+        cancelUrl,
+        expiryTime // Truyền thời gian hết hạn đã được cấu hình
       });
       
       if (!response.ok) {
@@ -207,11 +213,21 @@ export function PayOSDirectCheckout({
     });
     
     try {
-      // Gọi API hủy thanh toán
-      const response = await apiRequest("POST", `/api/payos/cancel/${orderCode}`);
+      // Gọi API hủy thanh toán - chuyển đổi định dạng orderCode nếu cần
+      // Đảm bảo mã giao dịch đúng định dạng mà server mong đợi
+      let cancelOrderCode = orderCode;
+      
+      // Thêm tiền tố ORDER nếu chưa có
+      if (!cancelOrderCode.startsWith('ORDER')) {
+        cancelOrderCode = `ORDER${cancelOrderCode}`;
+      }
+      
+      console.log("Sending cancel request for:", cancelOrderCode);
+      const response = await apiRequest("POST", `/api/payos/cancel/${cancelOrderCode}`);
       
       if (!response.ok) {
         const errorData = await response.json();
+        console.error("Server error during cancel:", errorData);
         throw new Error(errorData.desc || 'Không thể hủy thanh toán');
       }
       
@@ -349,62 +365,65 @@ export function PayOSDirectCheckout({
                         </div>
                       ) : (
                         <div id="qrcode-data-container" className="w-48 h-48 mx-auto">
-                          {/* Tự tạo QR code từ dữ liệu */}
-                          {useEffect(() => {
-                            if (qrCode && !qrCode.startsWith('data:') && !qrCode.startsWith('http')) {
-                              const container = document.getElementById('qrcode-data-container');
-                              if (container) {
-                                container.innerHTML = ''; // Xóa nội dung cũ
-                                
+                          {/* Hiển thị chuỗi VietQR dưới dạng QR code */}
+                          <div className="w-48 h-48 mx-auto flex flex-col items-center justify-center">
+                            {React.useEffect(() => {
+                              const renderQRCode = async () => {
                                 try {
-                                  // Thử tạo QR code từ dữ liệu
-                                  QRCode.toCanvas(
-                                    container, 
-                                    qrCode,
-                                    { 
-                                      width: 192,
-                                      margin: 2,
-                                      color: {
-                                        dark: '#000',
-                                        light: '#fff'
-                                      }
-                                    }, 
-                                    (error) => {
-                                      if (error) {
-                                        console.error('Error generating QR code from data:', error);
-                                        
-                                        // Hiển thị thông báo lỗi
-                                        const errorMsg = document.createElement('div');
-                                        errorMsg.className = 'w-48 h-48 mx-auto flex flex-col items-center justify-center text-center';
-                                        errorMsg.innerHTML = `
-                                          <p class="text-sm text-gray-700 font-medium mb-2">Mở ứng dụng ngân hàng</p>
-                                          <p class="text-xs text-gray-500">Quét mã VietQR hoặc chuyển khoản theo thông tin bên dưới</p>
-                                          <div class="mt-2 p-2 bg-gray-100 rounded-md">
-                                            <p class="text-xs text-gray-600">Mã giao dịch: ${orderCode || 'N/A'}</p>
-                                          </div>
-                                        `;
-                                        container.appendChild(errorMsg);
-                                      }
+                                  // Sử dụng thư viện QRCode để tạo QR code từ chuỗi VietQR
+                                  if (qrCode && !qrCode.startsWith('data:') && !qrCode.startsWith('http')) {
+                                    const container = document.getElementById('qrcode-data-container');
+                                    if (container) {
+                                      container.innerHTML = ''; // Xóa nội dung cũ
+                                      
+                                      // Tạo canvas element trước
+                                      const canvas = document.createElement('canvas');
+                                      canvas.width = 192;
+                                      canvas.height = 192;
+                                      container.appendChild(canvas);
+                                      
+                                      // Tạo QR code
+                                      await QRCode.toCanvas(
+                                        canvas,
+                                        qrCode,
+                                        { 
+                                          width: 192,
+                                          margin: 2,
+                                          color: {
+                                            dark: '#000',
+                                            light: '#fff'
+                                          },
+                                          errorCorrectionLevel: 'H'
+                                        }
+                                      );
                                     }
-                                  );
+                                  }
                                 } catch (err) {
-                                  console.error('Failed to generate QR code:', err);
+                                  console.error('Failed to generate VietQR code:', err);
                                   
-                                  // Hiển thị thông báo lỗi
-                                  const fallbackMsg = document.createElement('div');
-                                  fallbackMsg.className = 'w-48 h-48 mx-auto flex flex-col items-center justify-center text-center';
-                                  fallbackMsg.innerHTML = `
-                                    <p class="text-sm text-gray-700 font-medium mb-2">Mở ứng dụng ngân hàng</p>
-                                    <p class="text-xs text-gray-500">Quét mã VietQR hoặc chuyển khoản theo thông tin bên dưới</p>
-                                    <div class="mt-2 p-2 bg-gray-100 rounded-md">
-                                      <p class="text-xs text-gray-600">Mã giao dịch: ${orderCode || 'N/A'}</p>
-                                    </div>
-                                  `;
-                                  container.appendChild(fallbackMsg);
+                                  // Fall back to showing a text message
+                                  const container = document.getElementById('qrcode-data-container');
+                                  if (container) {
+                                    container.innerHTML = '';
+                                    
+                                    const fallbackMsg = document.createElement('div');
+                                    fallbackMsg.className = 'w-48 h-48 flex flex-col items-center justify-center text-center';
+                                    fallbackMsg.innerHTML = `
+                                      <p class="text-sm text-gray-700 font-medium mb-2">Mở ứng dụng ngân hàng</p>
+                                      <p class="text-xs text-gray-500 mb-2">Quét mã VietQR hoặc chuyển khoản theo thông tin</p>
+                                      <div class="p-2 bg-gray-50 border border-gray-200 rounded-md w-full">
+                                        <p class="text-xs text-gray-800 font-medium">Mã giao dịch:</p>
+                                        <p class="text-xs text-gray-600 break-all">${orderCode || 'N/A'}</p>
+                                      </div>
+                                    `;
+                                    container.appendChild(fallbackMsg);
+                                  }
                                 }
-                              }
-                            }
-                          }, [qrCode, orderCode])}
+                              };
+                              
+                              renderQRCode();
+                            }, [qrCode, orderCode])}
+                          </div>
                         </div>
                       )}
                     </>

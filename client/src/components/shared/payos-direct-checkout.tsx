@@ -1,22 +1,25 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Clock } from 'lucide-react';
 import { apiRequest } from '@/lib/queryClient';
 import { extractPayOSPaymentData, isValidPayOSResponse, extractPayOSErrorMessage } from '@/utils/payos-helpers';
+import QRCode from 'qrcode';
 
 interface PayOSDirectCheckoutProps {
   amount: number;
   description?: string;
   onSuccess: (orderCode: string) => void;
   onCancel?: () => void;
+  expiryTime?: number; // Thời gian hết hạn (giây), mặc định là 10 phút (600 giây)
 }
 
 export function PayOSDirectCheckout({ 
   amount, 
   description = "Nạp tiền", 
   onSuccess, 
-  onCancel 
+  onCancel,
+  expiryTime = 600 // Mặc định 10 phút
 }: PayOSDirectCheckoutProps) {
   const [isCreatingLink, setIsCreatingLink] = useState(false);
   const [qrCode, setQrCode] = useState<string | null>(null);
@@ -65,8 +68,8 @@ export function PayOSDirectCheckout({
       setQrCode(paymentData.qrCode || null);
       setCheckoutUrl(paymentData.checkoutUrl || null);
       
-      // Start the countdown timer (10 minutes = 600 seconds)
-      setCountdown(600);
+      // Đặt thời gian đếm ngược dựa trên thời gian hết hạn được cấu hình
+      setCountdown(expiryTime);
       
     } catch (error: any) {
       toast({

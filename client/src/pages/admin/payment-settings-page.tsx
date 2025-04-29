@@ -25,7 +25,8 @@ import {
   Save, 
   RefreshCw,
   CircleDollarSign,
-  BadgePercent
+  BadgePercent,
+  CreditCard as PaymentCard
 } from "lucide-react";
 
 export function PaymentSettingsPage() {
@@ -59,6 +60,15 @@ export function PaymentSettingsPage() {
       { amount: 100000, discountPercent: 10 },
       { amount: 200000, discountPercent: 15 },
     ]
+  });
+  
+  // PayOS configuration state
+  const [payosConfig, setPayosConfig] = useState({
+    enabled: false,
+    clientId: "",
+    apiKey: "",
+    checksumKey: "",
+    baseUrl: "https://api-sandbox.payos.vn"
   });
 
   // Fetch the current payment configuration

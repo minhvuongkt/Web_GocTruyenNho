@@ -9,6 +9,7 @@ import {
   doublePrecision,
   jsonb,
 } from "drizzle-orm/pg-core";
+import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -46,6 +47,8 @@ export const users = pgTable("users", {
   isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
+
+// We'll define the relations after all tables are defined
 
 // Content Tables
 export const genres = pgTable("genres", {

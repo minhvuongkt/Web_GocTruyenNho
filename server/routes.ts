@@ -986,6 +986,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Return only necessary public info
       res.json({
         bankId: vietQRConfig.bankId,
+        accountNumber: vietQRConfig.accountNumber,
         accountName: vietQRConfig.accountName,
         template: vietQRConfig.template,
       });

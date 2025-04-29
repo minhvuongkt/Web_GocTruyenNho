@@ -37,5 +37,5 @@ export function generateVietQRURL(data: VietQRPaymentData): string {
     params.append('template', data.template);
   }
   
-  return `${baseUrl}/${data.bankId}/${data.accountNumber}/${data.template || 'compact'}?${params.toString()}`;
+  return `${baseUrl}/${data.bankId}/${data.accountNumber}/${data.template || 'compact2'}?${params.toString()}`;
 }

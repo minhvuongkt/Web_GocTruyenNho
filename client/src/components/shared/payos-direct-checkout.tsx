@@ -237,33 +237,52 @@ export function PayOSDirectCheckout({
                 
                 <div className="bg-white p-2 border border-gray-200 rounded-md">
                   {qrCode ? (
-                    <img 
-                      src={qrCode.startsWith('data:image') ? qrCode : qrCode.startsWith('http') ? qrCode : `data:image/png;base64,${qrCode}`} 
-                      alt="QR Code thanh toán" 
-                      className="w-48 h-48 mx-auto"
-                      onError={(e) => {
-                        // Fallback nếu có lỗi (e.g., không phải base64 hợp lệ)
-                        console.log("QR code display error, using fallback");
-                        // Nếu là URL, giữ nguyên
-                        if (qrCode.startsWith('http')) {
-                          e.currentTarget.src = qrCode;
-                        } else if (qrCode.startsWith('00020101')) {
-                          // Fallback text - hiển thị thông báo thay vì QR không hợp lệ
-                          e.currentTarget.style.display = 'none';
-                          const container = e.currentTarget.parentElement;
-                          if (container) {
-                            const msg = document.createElement('div');
-                            msg.innerHTML = `
-                              <div class="w-48 h-48 mx-auto flex flex-col items-center justify-center text-center">
-                                <p class="text-sm text-gray-700 font-medium mb-2">Mở ứng dụng ngân hàng</p>
-                                <p class="text-xs text-gray-500">Quét mã VietQR hoặc chuyển khoản theo thông tin bên dưới</p>
-                              </div>
-                            `;
-                            container.appendChild(msg);
-                          }
-                        }
-                      }}
-                    />
+                    <>
+                      {/* Thử nhiều cách khác nhau để hiển thị mã QR */}
+                      {qrCode.startsWith('000201') ? (
+                        <div className="w-48 h-48 mx-auto flex flex-col items-center justify-center bg-gray-50 p-3 text-center">
+                          <p className="text-sm text-gray-700 font-medium mb-2">Mở ứng dụng ngân hàng</p>
+                          <p className="text-xs text-gray-500 mb-3">Quét mã VietQR hoặc chuyển khoản theo thông tin bên dưới</p>
+                          <p className="text-xs bg-white p-2 border border-gray-200 rounded text-gray-600 w-full overflow-hidden">
+                            {orderCode}
+                          </p>
+                        </div>
+                      ) : qrCode.startsWith('data:image') ? (
+                        <img 
+                          src={qrCode} 
+                          alt="QR Code thanh toán" 
+                          className="w-48 h-48 mx-auto"
+                        />
+                      ) : qrCode.startsWith('http') ? (
+                        <img 
+                          src={qrCode} 
+                          alt="QR Code thanh toán" 
+                          className="w-48 h-48 mx-auto"
+                        />
+                      ) : (
+                        <img 
+                          src={`data:image/png;base64,${qrCode}`} 
+                          alt="QR Code thanh toán" 
+                          className="w-48 h-48 mx-auto"
+                          onError={(e) => {
+                            console.log("QR code error, trying other format");
+                            e.currentTarget.style.display = 'none';
+                            // Hiển thị dạng text thay thế
+                            const container = e.currentTarget.parentElement;
+                            if (container) {
+                              const msg = document.createElement('div');
+                              msg.innerHTML = `
+                                <div class="w-48 h-48 mx-auto flex flex-col items-center justify-center text-center">
+                                  <p class="text-sm text-gray-700 font-medium mb-2">Mở ứng dụng ngân hàng</p>
+                                  <p class="text-xs text-gray-500">Quét mã VietQR hoặc chuyển khoản theo thông tin bên dưới</p>
+                                </div>
+                              `;
+                              container.appendChild(msg);
+                            }
+                          }}
+                        />
+                      )}
+                    </>
                   ) : (
                     <div className="w-48 h-48 mx-auto flex items-center justify-center bg-gray-100">
                       <p className="text-sm text-gray-500">Không thể tải mã QR</p>

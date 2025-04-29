@@ -238,13 +238,30 @@ export function PayOSDirectCheckout({
                 <div className="bg-white p-2 border border-gray-200 rounded-md">
                   {qrCode ? (
                     <img 
-                      src={`data:image/png;base64,${btoa(qrCode)}`} 
+                      src={qrCode.startsWith('data:image') ? qrCode : qrCode.startsWith('http') ? qrCode : `data:image/png;base64,${qrCode}`} 
                       alt="QR Code thanh toán" 
                       className="w-48 h-48 mx-auto"
                       onError={(e) => {
-                        // Nếu không thể hiển thị dưới dạng base64, thử hiển thị trực tiếp chuỗi QR
-                        e.currentTarget.src = qrCode;
-                        console.log("QR code display fallback", qrCode);
+                        // Fallback nếu có lỗi (e.g., không phải base64 hợp lệ)
+                        console.log("QR code display error, using fallback");
+                        // Nếu là URL, giữ nguyên
+                        if (qrCode.startsWith('http')) {
+                          e.currentTarget.src = qrCode;
+                        } else if (qrCode.startsWith('00020101')) {
+                          // Fallback text - hiển thị thông báo thay vì QR không hợp lệ
+                          e.currentTarget.style.display = 'none';
+                          const container = e.currentTarget.parentElement;
+                          if (container) {
+                            const msg = document.createElement('div');
+                            msg.innerHTML = `
+                              <div class="w-48 h-48 mx-auto flex flex-col items-center justify-center text-center">
+                                <p class="text-sm text-gray-700 font-medium mb-2">Mở ứng dụng ngân hàng</p>
+                                <p class="text-xs text-gray-500">Quét mã VietQR hoặc chuyển khoản theo thông tin bên dưới</p>
+                              </div>
+                            `;
+                            container.appendChild(msg);
+                          }
+                        }
                       }}
                     />
                   ) : (

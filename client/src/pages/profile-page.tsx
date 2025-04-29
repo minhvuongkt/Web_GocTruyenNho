@@ -10,15 +10,15 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
-import { 
-  Card, 
-  CardContent, 
-  CardDescription, 
-  CardFooter, 
-  CardHeader, 
-  CardTitle 
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
 } from "@/components/ui/card";
-import { 
+import {
   Form,
   FormControl,
   FormDescription,
@@ -36,17 +36,17 @@ import {
 } from "@/components/ui/select";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Switch } from "@/components/ui/switch";
-import { 
-  User, 
-  CreditCard, 
-  History, 
-  Heart, 
-  Settings, 
-  Moon, 
-  Sun, 
+import {
+  User,
+  CreditCard,
+  History,
+  Heart,
+  Settings,
+  Moon,
+  Sun,
   BookOpen,
   Trash2,
-  Loader2
+  Loader2,
 } from "lucide-react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -60,7 +60,7 @@ export function ProfilePage() {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const { theme, setTheme } = useTheme();
   const { toast } = useToast();
-  
+
   // Function to notify success
   const notifySuccess = (message: string) => {
     toast({
@@ -68,7 +68,7 @@ export function ProfilePage() {
       description: message,
     });
   };
-  
+
   // Function to notify error
   const notifyError = (message: string) => {
     toast({
@@ -77,20 +77,20 @@ export function ProfilePage() {
       variant: "destructive",
     });
   };
-  
+
   // Extract query parameters
   const search = new URLSearchParams(window.location.search);
-  const initialTab = search.get('tab') || 'profile';
-  
+  const initialTab = search.get("tab") || "profile";
+
   // State to manage active tab
   const [activeTab, setActiveTab] = useState(initialTab);
-  
+
   // Update URL when tab changes
   const handleTabChange = (value: string) => {
     setActiveTab(value);
     navigate(`/profile?tab=${value}`, { replace: true });
   };
-  
+
   // Define form schema
   const formSchema = z.object({
     firstName: z.string().optional(),
@@ -100,7 +100,7 @@ export function ProfilePage() {
     darkMode: z.boolean().default(false),
     displayMode: z.enum(["scroll", "pagination"]).default("scroll"),
   });
-  
+
   // Setup form
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -113,7 +113,7 @@ export function ProfilePage() {
       displayMode: "scroll",
     },
   });
-  
+
   // Update form values when user data changes
   useEffect(() => {
     if (user) {
@@ -122,13 +122,13 @@ export function ProfilePage() {
       form.setValue("email", user.email || "");
     }
   }, [user, form]);
-  
+
   // Update theme when darkMode changes
   useEffect(() => {
     const watchDarkMode = form.watch("darkMode");
     setTheme(watchDarkMode ? "dark" : "light");
   }, [form.watch("darkMode"), setTheme]);
-  
+
   // Update user profile mutation
   const updateProfileMutation = useMutation({
     mutationFn: async (userData: z.infer<typeof formSchema>) => {
@@ -154,34 +154,34 @@ export function ProfilePage() {
   function onSubmit(values: z.infer<typeof formSchema>) {
     updateProfileMutation.mutate(values);
   }
-  
+
   // Fetch reading history
   const { data: readingHistory, isLoading: loadingHistory } = useQuery({
     queryKey: ["/api/reading-history"],
     queryFn: async () => {
       const res = await apiRequest("GET", "/api/reading-history");
       return res.json();
-    }
+    },
   });
-  
+
   // Fetch favorites
   const { data: favorites, isLoading: loadingFavorites } = useQuery({
     queryKey: ["/api/favorites"],
     queryFn: async () => {
       const res = await apiRequest("GET", "/api/favorites");
       return res.json();
-    }
+    },
   });
-  
+
   // Fetch payments
   const { data: payments, isLoading: loadingPayments } = useQuery({
     queryKey: ["/api/payments"],
     queryFn: async () => {
       const res = await apiRequest("GET", "/api/payments");
       return res.json();
-    }
+    },
   });
-  
+
   // Mutation to remove favorite
   const removeFavoriteMutation = useMutation({
     mutationFn: async (contentId: number) => {
@@ -190,15 +190,15 @@ export function ProfilePage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/favorites"] });
-    }
+    },
   });
-  
+
   // If user is not logged in, redirect to auth page
   if (!user) {
     navigate("/auth");
     return null;
   }
-  
+
   return (
     <MainLayout>
       <div className="container mx-auto px-4 py-8">
@@ -223,9 +223,9 @@ export function ProfilePage() {
                       {formatCurrency(user.balance)}
                     </p>
                   </div>
-                  <Button 
-                    className="w-full" 
-                    onClick={() => setShowPaymentModal(true)}
+                  <Button
+                    className="w-full"
+                    onClick={() => (window.location.href = "/payment")}
                   >
                     <CreditCard className="mr-2 h-4 w-4" />
                     Nạp tiền
@@ -234,38 +234,42 @@ export function ProfilePage() {
                 <CardFooter className="flex flex-col space-y-2">
                   <Separator className="my-2" />
                   <div className="w-full">
-                    <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
+                    <Tabs
+                      value={activeTab}
+                      onValueChange={handleTabChange}
+                      className="w-full"
+                    >
                       <TabsList className="grid w-full grid-cols-1 h-auto">
-                        <TabsTrigger 
-                          value="profile" 
+                        <TabsTrigger
+                          value="profile"
                           className="flex items-center justify-start py-2 px-3"
                         >
                           <User className="mr-2 h-4 w-4" />
                           Hồ sơ
                         </TabsTrigger>
-                        <TabsTrigger 
-                          value="history" 
+                        <TabsTrigger
+                          value="history"
                           className="flex items-center justify-start py-2 px-3"
                         >
                           <History className="mr-2 h-4 w-4" />
                           Lịch sử đọc
                         </TabsTrigger>
-                        <TabsTrigger 
-                          value="favorites" 
+                        <TabsTrigger
+                          value="favorites"
                           className="flex items-center justify-start py-2 px-3"
                         >
                           <Heart className="mr-2 h-4 w-4" />
                           Yêu thích
                         </TabsTrigger>
-                        <TabsTrigger 
-                          value="payments" 
+                        <TabsTrigger
+                          value="payments"
                           className="flex items-center justify-start py-2 px-3"
                         >
                           <CreditCard className="mr-2 h-4 w-4" />
                           Thanh toán
                         </TabsTrigger>
-                        <TabsTrigger 
-                          value="settings" 
+                        <TabsTrigger
+                          value="settings"
                           className="flex items-center justify-start py-2 px-3"
                         >
                           <Settings className="mr-2 h-4 w-4" />
@@ -275,8 +279,8 @@ export function ProfilePage() {
                     </Tabs>
                   </div>
                   <Separator className="my-2" />
-                  <Button 
-                    variant="destructive" 
+                  <Button
+                    variant="destructive"
                     onClick={() => logoutMutation.mutate()}
                     disabled={logoutMutation.isPending}
                     className="w-full"
@@ -291,7 +295,7 @@ export function ProfilePage() {
               </Card>
             </div>
           </div>
-          
+
           {/* Main content */}
           <div className="md:w-3/4">
             <Card>
@@ -304,19 +308,30 @@ export function ProfilePage() {
                   {activeTab === "settings" && "Cài đặt tài khoản"}
                 </CardTitle>
                 <CardDescription>
-                  {activeTab === "profile" && "Quản lý thông tin cá nhân của bạn"}
+                  {activeTab === "profile" &&
+                    "Quản lý thông tin cá nhân của bạn"}
                   {activeTab === "history" && "Xem lại những truyện bạn đã đọc"}
-                  {activeTab === "favorites" && "Quản lý danh sách truyện yêu thích"}
-                  {activeTab === "payments" && "Xem lịch sử giao dịch và nạp tiền"}
-                  {activeTab === "settings" && "Tùy chỉnh trải nghiệm đọc truyện"}
+                  {activeTab === "favorites" &&
+                    "Quản lý danh sách truyện yêu thích"}
+                  {activeTab === "payments" &&
+                    "Xem lịch sử giao dịch và nạp tiền"}
+                  {activeTab === "settings" &&
+                    "Tùy chỉnh trải nghiệm đọc truyện"}
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
+                <Tabs
+                  value={activeTab}
+                  onValueChange={handleTabChange}
+                  className="w-full"
+                >
                   {/* Profile Tab */}
                   <TabsContent value="profile" className="mt-0">
                     <Form {...form}>
-                      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                      <form
+                        onSubmit={form.handleSubmit(onSubmit)}
+                        className="space-y-6"
+                      >
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <FormField
                             control={form.control}
@@ -345,7 +360,7 @@ export function ProfilePage() {
                             )}
                           />
                         </div>
-                        
+
                         <FormField
                           control={form.control}
                           name="email"
@@ -353,7 +368,11 @@ export function ProfilePage() {
                             <FormItem>
                               <FormLabel>Email</FormLabel>
                               <FormControl>
-                                <Input placeholder="Nhập email" {...field} readOnly />
+                                <Input
+                                  placeholder="Nhập email"
+                                  {...field}
+                                  readOnly
+                                />
                               </FormControl>
                               <FormDescription>
                                 Không thể thay đổi email.
@@ -362,14 +381,17 @@ export function ProfilePage() {
                             </FormItem>
                           )}
                         />
-                        
+
                         <FormField
                           control={form.control}
                           name="gender"
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel>Giới tính</FormLabel>
-                              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                              <Select
+                                onValueChange={field.onChange}
+                                defaultValue={field.value}
+                              >
                                 <FormControl>
                                   <SelectTrigger>
                                     <SelectValue placeholder="Chọn giới tính" />
@@ -385,9 +407,9 @@ export function ProfilePage() {
                             </FormItem>
                           )}
                         />
-                        
-                        <Button 
-                          type="submit" 
+
+                        <Button
+                          type="submit"
                           disabled={updateProfileMutation.isPending}
                         >
                           {updateProfileMutation.isPending && (
@@ -398,7 +420,7 @@ export function ProfilePage() {
                       </form>
                     </Form>
                   </TabsContent>
-                  
+
                   {/* Reading History Tab */}
                   <TabsContent value="history" className="mt-0">
                     {loadingHistory ? (
@@ -408,19 +430,25 @@ export function ProfilePage() {
                     ) : readingHistory && readingHistory.length > 0 ? (
                       <div className="space-y-4">
                         {readingHistory.map((item: any) => (
-                          <div key={`${item.content.id}-${item.chapter.id}`} className="flex border-b border-border pb-4">
+                          <div
+                            key={`${item.content.id}-${item.chapter.id}`}
+                            className="flex border-b border-border pb-4"
+                          >
                             <div className="w-20 h-24 overflow-hidden rounded-md mr-4">
-                              <img 
-                                src={item.content.coverImage || (item.content.type === 'manga' ? 
-                                  'https://images.unsplash.com/photo-1608231387042-66d1773070a5?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&h=400&q=80' : 
-                                  'https://images.unsplash.com/photo-1544947950-fa07a98d237f?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&h=400&q=80')}
+                              <img
+                                src={
+                                  item.content.coverImage ||
+                                  (item.content.type === "manga"
+                                    ? "https://images.unsplash.com/photo-1608231387042-66d1773070a5?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&h=400&q=80"
+                                    : "https://images.unsplash.com/photo-1544947950-fa07a98d237f?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&h=400&q=80")
+                                }
                                 alt={item.content.title}
                                 className="w-full h-full object-cover"
                               />
                             </div>
                             <div className="flex-1">
                               <h3 className="font-medium">
-                                <Link 
+                                <Link
                                   href={`/${item.content.type}/${item.content.id}`}
                                   className="hover:text-primary"
                                 >
@@ -428,15 +456,15 @@ export function ProfilePage() {
                                 </Link>
                               </h3>
                               <p className="text-sm text-muted-foreground">
-                                Đã đọc: Chương {item.chapter.number} - {item.chapter.title || `Chương ${item.chapter.number}`}
+                                Đã đọc: Chương {item.chapter.number} -{" "}
+                                {item.chapter.title ||
+                                  `Chương ${item.chapter.number}`}
                               </p>
                               <div className="flex justify-between items-center mt-2">
-                                <Button 
-                                  variant="outline" 
-                                  size="sm" 
-                                  asChild
-                                >
-                                  <Link href={`/${item.content.type}/${item.content.id}/chapter/${item.chapter.id}`}>
+                                <Button variant="outline" size="sm" asChild>
+                                  <Link
+                                    href={`/${item.content.type}/${item.content.id}/chapter/${item.chapter.id}`}
+                                  >
                                     <BookOpen className="mr-2 h-4 w-4" />
                                     Tiếp tục đọc
                                   </Link>
@@ -459,7 +487,7 @@ export function ProfilePage() {
                       </div>
                     )}
                   </TabsContent>
-                  
+
                   {/* Favorites Tab */}
                   <TabsContent value="favorites" className="mt-0">
                     {loadingFavorites ? (
@@ -469,19 +497,25 @@ export function ProfilePage() {
                     ) : favorites && favorites.length > 0 ? (
                       <div className="space-y-4">
                         {favorites.map((item: any) => (
-                          <div key={item.id} className="flex border-b border-border pb-4">
+                          <div
+                            key={item.id}
+                            className="flex border-b border-border pb-4"
+                          >
                             <div className="w-20 h-24 overflow-hidden rounded-md mr-4">
-                              <img 
-                                src={item.coverImage || (item.type === 'manga' ? 
-                                  'https://images.unsplash.com/photo-1608231387042-66d1773070a5?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&h=400&q=80' : 
-                                  'https://images.unsplash.com/photo-1544947950-fa07a98d237f?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&h=400&q=80')}
+                              <img
+                                src={
+                                  item.coverImage ||
+                                  (item.type === "manga"
+                                    ? "https://images.unsplash.com/photo-1608231387042-66d1773070a5?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&h=400&q=80"
+                                    : "https://images.unsplash.com/photo-1544947950-fa07a98d237f?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&h=400&q=80")
+                                }
                                 alt={item.title}
                                 className="w-full h-full object-cover"
                               />
                             </div>
                             <div className="flex-1">
                               <h3 className="font-medium">
-                                <Link 
+                                <Link
                                   href={`/${item.type}/${item.id}`}
                                   className="hover:text-primary"
                                 >
@@ -489,23 +523,23 @@ export function ProfilePage() {
                                 </Link>
                               </h3>
                               <p className="text-sm text-muted-foreground">
-                                {item.alternativeTitle || item.type === 'manga' ? 'Truyện tranh' : 'Truyện chữ'}
+                                {item.alternativeTitle || item.type === "manga"
+                                  ? "Truyện tranh"
+                                  : "Truyện chữ"}
                               </p>
                               <div className="flex justify-between items-center mt-2">
-                                <Button 
-                                  variant="outline" 
-                                  size="sm" 
-                                  asChild
-                                >
+                                <Button variant="outline" size="sm" asChild>
                                   <Link href={`/${item.type}/${item.id}`}>
                                     <BookOpen className="mr-2 h-4 w-4" />
                                     Đọc truyện
                                   </Link>
                                 </Button>
-                                <Button 
-                                  variant="ghost" 
+                                <Button
+                                  variant="ghost"
                                   size="sm"
-                                  onClick={() => removeFavoriteMutation.mutate(item.id)}
+                                  onClick={() =>
+                                    removeFavoriteMutation.mutate(item.id)
+                                  }
                                   disabled={removeFavoriteMutation.isPending}
                                 >
                                   <Trash2 className="h-4 w-4 text-muted-foreground" />
@@ -525,18 +559,23 @@ export function ProfilePage() {
                       </div>
                     )}
                   </TabsContent>
-                  
+
                   {/* Payments Tab */}
                   <TabsContent value="payments" className="mt-0">
                     <div className="space-y-4">
                       <div className="flex justify-between items-center">
-                        <h3 className="text-lg font-medium">Lịch sử giao dịch</h3>
-                        <Button onClick={() => setShowPaymentModal(true)}>
+                        <h3 className="text-lg font-medium">
+                          Lịch sử giao dịch
+                        </h3>
+                        <Button
+                          className="w-full"
+                          onClick={() => (window.location.href = "/payment")}
+                        >
                           <CreditCard className="mr-2 h-4 w-4" />
                           Nạp tiền
                         </Button>
                       </div>
-                      
+
                       {loadingPayments ? (
                         <div className="flex justify-center py-8">
                           <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -548,23 +587,35 @@ export function ProfilePage() {
                               <CardContent className="p-4">
                                 <div className="flex justify-between items-center">
                                   <div>
-                                    <p className="font-semibold">{formatCurrency(payment.amount)}</p>
+                                    <p className="font-semibold">
+                                      {formatCurrency(payment.amount)}
+                                    </p>
                                     <p className="text-sm text-muted-foreground">
-                                      {payment.method === 'bank_transfer' ? 'Chuyển khoản ngân hàng' : 
-                                       payment.method === 'credit_card' ? 'Thẻ tín dụng' : 'Ví điện tử'}
+                                      {payment.method === "bank_transfer"
+                                        ? "Chuyển khoản ngân hàng"
+                                        : payment.method === "credit_card"
+                                          ? "Thẻ tín dụng"
+                                          : "Ví điện tử"}
                                     </p>
                                     <p className="text-xs text-muted-foreground mt-1">
                                       Mã giao dịch: {payment.transactionId}
                                     </p>
                                   </div>
                                   <div className="text-right">
-                                    <div className={`text-sm ${
-                                      payment.status === 'completed' ? 'text-green-600 dark:text-green-400' : 
-                                      payment.status === 'pending' ? 'text-yellow-600 dark:text-yellow-400' : 
-                                      'text-red-600 dark:text-red-400'
-                                    }`}>
-                                      {payment.status === 'completed' ? 'Thành công' : 
-                                       payment.status === 'pending' ? 'Đang xử lý' : 'Thất bại'}
+                                    <div
+                                      className={`text-sm ${
+                                        payment.status === "completed"
+                                          ? "text-green-600 dark:text-green-400"
+                                          : payment.status === "pending"
+                                            ? "text-yellow-600 dark:text-yellow-400"
+                                            : "text-red-600 dark:text-red-400"
+                                      }`}
+                                    >
+                                      {payment.status === "completed"
+                                        ? "Thành công"
+                                        : payment.status === "pending"
+                                          ? "Đang xử lý"
+                                          : "Thất bại"}
                                     </div>
                                     <p className="text-xs text-muted-foreground">
                                       {formatDate(payment.createdAt)}
@@ -579,18 +630,25 @@ export function ProfilePage() {
                         <div className="text-center py-8 text-muted-foreground">
                           <CreditCard className="h-12 w-12 mx-auto mb-3 text-muted-foreground/50" />
                           <p>Bạn chưa có giao dịch nào.</p>
-                          <Button onClick={() => setShowPaymentModal(true)} className="mt-4">
-                            Nạp tiền ngay
+                          <Button
+                            className="w-full"
+                            onClick={() => (window.location.href = "/payment")}
+                          >
+                            <CreditCard className="mr-2 h-4 w-4" />
+                            Nạp tiền
                           </Button>
                         </div>
                       )}
                     </div>
                   </TabsContent>
-                  
+
                   {/* Settings Tab */}
                   <TabsContent value="settings" className="mt-0">
                     <Form {...form}>
-                      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                      <form
+                        onSubmit={form.handleSubmit(onSubmit)}
+                        className="space-y-6"
+                      >
                         <FormField
                           control={form.control}
                           name="darkMode"
@@ -601,7 +659,8 @@ export function ProfilePage() {
                                   Chế độ tối
                                 </FormLabel>
                                 <FormDescription>
-                                  Sử dụng chế độ tối để giảm mỏi mắt khi đọc vào ban đêm.
+                                  Sử dụng chế độ tối để giảm mỏi mắt khi đọc vào
+                                  ban đêm.
                                 </FormDescription>
                               </div>
                               <FormControl>
@@ -617,7 +676,7 @@ export function ProfilePage() {
                             </FormItem>
                           )}
                         />
-                        
+
                         <FormField
                           control={form.control}
                           name="displayMode"
@@ -628,8 +687,8 @@ export function ProfilePage() {
                                 Chọn cách hiển thị ảnh khi đọc truyện tranh.
                               </FormDescription>
                               <FormControl>
-                                <RadioGroup 
-                                  onValueChange={field.onChange} 
+                                <RadioGroup
+                                  onValueChange={field.onChange}
                                   defaultValue={field.value}
                                   className="flex flex-col space-y-1"
                                 >
@@ -655,7 +714,7 @@ export function ProfilePage() {
                             </FormItem>
                           )}
                         />
-                        
+
                         <Button type="submit">Lưu cài đặt</Button>
                       </form>
                     </Form>
@@ -666,11 +725,11 @@ export function ProfilePage() {
           </div>
         </div>
       </div>
-      
+
       {/* Payment Modal */}
-      <PaymentModal 
-        isOpen={showPaymentModal} 
-        onClose={() => setShowPaymentModal(false)} 
+      <PaymentModal
+        isOpen={showPaymentModal}
+        onClose={() => setShowPaymentModal(false)}
       />
     </MainLayout>
   );

@@ -19,6 +19,7 @@ import ProfilePage from "@/pages/profile-page";
 import PaymentPage from "@/pages/payment-page";
 import SearchPage from "@/pages/search-page";
 import { PaymentTestPage } from "@/pages/payment-test-page";
+import PaymentCallbackPage from "@/pages/payment-callback";
 
 // Admin Pages
 import DashboardPage from "@/pages/admin/dashboard-page";
@@ -70,8 +71,9 @@ function Router() {
       <ProtectedRoute path="/profile" component={ProfilePage} />
       <ProtectedRoute path="/payment" component={PaymentPage} />
       
-      {/* Test payment page */}
+      {/* Payment related pages */}
       <Route path="/payment-test" component={PaymentTestPage} />
+      <Route path="/payment-callback" component={PaymentCallbackPage} />
       
       {/* Admin routes */}
       <ProtectedRoute path="/admin" component={DashboardPage} requireAdmin={true} />

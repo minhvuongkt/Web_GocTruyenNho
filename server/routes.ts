@@ -10,7 +10,11 @@ import * as schema from "@shared/schema";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { generateVietQRURL } from "./payment-utils";
-import { createPayOSPaymentLink, checkPayOSPaymentStatus, verifyPayOSWebhook } from "./payos-utils";
+import {
+  createPayOSPaymentLink,
+  checkPayOSPaymentStatus,
+  verifyPayOSWebhook,
+} from "./payos-utils";
 import { setupAuth } from "./auth";
 
 const ensureAuthenticated = (
@@ -338,10 +342,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const updateContentHandler = async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
-      const contentData = {...req.body}; // Tạo một bản sao để tránh thay đổi giá trị gốc
-      
+      const contentData = { ...req.body }; // Tạo một bản sao để tránh thay đổi giá trị gốc
+
       // Xóa các trường không cần thiết và không thể cập nhật
-      const genreIds = Array.isArray(contentData.genreIds) ? contentData.genreIds : undefined;
+      const genreIds = Array.isArray(contentData.genreIds)
+        ? contentData.genreIds
+        : undefined;
       delete contentData.genreIds;
       delete contentData.author;
       delete contentData.translationGroup;
@@ -349,7 +355,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       delete contentData.createdAt; // Bỏ trường createdAt vì nó là timestamp
       delete contentData.id; // Không cập nhật id
       delete contentData.views; // Không cập nhật views trực tiếp
-      
+
       // Chuyển đổi định dạng trường status nếu cần
       if (contentData.status) {
         // Đảm bảo status nằm trong danh sách giá trị hợp lệ
@@ -357,15 +363,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
           contentData.status = "ongoing"; // Giá trị mặc định
         }
       }
-      
-      console.log("Updating content with cleaned data:", id, contentData, "Genre IDs:", genreIds);
+
+      console.log(
+        "Updating content with cleaned data:",
+        id,
+        contentData,
+        "Genre IDs:",
+        genreIds,
+      );
 
       const updatedContent = await storage.updateContent(
         id,
         contentData,
-        genreIds
+        genreIds,
       );
-      
+
       if (!updatedContent) {
         return res.status(404).json({ error: "Content not found" });
       }
@@ -473,14 +485,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Support both PATCH and PUT for chapter updates
   app.patch("/api/chapters/:id", ensureAdmin, updateChapterHandler);
   app.put("/api/chapters/:id", ensureAdmin, updateChapterHandler);
-  
+
   // Chapter lock/unlock endpoint
   app.patch("/api/chapters/:id/lock", ensureAdmin, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const { isLocked, unlockPrice } = req.body;
-      
-      const updatedChapter = await storage.updateChapter(id, { isLocked, unlockPrice });
+
+      const updatedChapter = await storage.updateChapter(id, {
+        isLocked,
+        unlockPrice,
+      });
 
       if (!updatedChapter) {
         return res.status(404).json({ error: "Chapter not found" });
@@ -539,7 +554,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   };
 
   // Support both PATCH and PUT for chapter content updates
-  app.patch("/api/chapter-content/:id", ensureAdmin, updateChapterContentHandler);
+  app.patch(
+    "/api/chapter-content/:id",
+    ensureAdmin,
+    updateChapterContentHandler,
+  );
   app.put("/api/chapter-content/:id", ensureAdmin, updateChapterContentHandler);
 
   app.delete("/api/chapter-content/:id", ensureAdmin, async (req, res) => {
@@ -619,7 +638,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.addReadingHistory(userId, contentId, chapterId);
       res.status(201).json({ success: true });
     } catch (error) {
-      res.status(500).json({ error: "Failed to add reading history" });
+      res
+        .status(500)
+        .json({ error: "Failed to add reading history " + error.message });
     }
   });
 
@@ -629,7 +650,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const history = await storage.getReadingHistory(userId);
       res.json(history);
     } catch (error) {
-      res.status(500).json({ error: "Failed to get reading history" });
+      res
+        .status(500)
+        .json({ error: "Failed to get reading history " + error.message });
     }
   });
 
@@ -779,7 +802,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const newPayment = await storage.createPayment({
         userId,
         amount,
-        method: method || 'bank_transfer',
+        method: method || "bank_transfer",
         transactionId,
         status: "pending",
         createdAt: new Date(),
@@ -794,7 +817,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .json({ error: "Payment settings not configured" });
       }
 
-      if (method === 'bank_transfer') {
+      if (method === "bank_transfer") {
         if (!settings.vietQRConfig) {
           return res
             .status(500)
@@ -814,25 +837,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         // Lấy thời gian hết hạn từ cấu hình (mặc định 10 phút)
         const expiryMinutes = settings.expiryConfig?.bankTransfer || 10;
-        const expiresAt = new Date(newPayment.createdAt.getTime() + expiryMinutes * 60 * 1000);
-        
+        const expiresAt = new Date(
+          newPayment.createdAt.getTime() + expiryMinutes * 60 * 1000,
+        );
+
         res.status(201).json({
           payment: newPayment,
           qrCodeURL,
-          expiresAt
+          expiresAt,
         });
-      } else if (method === 'payos') {
+      } else if (method === "payos") {
         // Tạo thanh toán qua PayOS
         if (!settings.payosConfig) {
-          return res.status(500).json({ error: "PayOS payment settings not configured" });
+          return res
+            .status(500)
+            .json({ error: "PayOS payment settings not configured" });
         }
 
         // Lấy config PayOS
         const payosConfig = settings.payosConfig as any;
-        
+
         // Kiểm tra config
-        if (!payosConfig.clientId || !payosConfig.apiKey || !payosConfig.checksumKey) {
-          return res.status(500).json({ error: "PayOS API credentials are missing" });
+        if (
+          !payosConfig.clientId ||
+          !payosConfig.apiKey ||
+          !payosConfig.checksumKey
+        ) {
+          return res
+            .status(500)
+            .json({ error: "PayOS API credentials are missing" });
         }
 
         // Setup PayOS request
@@ -841,13 +874,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           clientId: payosConfig.clientId,
           apiKey: payosConfig.apiKey,
           checksumKey: payosConfig.checksumKey,
-          baseUrl
+          baseUrl,
         };
 
         // URL trả về sau khi thanh toán
-        const appUrl = process.env.APP_URL || `http://localhost:${process.env.PORT || 5000}`;
-        const returnUrl = `${appUrl}/payment?status=success&id=${newPayment.transactionId}`;
-        const cancelUrl = `${appUrl}/payment?status=cancel&id=${newPayment.transactionId}`;
+        const appUrl =
+          process.env.APP_URL || `http://localhost:${process.env.PORT || 5000}`;
+        const returnUrl = `${appUrl}/payment-callback?code=00&status=PAID&orderCode=${newPayment.transactionId}`;
+        const cancelUrl = `${appUrl}/payment-callback?cancel=true&orderCode=${newPayment.transactionId}`;
 
         try {
           // Sử dụng PayOS API để tạo payment link
@@ -856,26 +890,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
             description: `Nạp tiền tài khoản cho ${(req.user as any).username}`,
             orderCode: newPayment.transactionId,
             returnUrl: returnUrl,
-            cancelUrl: cancelUrl
+            cancelUrl: cancelUrl,
           };
-          
+
           console.log("PayOS payment request:", paymentData);
-          
+
           // Tạo payment link qua PayOS API
-          const payosResponse = await createPayOSPaymentLink(config, paymentData);
-          
+          const payosResponse = await createPayOSPaymentLink(
+            config,
+            paymentData,
+          );
+
           console.log("PayOS payment response:", payosResponse);
-          
+
           // Kiểm tra response - Xử lý cả 2 dạng response từ PayOS
-          let paymentLink = '';
+          let paymentLink = "";
           let qrCode = null;
-          
+
           if (payosResponse) {
             // Kiểm tra xem response có dạng mới (code, data) không
-            if (payosResponse.code === '00' && payosResponse.data && payosResponse.data.checkoutUrl) {
+            if (
+              payosResponse.code === "00" &&
+              payosResponse.data &&
+              payosResponse.data.checkoutUrl
+            ) {
               paymentLink = payosResponse.data.checkoutUrl;
               qrCode = payosResponse.data.qrCode || null;
-            } 
+            }
             // Hoặc dạng cũ (trả về trực tiếp từ SDK)
             else if (payosResponse.checkoutUrl) {
               paymentLink = payosResponse.checkoutUrl;
@@ -885,40 +926,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
             else {
               console.error("Invalid PayOS response format:", payosResponse);
               await storage.updatePaymentStatus(newPayment.id, "failed");
-              return res.status(500).json({ error: "Invalid PayOS response format" });
+              return res
+                .status(500)
+                .json({ error: "Invalid PayOS response format" });
             }
           } else {
             console.error("Empty PayOS response");
             await storage.updatePaymentStatus(newPayment.id, "failed");
             return res.status(500).json({ error: "Empty PayOS response" });
           }
-          
+
           // Lấy thời gian hết hạn từ cấu hình (mặc định 15 phút)
           const expiryMinutes = settings.expiryConfig?.payos || 15;
-          const expiresAt = new Date(newPayment.createdAt.getTime() + expiryMinutes * 60 * 1000);
-          
+          const expiresAt = new Date(
+            newPayment.createdAt.getTime() + expiryMinutes * 60 * 1000,
+          );
+
           res.status(201).json({
             payment: newPayment,
             paymentLink: paymentLink,
             qrCode: qrCode,
-            expiresAt: expiresAt
+            expiresAt: expiresAt,
           });
         } catch (error) {
           console.error("Error creating PayOS payment:", error);
           // Xóa thanh toán vì không tạo được token PayOS
           await storage.updatePaymentStatus(newPayment.id, "failed");
-          
-          return res.status(500).json({ error: "Failed to create PayOS payment" });
+
+          return res
+            .status(500)
+            .json({ error: "Failed to create PayOS payment" });
         }
       } else {
         // Cho các phương thức khác trong tương lai
         // Lấy thời gian hết hạn từ cấu hình (mặc định 10 phút)
         const expiryMinutes = settings.expiryConfig?.bankTransfer || 10;
-        const expiresAt = new Date(newPayment.createdAt.getTime() + expiryMinutes * 60 * 1000);
-        
+        const expiresAt = new Date(
+          newPayment.createdAt.getTime() + expiryMinutes * 60 * 1000,
+        );
+
         res.status(201).json({
           payment: newPayment,
-          expiresAt: expiresAt
+          expiresAt: expiresAt,
         });
       }
     } catch (error) {
@@ -947,105 +996,104 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Xác nhận thanh toán theo transactionId thay vì paymentId
-  app.post(
-    "/api/payments/confirm",
-    ensureAuthenticated,
-    async (req, res) => {
-      try {
-        const { transactionId, returnUrl } = req.body;
-        if (!transactionId) {
-          return res.status(400).json({ 
-            success: false,
-            error: "Transaction ID is required" 
-          });
-        }
-
-        const userId = (req.user as any).id;
-        const username = (req.user as any).username;
-
-        // Lấy payment dựa vào transactionId
-        const payment = await storage.getPaymentByTransactionId(transactionId);
-
-        if (!payment) {
-          return res.status(404).json({ 
-            success: false,
-            error: "Payment not found" 
-          });
-        }
-
-        // Kiểm tra payment của user
-        if (payment.userId !== userId) {
-          return res.status(403).json({ 
-            success: false,
-            error: "Forbidden" 
-          });
-        }
-
-        // Kiểm tra trạng thái hiện tại
-        if (payment.status !== "pending") {
-          return res.status(400).json({ 
-            success: false,
-            error: `Payment is already ${payment.status}` 
-          });
-        }
-
-        // Lấy cấu hình thanh toán để kiểm tra thời gian hết hạn
-        const settings = await storage.getPaymentSettings();
-        
-        // Xác định thời gian hết hạn dựa vào phương thức thanh toán
-        let expiryMinutes = 10; // Mặc định 10 phút
-        
-        if (settings && settings.expiryConfig) {
-          if (payment.method === "vietqr" || payment.method === "bank_transfer") {
-            expiryMinutes = settings.expiryConfig.bankTransfer || 10;
-          } else if (payment.method === "payos") {
-            expiryMinutes = settings.expiryConfig.payos || 15;
-          }
-        }
-        
-        const expiryTime = new Date(payment.createdAt.getTime() + expiryMinutes * 60 * 1000);
-        
-        if (new Date() > expiryTime) {
-          await storage.updatePaymentStatus(payment.id, "failed");
-          return res.status(400).json({ 
-            success: false,
-            error: "Payment expired" 
-          });
-        }
-
-        // Không thay đổi trạng thái (vẫn là pending), chỉ đánh dấu là đã được xác nhận 
-        const updatedPayment = await storage.updatePaymentStatus(
-          payment.id,
-          "pending",
-        );
-
-        // Import function gửi email
-        const { sendPaymentConfirmationEmail } = await import('./email-utils');
-
-        // Gửi email thông báo cho admin
-        await sendPaymentConfirmationEmail(
-          transactionId,
-          payment.amount,
-          username,
-          payment.method
-        );
-
-        // Thêm redirectUrl vào response để client chuyển hướng
-        res.json({
-          success: true,
-          payment: updatedPayment,
-          message: "Payment confirmation sent. Please wait for admin verification.",
-          redirectUrl: returnUrl || '/' // Nếu không có returnUrl thì chuyển về trang chủ
-        });
-      } catch (error) {
-        console.error("Payment confirm error:", error);
-        res.status(500).json({ 
+  app.post("/api/payments/confirm", ensureAuthenticated, async (req, res) => {
+    try {
+      const { transactionId, returnUrl } = req.body;
+      if (!transactionId) {
+        return res.status(400).json({
           success: false,
-          error: "Failed to confirm payment" 
+          error: "Transaction ID is required",
         });
       }
-    },
-  );
+
+      const userId = (req.user as any).id;
+      const username = (req.user as any).username;
+
+      // Lấy payment dựa vào transactionId
+      const payment = await storage.getPaymentByTransactionId(transactionId);
+
+      if (!payment) {
+        return res.status(404).json({
+          success: false,
+          error: "Payment not found",
+        });
+      }
+
+      // Kiểm tra payment của user
+      if (payment.userId !== userId) {
+        return res.status(403).json({
+          success: false,
+          error: "Forbidden",
+        });
+      }
+
+      // Kiểm tra trạng thái hiện tại
+      if (payment.status !== "pending") {
+        return res.status(400).json({
+          success: false,
+          error: `Payment is already ${payment.status}`,
+        });
+      }
+
+      // Lấy cấu hình thanh toán để kiểm tra thời gian hết hạn
+      const settings = await storage.getPaymentSettings();
+
+      // Xác định thời gian hết hạn dựa vào phương thức thanh toán
+      let expiryMinutes = 10; // Mặc định 10 phút
+
+      if (settings && settings.expiryConfig) {
+        if (payment.method === "vietqr" || payment.method === "bank_transfer") {
+          expiryMinutes = settings.expiryConfig.bankTransfer || 10;
+        } else if (payment.method === "payos") {
+          expiryMinutes = settings.expiryConfig.payos || 15;
+        }
+      }
+
+      const expiryTime = new Date(
+        payment.createdAt.getTime() + expiryMinutes * 60 * 1000,
+      );
+
+      if (new Date() > expiryTime) {
+        await storage.updatePaymentStatus(payment.id, "failed");
+        return res.status(400).json({
+          success: false,
+          error: "Payment expired",
+        });
+      }
+
+      // Không thay đổi trạng thái (vẫn là pending), chỉ đánh dấu là đã được xác nhận
+      const updatedPayment = await storage.updatePaymentStatus(
+        payment.id,
+        "pending",
+      );
+
+      // Import function gửi email
+      const { sendPaymentConfirmationEmail } = await import("./email-utils");
+
+      // Gửi email thông báo cho admin
+      await sendPaymentConfirmationEmail(
+        transactionId,
+        payment.amount,
+        username,
+        payment.method,
+      );
+
+      // Thêm redirectUrl vào response để client chuyển hướng
+      res.json({
+        success: true,
+        payment: updatedPayment,
+        message:
+          "Payment confirmation sent. Please wait for admin verification.",
+        redirectUrl: returnUrl || "/", // Nếu không có returnUrl thì chuyển về trang chủ
+      });
+    } catch (error) {
+      console.error("Payment confirm error:", error);
+      res.status(500).json({
+        success: false,
+        error: "Failed to confirm payment",
+      });
+    }
+  });
 
   // Common handler for payment status updates
   const updatePaymentStatusHandler = async (req: Request, res: Response) => {
@@ -1080,10 +1128,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           );
         }
       }
-      
+
       return res.json({
         success: true,
-        payment: updatedPayment
+        payment: updatedPayment,
       });
     } catch (error) {
       console.error("Error updating payment status:", error);
@@ -1092,87 +1140,101 @@ export async function registerRoutes(app: Express): Promise<Server> {
   };
 
   // Support both PATCH and PUT for payment status updates
-  app.patch("/api/payments/:id/status", ensureAdmin, updatePaymentStatusHandler);
+  app.patch(
+    "/api/payments/:id/status",
+    ensureAdmin,
+    updatePaymentStatusHandler,
+  );
   app.put("/api/payments/:id/status", ensureAdmin, updatePaymentStatusHandler);
-  
+
   // Add API endpoint for updating payment status by transaction ID (can be called by users)
-  app.post("/api/payments/update-status", ensureAuthenticated, async (req, res) => {
-    try {
-      const { transactionId, status } = req.body;
-      
-      if (!transactionId || !status) {
-        return res.status(400).json({ 
-          success: false,
-          error: "Transaction ID and status are required" 
-        });
-      }
-      
-      // Validate status
-      type PaymentStatusType = "pending" | "completed" | "failed";
-      if (!["pending", "completed", "failed"].includes(status)) {
-        return res.status(400).json({ 
-          success: false,
-          error: "Invalid status" 
-        });
-      }
-      
-      // Get payment by transaction ID
-      const payment = await storage.getPaymentByTransactionId(transactionId);
-      
-      if (!payment) {
-        return res.status(404).json({ 
-          success: false,
-          error: "Payment not found" 
-        });
-      }
-      
-      // For user requests, only allow updating to failed status and only their own payments
-      const userId = (req.user as any).id;
-      const isAdmin = (req.user as any).isAdmin;
-      
-      if (!isAdmin) {
-        if (payment.userId !== userId) {
-          return res.status(403).json({ 
+  app.post(
+    "/api/payments/update-status",
+    ensureAuthenticated,
+    async (req, res) => {
+      try {
+        const { transactionId, status } = req.body;
+
+        if (!transactionId || !status) {
+          return res.status(400).json({
             success: false,
-            error: "Forbidden" 
+            error: "Transaction ID and status are required",
           });
         }
-        
-        if (status !== "failed") {
-          return res.status(403).json({ 
+
+        // Validate status
+        type PaymentStatusType = "pending" | "completed" | "failed";
+        if (!["pending", "completed", "failed"].includes(status)) {
+          return res.status(400).json({
             success: false,
-            error: "Users can only update to failed status" 
+            error: "Invalid status",
           });
         }
-      }
-      
-      // Update status
-      let newStatus: PaymentStatusType = status as PaymentStatusType;
-      const updatedPayment = await storage.updatePaymentStatus(payment.id, newStatus);
-      
-      // Add the amount to user balance if completed
-      if (newStatus === "completed") {
-        const user = await storage.getUser(payment.userId);
-        if (user) {
-          await storage.updateUserBalance(
-            user.id,
-            user.balance + payment.amount
-          );
+
+        // Get payment by transaction ID
+        const payment = await storage.getPaymentByTransactionId(transactionId);
+
+        if (!payment) {
+          return res.status(404).json({
+            success: false,
+            error: "Payment not found",
+          });
         }
+
+        // For user requests, only allow updating to failed status and only their own payments
+        const userId = (req.user as any).id;
+        const isAdmin = (req.user as any).isAdmin;
+
+        if (!isAdmin) {
+          if (payment.userId !== userId) {
+            return res.status(403).json({
+              success: false,
+              error: "Forbidden",
+            });
+          }
+
+          if (status !== "failed") {
+            return res.status(403).json({
+              success: false,
+              error: "Users can only update to failed status",
+            });
+          }
+        }
+
+        // Update status
+        let newStatus: PaymentStatusType = status as PaymentStatusType;
+        const updatedPayment = await storage.updatePaymentStatus(
+          payment.id,
+          newStatus,
+        );
+
+        // Add the amount to user balance if completed
+        if (newStatus === "completed") {
+          const user = await storage.getUser(payment.userId);
+          if (user) {
+            await storage.updateUserBalance(
+              user.id,
+              user.balance + payment.amount,
+            );
+          }
+        }
+
+        res.json({
+          success: true,
+          payment: updatedPayment,
+        });
+      } catch (error) {
+        console.error(
+          "Error updating payment status by transaction ID:",
+          error,
+        );
+        res.status(500).json({
+          success: false,
+          error: "Failed to update payment status",
+        });
       }
-      
-      res.json({
-        success: true,
-        payment: updatedPayment
-      });
-    } catch (error) {
-      console.error("Error updating payment status by transaction ID:", error);
-      res.status(500).json({ 
-        success: false,
-        error: "Failed to update payment status" 
-      });
-    }
-  });
+    },
+  );
 
   // Payment Settings Routes
   app.get("/api/payment-settings", ensureAdmin, async (req, res) => {
@@ -1190,14 +1252,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
             smtpUser: "",
             smtpPass: "",
             senderEmail: "",
-            adminEmail: "hlmvuong123@gmail.com"
+            adminEmail: "hlmvuong123@gmail.com",
           };
         }
-        
+
         if (!settings.expiryConfig) {
           settings.expiryConfig = {
             bankTransfer: 10,
-            payos: 15
+            payos: 15,
           };
         }
       }
@@ -1218,7 +1280,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: "Failed to update payment settings" });
     }
   });
-  
+
   // Add PUT endpoint to match client request
   app.put("/api/payment-settings", ensureAdmin, async (req, res) => {
     try {
@@ -1238,7 +1300,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const vietQRConfig = settings.vietQRConfig as any;
-      
+
       if (!vietQRConfig) {
         return res.status(404).json({ error: "VietQR config not found" });
       }
@@ -1254,7 +1316,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: "Failed to get VietQR config" });
     }
   });
-  
+
   // Add API endpoint for fetching pricing settings
   app.get("/api/payment-settings/pricing", async (req, res) => {
     try {
@@ -1265,7 +1327,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const priceConfig = settings.priceConfig as any;
-      
+
       if (!priceConfig) {
         return res.status(404).json({ error: "Price config not found" });
       }
@@ -1279,180 +1341,208 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Also include VietQR bank info for the payment form
         bankBin: settings.vietQRConfig?.bankId || "MBBANK",
         accountNumber: settings.vietQRConfig?.accountNumber || "0862713897",
-        accountName: settings.vietQRConfig?.accountName || "góc truyện nhỏ"
+        accountName: settings.vietQRConfig?.accountName || "góc truyện nhỏ",
       });
     } catch (error) {
       res.status(500).json({ error: "Failed to get pricing settings" });
     }
   });
-  
+
   // PayOS routes
-  app.post("/api/payos/create-payment", ensureAuthenticated, async (req, res) => {
-    try {
-      const { amount, orderCode, description, returnUrl, cancelUrl, expiredAt } = req.body;
+  app.post(
+    "/api/payos/create-payment",
+    ensureAuthenticated,
+    async (req, res) => {
+      try {
+        const {
+          amount,
+          orderCode,
+          description,
+          returnUrl,
+          cancelUrl,
+          expiredAt,
+        } = req.body;
 
-      if (!amount || !orderCode || !description || !returnUrl || !cancelUrl) {
-        return res.status(400).json({ 
-          code: '01',
-          desc: 'Missing required parameters',
-          data: null
+        if (!amount || !orderCode || !description || !returnUrl || !cancelUrl) {
+          return res.status(400).json({
+            code: "01",
+            desc: "Missing required parameters",
+            data: null,
+          });
+        }
+
+        // Get PayOS settings
+        const settings = await storage.getPaymentSettings();
+
+        if (!settings || !settings.payosConfig) {
+          return res.status(500).json({
+            code: "02",
+            desc: "PayOS settings not configured",
+            data: null,
+          });
+        }
+
+        const payosConfig = settings.payosConfig as any;
+
+        // Check for required configurations
+        if (
+          !payosConfig.clientId ||
+          !payosConfig.apiKey ||
+          !payosConfig.checksumKey ||
+          !payosConfig.baseUrl
+        ) {
+          return res.status(500).json({
+            code: "03",
+            desc: "Incomplete PayOS configuration",
+            data: null,
+          });
+        }
+
+        // Create payment link
+        const result = await createPayOSPaymentLink(payosConfig, {
+          amount,
+          orderCode,
+          description,
+          returnUrl,
+          cancelUrl,
+        });
+
+        // Return the result directly
+        res.json(result);
+      } catch (error: any) {
+        console.error("PayOS create payment error:", error);
+        res.status(500).json({
+          code: "99",
+          desc: error.message || "Failed to create PayOS payment",
+          data: null,
         });
       }
+    },
+  );
 
-      // Get PayOS settings
-      const settings = await storage.getPaymentSettings();
-      
-      if (!settings || !settings.payosConfig) {
-        return res.status(500).json({ 
-          code: '02',
-          desc: 'PayOS settings not configured',
-          data: null
-        });
-      }
+  app.get(
+    "/api/payment/payos/check-payment-status/:orderCode",
+    ensureAuthenticated,
+    async (req, res) => {
+      try {
+        const { orderCode } = req.params;
 
-      const payosConfig = settings.payosConfig as any;
-      
-      // Check for required configurations
-      if (!payosConfig.clientId || !payosConfig.apiKey || !payosConfig.checksumKey || !payosConfig.baseUrl) {
-        return res.status(500).json({ 
-          code: '03',
-          desc: 'Incomplete PayOS configuration',
-          data: null
-        });
-      }
+        if (!orderCode) {
+          return res.status(400).json({
+            code: "01",
+            desc: "Order code is required",
+            data: null,
+          });
+        }
 
-      // Create payment link
-      const result = await createPayOSPaymentLink(payosConfig, {
-        amount,
-        orderCode,
-        description,
-        returnUrl,
-        cancelUrl
-      });
+        // Get PayOS settings
+        const settings = await storage.getPaymentSettings();
 
-      // Return the result directly
-      res.json(result);
-    } catch (error: any) {
-      console.error("PayOS create payment error:", error);
-      res.status(500).json({ 
-        code: '99',
-        desc: error.message || 'Failed to create PayOS payment',
-        data: null
-      });
-    }
-  });
+        if (!settings || !settings.payosConfig) {
+          return res.status(500).json({
+            code: "02",
+            desc: "PayOS settings not configured",
+            data: null,
+          });
+        }
 
-  app.get("/api/payment/payos/check-payment-status/:orderCode", ensureAuthenticated, async (req, res) => {
-    try {
-      const { orderCode } = req.params;
+        const payosConfig = settings.payosConfig as any;
 
-      if (!orderCode) {
-        return res.status(400).json({ 
-          code: '01',
-          desc: 'Order code is required',
-          data: null
-        });
-      }
+        // Check payment status
+        const result = await checkPayOSPaymentStatus(payosConfig, orderCode);
 
-      // Get PayOS settings
-      const settings = await storage.getPaymentSettings();
-      
-      if (!settings || !settings.payosConfig) {
-        return res.status(500).json({ 
-          code: '02',
-          desc: 'PayOS settings not configured',
-          data: null
-        });
-      }
+        // If payment is completed, update payment and user balance
+        if (
+          result.code === "00" &&
+          result.data &&
+          result.data.status === "PAID"
+        ) {
+          // Find payment with this order code/transaction ID
+          const payment = await storage.getPaymentByTransactionId(orderCode);
 
-      const payosConfig = settings.payosConfig as any;
+          if (payment && payment.status !== "completed") {
+            // Update payment status
+            await storage.updatePaymentStatus(payment.id, "completed");
 
-      // Check payment status
-      const result = await checkPayOSPaymentStatus(payosConfig, orderCode);
+            // Update user balance
+            const user = await storage.getUser(payment.userId);
 
-      // If payment is completed, update payment and user balance
-      if (result.code === '00' && result.data && result.data.status === 'PAID') {
-        // Find payment with this order code/transaction ID
-        const payment = await storage.getPaymentByTransactionId(orderCode);
-        
-        if (payment && payment.status !== 'completed') {
-          // Update payment status
-          await storage.updatePaymentStatus(payment.id, 'completed');
-          
-          // Update user balance
-          const user = await storage.getUser(payment.userId);
-          
-          if (user) {
-            await storage.updateUserBalance(
-              user.id,
-              user.balance + payment.amount
-            );
+            if (user) {
+              await storage.updateUserBalance(
+                user.id,
+                user.balance + payment.amount,
+              );
+            }
           }
         }
-      }
 
-      // Return the result
-      res.json(result);
-    } catch (error: any) {
-      console.error("PayOS status check error:", error);
-      res.status(500).json({ 
-        code: '99',
-        desc: error.message || 'Failed to check PayOS payment status',
-        data: null
-      });
-    }
-  });
+        // Return the result
+        res.json(result);
+      } catch (error: any) {
+        console.error("PayOS status check error:", error);
+        res.status(500).json({
+          code: "99",
+          desc: error.message || "Failed to check PayOS payment status",
+          data: null,
+        });
+      }
+    },
+  );
 
   // PayOS webhook handler
   app.post("/api/payos/webhook", async (req, res) => {
     try {
-      const webhookSignature = req.headers['x-webhook-signature'] as string;
+      const webhookSignature = req.headers["x-webhook-signature"] as string;
       const rawBody = JSON.stringify(req.body);
-      
+
       if (!webhookSignature) {
-        return res.status(400).json({ error: 'Missing webhook signature' });
+        return res.status(400).json({ error: "Missing webhook signature" });
       }
 
       // Get PayOS settings
       const settings = await storage.getPaymentSettings();
-      
+
       if (!settings || !settings.payosConfig) {
-        return res.status(500).json({ error: 'PayOS settings not configured' });
+        return res.status(500).json({ error: "PayOS settings not configured" });
       }
 
       const payosConfig = settings.payosConfig as any;
 
       // Verify the webhook signature
-      const isValid = verifyPayOSWebhook(payosConfig, rawBody, webhookSignature);
-      
+      const isValid = verifyPayOSWebhook(
+        payosConfig,
+        rawBody,
+        webhookSignature,
+      );
+
       if (!isValid) {
-        return res.status(403).json({ error: 'Invalid webhook signature' });
+        return res.status(403).json({ error: "Invalid webhook signature" });
       }
 
       // Process the webhook data
       const { orderCode, status, amount } = req.body.data || {};
-      
+
       if (orderCode && status) {
         // Find payment with this order code/transaction ID
         const payment = await storage.getPaymentByTransactionId(orderCode);
-        
+
         if (payment) {
-          if (status === 'PAID' && payment.status !== 'completed') {
+          if (status === "PAID" && payment.status !== "completed") {
             // Update payment status
-            await storage.updatePaymentStatus(payment.id, 'completed');
-            
+            await storage.updatePaymentStatus(payment.id, "completed");
+
             // Update user balance
             const user = await storage.getUser(payment.userId);
-            
+
             if (user) {
               await storage.updateUserBalance(
                 user.id,
-                user.balance + payment.amount
+                user.balance + payment.amount,
               );
             }
-          } else if (status === 'CANCELED' && payment.status !== 'failed') {
+          } else if (status === "CANCELED" && payment.status !== "failed") {
             // Update payment status to failed
-            await storage.updatePaymentStatus(payment.id, 'failed');
+            await storage.updatePaymentStatus(payment.id, "failed");
           }
         }
       }
@@ -1460,11 +1550,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ success: true });
     } catch (error: any) {
       console.error("PayOS webhook error:", error);
-      res.status(500).json({ error: error.message || 'Failed to process PayOS webhook' });
+      res
+        .status(500)
+        .json({ error: error.message || "Failed to process PayOS webhook" });
     }
   });
-  
-
 
   // Genre Routes
   app.get("/api/genres", async (req, res) => {
@@ -1622,7 +1712,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/ads", async (req, res) => {
     try {
       const position = req.query.position as "banner" | "sidebar" | "popup";
-      const isAdmin = req.isAuthenticated() && (req.user as any).role === "admin";
+      const isAdmin =
+        req.isAuthenticated() && (req.user as any).role === "admin";
 
       if (position) {
         const ads = await storage.getActiveAdvertisements(position);
@@ -1657,15 +1748,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     upload.single("image"),
     async (req, res) => {
       try {
-        const { title, targetUrl, position, startDate, endDate, imageUrl: providedImageUrl, isActive } = req.body;
+        const {
+          title,
+          targetUrl,
+          position,
+          startDate,
+          endDate,
+          imageUrl: providedImageUrl,
+          isActive,
+        } = req.body;
 
         // Use either uploaded file or provided imageUrl
         let imageUrl = providedImageUrl;
-        
+
         if (req.file) {
           imageUrl = `/uploads/${req.file.filename}`;
         }
-        
+
         if (!imageUrl) {
           return res.status(400).json({ error: "Image URL is required" });
         }
@@ -1677,7 +1776,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           position: position as "banner" | "sidebar" | "popup",
           startDate: new Date(startDate),
           endDate: new Date(endDate),
-          isActive: isActive === undefined ? true : isActive === "true" || isActive === true,
+          isActive:
+            isActive === undefined
+              ? true
+              : isActive === "true" || isActive === true,
         });
 
         res.status(201).json(newAd);
@@ -1712,7 +1814,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Parse boolean - handle both string and boolean types
       if (adData.isActive !== undefined) {
-        adData.isActive = adData.isActive === true || adData.isActive === "true";
+        adData.isActive =
+          adData.isActive === true || adData.isActive === "true";
       }
 
       const updatedAd = await storage.updateAdvertisement(id, adData);
@@ -1729,7 +1832,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   };
 
   // Support both PATCH and PUT for ad updates
-  app.patch("/api/ads/:id", ensureAdmin, upload.single("image"), updateAdHandler);
+  app.patch(
+    "/api/ads/:id",
+    ensureAdmin,
+    upload.single("image"),
+    updateAdHandler,
+  );
   app.put("/api/ads/:id", ensureAdmin, upload.single("image"), updateAdHandler);
 
   app.delete("/api/ads/:id", ensureAdmin, async (req, res) => {
@@ -1786,9 +1894,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const payosConfig = settings.payosConfig as any;
-      
+
       if (!payosConfig || !payosConfig.clientId) {
-        return res.status(404).json({ error: "PayOS config not found or incomplete" });
+        return res
+          .status(404)
+          .json({ error: "PayOS config not found or incomplete" });
       }
 
       // Return only necessary public info
@@ -1801,182 +1911,222 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/payment/payos/create-payment-link", ensureAuthenticated, async (req, res) => {
-    try {
-      const userId = (req.user as any).id;
-      const username = (req.user as any).username;
-      const { amount } = req.body;
+  app.post(
+    "/api/payment/payos/create-payment-link",
+    ensureAuthenticated,
+    async (req, res) => {
+      try {
+        const userId = (req.user as any).id;
+        const username = (req.user as any).username;
+        const { amount } = req.body;
 
-      if (!amount || amount < 10000 || amount % 1000 !== 0) {
-        return res.status(400).json({ 
-          error: "Invalid amount. Amount must be at least 10,000 VND and must be divisible by 1,000." 
+        if (!amount || amount < 10000 || amount % 1000 !== 0) {
+          return res.status(400).json({
+            error:
+              "Invalid amount. Amount must be at least 10,000 VND and must be divisible by 1,000.",
+          });
+        }
+
+        // Get PayOS settings
+        const settings = await storage.getPaymentSettings();
+        if (!settings || !settings.payosConfig) {
+          return res
+            .status(500)
+            .json({ error: "PayOS settings not configured" });
+        }
+
+        const payosConfig = settings.payosConfig as any;
+        if (
+          !payosConfig.clientId ||
+          !payosConfig.apiKey ||
+          !payosConfig.checksumKey
+        ) {
+          return res
+            .status(500)
+            .json({ error: "PayOS API credentials are missing" });
+        }
+
+        // Create a new payment record
+        const transactionId = createHash("sha256")
+          .update(`${userId}-${Date.now()}-payos`)
+          .digest("hex")
+          .substring(0, 12);
+
+        const newPayment = await storage.createPayment({
+          userId,
+          amount,
+          method: "payos",
+          transactionId,
+          status: "pending",
+          createdAt: new Date(),
         });
+
+        // Create the payment via PayOS
+        const baseUrl = payosConfig.baseUrl || "https://api-merchant.payos.vn";
+        const config = {
+          clientId: payosConfig.clientId,
+          apiKey: payosConfig.apiKey,
+          checksumKey: payosConfig.checksumKey,
+          baseUrl,
+        };
+
+        const appUrl =
+          process.env.APP_URL || `http://localhost:${process.env.PORT || 5000}`;
+        const returnUrl = `${appUrl}/payment/success?id=${newPayment.id}`;
+        const cancelUrl = `${appUrl}/payment/cancel?id=${newPayment.id}`;
+
+        const paymentData = {
+          amount,
+          description: `NAP_${username}`,
+          orderCode: transactionId,
+          returnUrl,
+          cancelUrl,
+        };
+
+        const paymentLinkResponse = await createPayOSPaymentLink(
+          config,
+          paymentData,
+        );
+
+        res.status(201).json({
+          payment: newPayment,
+          paymentLink: paymentLinkResponse.data?.checkoutUrl || null,
+          qrCode: paymentLinkResponse.data?.qrCode || null,
+          expiresAt: new Date(Date.now() + 15 * 60 * 1000), // 15 minutes expiry
+        });
+      } catch (error) {
+        console.error("Error creating PayOS payment:", error);
+        res.status(500).json({ error: "Failed to create PayOS payment" });
       }
+    },
+  );
 
-      // Get PayOS settings
-      const settings = await storage.getPaymentSettings();
-      if (!settings || !settings.payosConfig) {
-        return res.status(500).json({ error: "PayOS settings not configured" });
-      }
+  app.get(
+    "/api/payment/payos/check-payment-status/:orderCode",
+    ensureAuthenticated,
+    async (req, res) => {
+      try {
+        const { orderCode } = req.params;
 
-      const payosConfig = settings.payosConfig as any;
-      if (!payosConfig.clientId || !payosConfig.apiKey || !payosConfig.checksumKey) {
-        return res.status(500).json({ error: "PayOS API credentials are missing" });
-      }
+        // Get PayOS settings
+        const settings = await storage.getPaymentSettings();
+        if (!settings || !settings.payosConfig) {
+          return res
+            .status(500)
+            .json({ error: "PayOS settings not configured" });
+        }
 
-      // Create a new payment record
-      const transactionId = createHash("sha256")
-        .update(`${userId}-${Date.now()}-payos`)
-        .digest("hex")
-        .substring(0, 12);
+        const payosConfig = settings.payosConfig as any;
+        if (
+          !payosConfig.clientId ||
+          !payosConfig.apiKey ||
+          !payosConfig.checksumKey
+        ) {
+          return res
+            .status(500)
+            .json({ error: "PayOS API credentials are missing" });
+        }
 
-      const newPayment = await storage.createPayment({
-        userId,
-        amount,
-        method: "payos",
-        transactionId,
-        status: "pending",
-        createdAt: new Date(),
-      });
+        // Get the payment by transaction ID
+        const payment = await storage.getPaymentByTransactionId(orderCode);
+        if (!payment) {
+          return res.status(404).json({ error: "Payment not found" });
+        }
 
-      // Create the payment via PayOS
-      const baseUrl = payosConfig.baseUrl || "https://api-merchant.payos.vn";
-      const config = {
-        clientId: payosConfig.clientId,
-        apiKey: payosConfig.apiKey,
-        checksumKey: payosConfig.checksumKey,
-        baseUrl
-      };
+        // Check if the payment belongs to the user
+        const userId = (req.user as any).id;
+        if (payment.userId !== userId && (req.user as any).role !== "admin") {
+          return res.status(403).json({ error: "Forbidden" });
+        }
 
-      const appUrl = process.env.APP_URL || `http://localhost:${process.env.PORT || 5000}`;
-      const returnUrl = `${appUrl}/payment/success?id=${newPayment.id}`;
-      const cancelUrl = `${appUrl}/payment/cancel?id=${newPayment.id}`;
+        // Check payment status with PayOS
+        const baseUrl = payosConfig.baseUrl || "https://api-merchant.payos.vn";
+        const config = {
+          clientId: payosConfig.clientId,
+          apiKey: payosConfig.apiKey,
+          checksumKey: payosConfig.checksumKey,
+          baseUrl,
+        };
 
-      const paymentData = {
-        amount,
-        description: `NAP_${username}`,
-        orderCode: transactionId,
-        returnUrl,
-        cancelUrl
-      };
+        const statusResponse = await checkPayOSPaymentStatus(config, orderCode);
 
-      const paymentLinkResponse = await createPayOSPaymentLink(config, paymentData);
+        // Update payment status based on PayOS response
+        if (statusResponse.code === "00" && statusResponse.data?.status) {
+          let newStatus: "pending" | "completed" | "failed" = "pending";
 
-      res.status(201).json({
-        payment: newPayment,
-        paymentLink: paymentLinkResponse.data?.checkoutUrl || null,
-        qrCode: paymentLinkResponse.data?.qrCode || null,
-        expiresAt: new Date(Date.now() + 15 * 60 * 1000), // 15 minutes expiry
-      });
-    } catch (error) {
-      console.error("Error creating PayOS payment:", error);
-      res.status(500).json({ error: "Failed to create PayOS payment" });
-    }
-  });
+          if (statusResponse.data.status === "PAID") {
+            newStatus = "completed";
 
-  app.get("/api/payment/payos/check-payment-status/:orderCode", ensureAuthenticated, async (req, res) => {
-    try {
-      const { orderCode } = req.params;
-      
-      // Get PayOS settings
-      const settings = await storage.getPaymentSettings();
-      if (!settings || !settings.payosConfig) {
-        return res.status(500).json({ error: "PayOS settings not configured" });
-      }
-
-      const payosConfig = settings.payosConfig as any;
-      if (!payosConfig.clientId || !payosConfig.apiKey || !payosConfig.checksumKey) {
-        return res.status(500).json({ error: "PayOS API credentials are missing" });
-      }
-
-      // Get the payment by transaction ID
-      const payment = await storage.getPaymentByTransactionId(orderCode);
-      if (!payment) {
-        return res.status(404).json({ error: "Payment not found" });
-      }
-
-      // Check if the payment belongs to the user
-      const userId = (req.user as any).id;
-      if (payment.userId !== userId && (req.user as any).role !== "admin") {
-        return res.status(403).json({ error: "Forbidden" });
-      }
-
-      // Check payment status with PayOS
-      const baseUrl = payosConfig.baseUrl || "https://api-merchant.payos.vn";
-      const config = {
-        clientId: payosConfig.clientId,
-        apiKey: payosConfig.apiKey,
-        checksumKey: payosConfig.checksumKey,
-        baseUrl
-      };
-
-      const statusResponse = await checkPayOSPaymentStatus(config, orderCode);
-      
-      // Update payment status based on PayOS response
-      if (statusResponse.code === '00' && statusResponse.data?.status) {
-        let newStatus: "pending" | "completed" | "failed" = "pending";
-        
-        if (statusResponse.data.status === 'PAID') {
-          newStatus = "completed";
-          
-          // If payment is completed, add the amount to the user's balance
-          const user = await storage.getUser(payment.userId);
-          if (user) {
-            await storage.updateUserBalance(user.id, user.balance + payment.amount);
+            // If payment is completed, add the amount to the user's balance
+            const user = await storage.getUser(payment.userId);
+            if (user) {
+              await storage.updateUserBalance(
+                user.id,
+                user.balance + payment.amount,
+              );
+            }
+          } else if (
+            statusResponse.data.status === "CANCELLED" ||
+            statusResponse.data.status === "EXPIRED"
+          ) {
+            newStatus = "failed";
           }
-        } else if (statusResponse.data.status === 'CANCELLED' || statusResponse.data.status === 'EXPIRED') {
-          newStatus = "failed";
-        }
-        
-        if (payment.status !== newStatus) {
-          await storage.updatePaymentStatus(payment.id, newStatus);
-          payment.status = newStatus;
-        }
-      }
 
-      res.json({ 
-        payment,
-        payosStatus: statusResponse.data?.status || 'UNKNOWN'
-      });
-    } catch (error) {
-      console.error("Error checking PayOS payment status:", error);
-      res.status(500).json({ error: "Failed to check payment status" });
-    }
-  });
+          if (payment.status !== newStatus) {
+            await storage.updatePaymentStatus(payment.id, newStatus);
+            payment.status = newStatus;
+          }
+        }
+
+        res.json({
+          payment,
+          payosStatus: statusResponse.data?.status || "UNKNOWN",
+        });
+      } catch (error) {
+        console.error("Error checking PayOS payment status:", error);
+        res.status(500).json({ error: "Failed to check payment status" });
+      }
+    },
+  );
 
   // PayOS endpoints for embedded checkout
   app.post("/api/payos/create-payment", async (req, res) => {
     try {
       const { amount, orderCode, description, returnUrl, cancelUrl } = req.body;
-      
+
       // Validate required fields
       if (!amount || !orderCode || !description || !returnUrl || !cancelUrl) {
-        return res.status(400).json({ 
-          code: '01',
-          desc: 'Missing required parameters',
-          data: null
+        return res.status(400).json({
+          code: "01",
+          desc: "Missing required parameters",
+          data: null,
         });
       }
 
       // Get PayOS settings
       const settings = await storage.getPaymentSettings();
-      
+
       if (!settings || !settings.payosConfig) {
-        return res.status(500).json({ 
-          code: '02',
-          desc: 'PayOS settings not configured',
-          data: null
+        return res.status(500).json({
+          code: "02",
+          desc: "PayOS settings not configured",
+          data: null,
         });
       }
 
       const payosConfig = settings.payosConfig as any;
-      
+
       // Check for required configurations
-      if (!payosConfig.clientId || !payosConfig.apiKey || !payosConfig.checksumKey || !payosConfig.baseUrl) {
-        return res.status(500).json({ 
-          code: '03',
-          desc: 'Incomplete PayOS configuration',
-          data: null
+      if (
+        !payosConfig.clientId ||
+        !payosConfig.apiKey ||
+        !payosConfig.checksumKey ||
+        !payosConfig.baseUrl
+      ) {
+        return res.status(500).json({
+          code: "03",
+          desc: "Incomplete PayOS configuration",
+          data: null,
         });
       }
 
@@ -1986,17 +2136,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         orderCode,
         description,
         returnUrl,
-        cancelUrl
+        cancelUrl,
       });
 
       // Return the result directly
       res.json(result);
     } catch (error: any) {
       console.error("PayOS create payment error:", error);
-      res.status(500).json({ 
-        code: '99',
-        desc: error.message || 'Failed to create PayOS payment',
-        data: null
+      res.status(500).json({
+        code: "99",
+        desc: error.message || "Failed to create PayOS payment",
+        data: null,
       });
     }
   });
@@ -2006,21 +2156,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { orderCode } = req.params;
 
       if (!orderCode) {
-        return res.status(400).json({ 
-          code: '01',
-          desc: 'Order code is required',
-          data: null
+        return res.status(400).json({
+          code: "01",
+          desc: "Order code is required",
+          data: null,
         });
       }
 
       // Get PayOS settings
       const settings = await storage.getPaymentSettings();
-      
+
       if (!settings || !settings.payosConfig) {
-        return res.status(500).json({ 
-          code: '02',
-          desc: 'PayOS settings not configured',
-          data: null
+        return res.status(500).json({
+          code: "02",
+          desc: "PayOS settings not configured",
+          data: null,
         });
       }
 
@@ -2028,65 +2178,68 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Check payment status
       const result = await checkPayOSPaymentStatus(payosConfig, orderCode);
-      console.log("PayOS status check result:", JSON.stringify(result, null, 2));
-      
+      console.log(
+        "PayOS status check result:",
+        JSON.stringify(result, null, 2),
+      );
+
       // Biến để theo dõi trạng thái thanh toán
       let paymentStatus = null;
-      
+
       // Xử lý cả hai dạng response có thể nhận được từ PayOS
       if (result) {
         // Kiểm tra dạng response mới (có code, data)
-        if (result.code === '00' && result.data && result.data.status) {
+        if (result.code === "00" && result.data && result.data.status) {
           paymentStatus = result.data.status;
-        } 
+        }
         // Kiểm tra dạng response trực tiếp từ SDK
         else if (result.status) {
           paymentStatus = result.status;
         }
       }
-      
+
       console.log("PayOS payment status:", paymentStatus);
-      
+
       // Nếu tìm thấy trạng thái và đã thanh toán
-      if (paymentStatus === 'PAID') {
+      if (paymentStatus === "PAID") {
         // Tìm payment với order code/transaction ID này
         const payment = await storage.getPaymentByTransactionId(orderCode);
-        
-        if (payment && payment.status !== 'completed') {
+
+        if (payment && payment.status !== "completed") {
           // Cập nhật trạng thái payment
-          await storage.updatePaymentStatus(payment.id, 'completed');
-          
+          await storage.updatePaymentStatus(payment.id, "completed");
+
           // Cập nhật số dư người dùng
           const user = await storage.getUser(payment.userId);
-          
+
           if (user) {
             await storage.updateUserBalance(
               user.id,
-              user.balance + payment.amount
+              user.balance + payment.amount,
             );
           }
         }
       }
-      
+
       // Trả về kết quả
-      // Chuyển đổi dữ liệu theo định dạng thống nhất 
+      // Chuyển đổi dữ liệu theo định dạng thống nhất
       // để client xử lý dễ dàng
       res.json({
-        code: '00',
-        desc: 'Success',
+        code: "00",
+        desc: "Success",
         data: {
           status: paymentStatus,
           orderCode: orderCode,
           // Thêm các trường khác từ result nếu có
-          ...(result.data || result)
-        }
+          ...(result.data || result),
+        },
       });
     } catch (error: any) {
       console.error("PayOS status check error:", error);
-      res.status(500).json({ 
-        code: '99',
-        desc: error.message || 'Failed to check PayOS payment status',
-        data: null
+      res.status(500).json({
+        code: "99",
+        desc: error.message || "Failed to check PayOS payment status",
+        data: null,
       });
     }
   });
@@ -2095,8 +2248,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/webhooks/payos", async (req, res) => {
     try {
       console.log("Received PayOS webhook:", req.body);
-      
-      const webhookSignature = req.headers['x-webhook-signature'] as string;
+
+      const webhookSignature = req.headers["x-webhook-signature"] as string;
       if (!webhookSignature) {
         console.warn("Missing webhook signature");
         // Đối với môi trường dev, chúng ta vẫn xử lý webhook ngay cả khi không có signature
@@ -2111,7 +2264,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const payosConfig = settings.payosConfig as any;
-      
+
       // Kiểm tra checksumKey nếu cần thiết cho việc xác thực webhook
       if (webhookSignature && !payosConfig.checksumKey) {
         console.warn("Webhook signature provided but checksumKey is missing");
@@ -2122,18 +2275,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (webhookSignature && payosConfig.checksumKey) {
         const bodyData = JSON.stringify(req.body);
         isValid = verifyPayOSWebhook(
-          { 
+          {
             clientId: payosConfig.clientId,
             apiKey: payosConfig.apiKey,
             checksumKey: payosConfig.checksumKey,
-            baseUrl: payosConfig.baseUrl || "https://api-merchant.payos.vn"
-          }, 
-          bodyData, 
-          webhookSignature
+            baseUrl: payosConfig.baseUrl || "https://api-merchant.payos.vn",
+          },
+          bodyData,
+          webhookSignature,
         );
 
         if (!isValid) {
-          console.warn("Invalid webhook signature, but processing anyway in dev environment");
+          console.warn(
+            "Invalid webhook signature, but processing anyway in dev environment",
+          );
           // Trong môi trường production, bạn nên uncomment dòng dưới đây
           // return res.status(401).json({ error: "Invalid webhook signature" });
         }
@@ -2142,7 +2297,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Process webhook data - xử lý nhiều dạng webhook khác nhau từ PayOS
       let orderCode: string | undefined;
       let status: string | undefined;
-      
+
       // Trích xuất orderCode và status từ nhiều dạng khác nhau của webhook
       if (req.body.orderCode) {
         // Format webhook trực tiếp
@@ -2157,11 +2312,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         orderCode = req.body.order.orderCode.toString();
         status = req.body.order.status;
       }
-      
+
       console.log("Extracted webhook data:", { orderCode, status });
-      
+
       if (!orderCode) {
-        return res.status(400).json({ error: "Missing order code in webhook data" });
+        return res
+          .status(400)
+          .json({ error: "Missing order code in webhook data" });
       }
 
       // Xử lý orderCode - có thể là số hoặc chuỗi có tiền tố
@@ -2169,7 +2326,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (orderCode.startsWith("ORDER")) {
         orderCode = orderCode.replace("ORDER", "");
       }
-      
+
       // Update payment status
       const payment = await storage.getPaymentByTransactionId(orderCode);
       if (!payment) {
@@ -2178,22 +2335,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       console.log("Found payment:", payment);
-      
-      if (status === 'PAID' && payment.status !== 'completed') {
+
+      if (status === "PAID" && payment.status !== "completed") {
         console.log(`Updating payment ${payment.id} to completed`);
         await storage.updatePaymentStatus(payment.id, "completed");
-        
+
         // Add the amount to the user's balance
         const user = await storage.getUser(payment.userId);
         if (user) {
-          await storage.updateUserBalance(user.id, user.balance + payment.amount);
+          await storage.updateUserBalance(
+            user.id,
+            user.balance + payment.amount,
+          );
           console.log(`Updated user ${user.id} balance: +${payment.amount}`);
         }
-      } else if ((status === 'CANCELLED' || status === 'EXPIRED') && payment.status !== 'failed') {
+      } else if (
+        (status === "CANCELLED" || status === "EXPIRED") &&
+        payment.status !== "failed"
+      ) {
         console.log(`Updating payment ${payment.id} to failed`);
         await storage.updatePaymentStatus(payment.id, "failed");
       } else {
-        console.log(`Payment ${payment.id} status unchanged: ${payment.status}`);
+        console.log(
+          `Payment ${payment.id} status unchanged: ${payment.status}`,
+        );
       }
 
       // Luôn trả về thành công để PayOS không gửi lại webhook

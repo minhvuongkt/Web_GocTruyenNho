@@ -338,10 +338,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const id = parseInt(req.params.id);
       const contentData = {...req.body}; // Tạo một bản sao để tránh thay đổi giá trị gốc
+      
+      // Xóa các trường không cần thiết và không thể cập nhật
       const genreIds = Array.isArray(contentData.genreIds) ? contentData.genreIds : undefined;
       delete contentData.genreIds;
+      delete contentData.author;
+      delete contentData.translationGroup;
+      delete contentData.genres;
+      delete contentData.createdAt; // Bỏ trường createdAt vì nó là timestamp
+      delete contentData.id; // Không cập nhật id
+      delete contentData.views; // Không cập nhật views trực tiếp
       
-      console.log("Updating content:", id, contentData, "Genre IDs:", genreIds);
+      // Chuyển đổi định dạng trường status nếu cần
+      if (contentData.status) {
+        // Đảm bảo status nằm trong danh sách giá trị hợp lệ
+        if (!["ongoing", "completed", "hiatus"].includes(contentData.status)) {
+          contentData.status = "ongoing"; // Giá trị mặc định
+        }
+      }
+      
+      console.log("Updating content with cleaned data:", id, contentData, "Genre IDs:", genreIds);
 
       const updatedContent = await storage.updateContent(
         id,

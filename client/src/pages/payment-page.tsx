@@ -110,6 +110,7 @@ export function PaymentPage() {
     account: false,
     content: false
   });
+  const [presetAmount, setPresetAmount] = useState<string | null>(null);
   
   // Fetch payment settings
   const { data: paymentSettings, isLoading: isLoadingSettings } = useQuery({
@@ -139,6 +140,29 @@ export function PaymentPage() {
     accountName: paymentSettings?.accountName || "góc truyện nhỏ",
   };
   
+  // Get minimum deposit amount from settings
+  const minimumDeposit = paymentSettings?.minimumDeposit || 10000;
+  
+  // Calculate bonus coins based on discount tiers
+  const calculateBonus = (amount: number): { bonus: number, percentage: number } => {
+    if (!paymentSettings?.discountTiers || !paymentSettings.discountTiers.length) {
+      return { bonus: 0, percentage: 0 };
+    }
+    
+    // Sort tiers by amount in descending order to get the highest applicable tier
+    const sortedTiers = [...paymentSettings.discountTiers].sort((a, b) => b.amount - a.amount);
+    
+    // Find the applicable tier
+    const applicableTier = sortedTiers.find(tier => amount >= tier.amount);
+    
+    if (!applicableTier) {
+      return { bonus: 0, percentage: 0 };
+    }
+    
+    const bonusAmount = Math.floor((amount * applicableTier.discountPercent) / 100);
+    return { bonus: bonusAmount, percentage: applicableTier.discountPercent };
+  };
+  
   // Create a new payment
   const createPaymentMutation = useMutation({
     mutationFn: async () => {
@@ -146,16 +170,18 @@ export function PaymentPage() {
         throw new Error("Vui lòng nhập số tiền");
       }
       
-      if (parseInt(amount) < 10000) {
-        throw new Error("Số tiền tối thiểu là 10,000 VNĐ");
+      const amountValue = parseInt(amount);
+      
+      if (amountValue < minimumDeposit) {
+        throw new Error(`Số tiền tối thiểu là ${formatCurrency(minimumDeposit)} VNĐ`);
       }
       
-      if (parseInt(amount) % 1000 !== 0) {
+      if (amountValue % 1000 !== 0) {
         throw new Error("Số tiền phải là bội số của 1,000 VNĐ");
       }
       
       const resp = await apiRequest("POST", "/api/payments", {
-        amount: parseInt(amount),
+        amount: amountValue,
         method: paymentMethod
       });
       
@@ -339,14 +365,68 @@ export function PaymentPage() {
                         <Label htmlFor="amount">Số tiền (VNĐ)</Label>
                         <Input
                           id="amount"
-                          placeholder="Nhập số tiền (ví dụ: 50000)"
+                          placeholder={`Nhập số tiền (tối thiểu ${formatCurrency(minimumDeposit)})`}
                           value={amount}
-                          onChange={(e) => setAmount(e.target.value)}
+                          onChange={(e) => {
+                            setAmount(e.target.value);
+                            setPresetAmount(null);
+                          }}
                           type="number"
                         />
+                        
+                        {/* Preset amount buttons */}
+                        <div className="grid grid-cols-3 gap-2 pt-2">
+                          {paymentSettings?.discountTiers?.map((tier) => (
+                            <Button
+                              key={tier.amount}
+                              type="button"
+                              variant={presetAmount === tier.amount.toString() ? "default" : "outline"}
+                              size="sm"
+                              onClick={() => {
+                                setAmount(tier.amount.toString());
+                                setPresetAmount(tier.amount.toString());
+                              }}
+                              className="relative overflow-hidden"
+                            >
+                              <span>{formatCurrency(tier.amount)}</span>
+                              {tier.discountPercent > 0 && (
+                                <span className="absolute -top-0.5 -right-0.5 bg-primary text-primary-foreground text-[9px] px-1 rounded-bl-md">
+                                  +{tier.discountPercent}%
+                                </span>
+                              )}
+                            </Button>
+                          ))}
+                        </div>
+                        
                         <p className="text-xs text-muted-foreground">
-                          Tối thiểu 10,000 VNĐ. Số tiền phải là bội số của 1,000 VNĐ.
+                          Tối thiểu {formatCurrency(minimumDeposit)} VNĐ. Số tiền phải là bội số của 1,000 VNĐ.
                         </p>
+                        
+                        {/* Show bonus calculation */}
+                        {amount && !isNaN(parseInt(amount)) && parseInt(amount) >= minimumDeposit && (
+                          <div className="rounded-md bg-muted/50 p-3 mt-2">
+                            <div className="flex justify-between text-sm">
+                              <span>Nạp:</span>
+                              <span>{formatCurrency(parseInt(amount))} VNĐ</span>
+                            </div>
+                            
+                            {calculateBonus(parseInt(amount)).bonus > 0 && (
+                              <div className="flex justify-between text-sm text-primary">
+                                <span>Thưởng ({calculateBonus(parseInt(amount)).percentage}%):</span>
+                                <span>+{formatCurrency(calculateBonus(parseInt(amount)).bonus)} VNĐ</span>
+                              </div>
+                            )}
+                            
+                            <Separator className="my-2" />
+                            
+                            <div className="flex justify-between font-medium">
+                              <span>Tổng:</span>
+                              <span>
+                                {formatCurrency(parseInt(amount) + calculateBonus(parseInt(amount)).bonus)} VNĐ
+                              </span>
+                            </div>
+                          </div>
+                        )}
                       </div>
                       
                       <div className="space-y-4">

@@ -39,14 +39,17 @@ interface PayOSPaymentResponse {
  */
 export async function createPayOSPaymentLink(data: PayOSPaymentRequest): Promise<PayOSPaymentResponse> {
   try {
-    const response = await apiRequest('POST', '/api/payments/payos/create', data);
+    const response = await apiRequest("POST", "/api/payos/create-payment", data);
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to create PayOS payment');
+    }
+    
     return await response.json();
-  } catch (error: any) {
-    console.error('Failed to create PayOS payment:', error);
-    return {
-      code: 'ERROR',
-      desc: error.message || 'Failed to create payment',
-    };
+  } catch (error) {
+    console.error("Error creating PayOS payment:", error);
+    throw error;
   }
 }
 
@@ -58,13 +61,16 @@ export async function createPayOSPaymentLink(data: PayOSPaymentRequest): Promise
  */
 export async function checkPayOSPaymentStatus(orderCode: string): Promise<PayOSPaymentResponse> {
   try {
-    const response = await apiRequest('GET', `/api/payments/payos/status/${orderCode}`);
+    const response = await apiRequest("GET", `/api/payos/status/${orderCode}`);
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to check PayOS payment status');
+    }
+    
     return await response.json();
-  } catch (error: any) {
-    console.error('Failed to check PayOS payment status:', error);
-    return {
-      code: 'ERROR',
-      desc: error.message || 'Failed to check payment status',
-    };
+  } catch (error) {
+    console.error("Error checking PayOS payment status:", error);
+    throw error;
   }
 }

@@ -775,40 +775,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .digest("hex")
         .substring(0, 12);
 
+      // Method can be 'bank_transfer' or 'payos'
       const newPayment = await storage.createPayment({
         userId,
         amount,
-        method: "bank_transfer", // Only support bank transfers
+        method: method || 'bank_transfer',
         transactionId,
         status: "pending",
         createdAt: new Date(),
       });
 
-      // Get the payment settings for VietQR
+      // Get the payment settings
       const settings = await storage.getPaymentSettings();
 
-      if (!settings || !settings.vietQRConfig) {
+      if (!settings) {
         return res
           .status(500)
           .json({ error: "Payment settings not configured" });
       }
 
-      // Generate VietQR URL
-      const vietQRConfig = settings.vietQRConfig as any;
-      const qrCodeURL = generateVietQRURL({
-        bankId: vietQRConfig.bankId,
-        accountNumber: vietQRConfig.accountNumber,
-        accountName: vietQRConfig.accountName,
-        template: vietQRConfig.template,
-        amount,
-        message: `NAPTIEN admin ${amount}`,
-      });
+      if (method === 'bank_transfer') {
+        if (!settings.vietQRConfig) {
+          return res
+            .status(500)
+            .json({ error: "VietQR payment settings not configured" });
+        }
 
-      res.status(201).json({
-        payment: newPayment,
-        qrCodeURL,
-        expiresAt: new Date(newPayment.createdAt.getTime() + 10 * 60 * 1000), // 10 minutes expiry
-      });
+        // Generate VietQR URL
+        const vietQRConfig = settings.vietQRConfig as any;
+        const qrCodeURL = generateVietQRURL({
+          bankId: vietQRConfig.bankId,
+          accountNumber: vietQRConfig.accountNumber,
+          accountName: vietQRConfig.accountName,
+          template: vietQRConfig.template,
+          amount,
+          message: `NAP_${(req.user as any).username}`,
+        });
+
+        res.status(201).json({
+          payment: newPayment,
+          qrCodeURL,
+          expiresAt: new Date(newPayment.createdAt.getTime() + 10 * 60 * 1000), // 10 minutes expiry
+        });
+      } else {
+        // For payos method, we just return the payment info
+        // Actual payos payment will be created on the client side
+        res.status(201).json({
+          payment: newPayment,
+          expiresAt: new Date(newPayment.createdAt.getTime() + 10 * 60 * 1000), // 10 minutes expiry
+        });
+      }
     } catch (error) {
       res.status(500).json({ error: "Failed to create payment" });
     }
@@ -993,6 +1009,184 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error) {
       res.status(500).json({ error: "Failed to get VietQR config" });
+    }
+  });
+  
+  // PayOS routes
+  app.post("/api/payos/create-payment", ensureAuthenticated, async (req, res) => {
+    try {
+      const { amount, orderCode, description, returnUrl, cancelUrl, expiredAt } = req.body;
+
+      if (!amount || !orderCode || !description || !returnUrl || !cancelUrl) {
+        return res.status(400).json({ 
+          code: '01',
+          desc: 'Missing required parameters',
+          data: null
+        });
+      }
+
+      // Get PayOS settings
+      const settings = await storage.getPaymentSettings();
+      
+      if (!settings || !settings.payosConfig) {
+        return res.status(500).json({ 
+          code: '02',
+          desc: 'PayOS settings not configured',
+          data: null
+        });
+      }
+
+      const payosConfig = settings.payosConfig as any;
+      
+      // Check for required configurations
+      if (!payosConfig.clientId || !payosConfig.apiKey || !payosConfig.checksumKey || !payosConfig.baseUrl) {
+        return res.status(500).json({ 
+          code: '03',
+          desc: 'Incomplete PayOS configuration',
+          data: null
+        });
+      }
+
+      // Create payment link
+      const result = await createPayOSPaymentLink(payosConfig, {
+        amount,
+        orderCode,
+        description,
+        returnUrl,
+        cancelUrl
+      });
+
+      // Return the result directly
+      res.json(result);
+    } catch (error: any) {
+      console.error("PayOS create payment error:", error);
+      res.status(500).json({ 
+        code: '99',
+        desc: error.message || 'Failed to create PayOS payment',
+        data: null
+      });
+    }
+  });
+
+  app.get("/api/payos/status/:orderCode", ensureAuthenticated, async (req, res) => {
+    try {
+      const { orderCode } = req.params;
+
+      if (!orderCode) {
+        return res.status(400).json({ 
+          code: '01',
+          desc: 'Order code is required',
+          data: null
+        });
+      }
+
+      // Get PayOS settings
+      const settings = await storage.getPaymentSettings();
+      
+      if (!settings || !settings.payosConfig) {
+        return res.status(500).json({ 
+          code: '02',
+          desc: 'PayOS settings not configured',
+          data: null
+        });
+      }
+
+      const payosConfig = settings.payosConfig as any;
+
+      // Check payment status
+      const result = await checkPayOSPaymentStatus(payosConfig, orderCode);
+
+      // If payment is completed, update payment and user balance
+      if (result.code === '00' && result.data && result.data.status === 'PAID') {
+        // Find payment with this order code/transaction ID
+        const payment = await storage.getPaymentByTransactionId(orderCode);
+        
+        if (payment && payment.status !== 'completed') {
+          // Update payment status
+          await storage.updatePaymentStatus(payment.id, 'completed');
+          
+          // Update user balance
+          const user = await storage.getUser(payment.userId);
+          
+          if (user) {
+            await storage.updateUserBalance(
+              user.id,
+              user.balance + payment.amount
+            );
+          }
+        }
+      }
+
+      // Return the result
+      res.json(result);
+    } catch (error: any) {
+      console.error("PayOS status check error:", error);
+      res.status(500).json({ 
+        code: '99',
+        desc: error.message || 'Failed to check PayOS payment status',
+        data: null
+      });
+    }
+  });
+
+  // PayOS webhook handler
+  app.post("/api/payos/webhook", async (req, res) => {
+    try {
+      const webhookSignature = req.headers['x-webhook-signature'] as string;
+      const rawBody = JSON.stringify(req.body);
+      
+      if (!webhookSignature) {
+        return res.status(400).json({ error: 'Missing webhook signature' });
+      }
+
+      // Get PayOS settings
+      const settings = await storage.getPaymentSettings();
+      
+      if (!settings || !settings.payosConfig) {
+        return res.status(500).json({ error: 'PayOS settings not configured' });
+      }
+
+      const payosConfig = settings.payosConfig as any;
+
+      // Verify the webhook signature
+      const isValid = verifyPayOSWebhook(payosConfig, rawBody, webhookSignature);
+      
+      if (!isValid) {
+        return res.status(403).json({ error: 'Invalid webhook signature' });
+      }
+
+      // Process the webhook data
+      const { orderCode, status, amount } = req.body.data || {};
+      
+      if (orderCode && status) {
+        // Find payment with this order code/transaction ID
+        const payment = await storage.getPaymentByTransactionId(orderCode);
+        
+        if (payment) {
+          if (status === 'PAID' && payment.status !== 'completed') {
+            // Update payment status
+            await storage.updatePaymentStatus(payment.id, 'completed');
+            
+            // Update user balance
+            const user = await storage.getUser(payment.userId);
+            
+            if (user) {
+              await storage.updateUserBalance(
+                user.id,
+                user.balance + payment.amount
+              );
+            }
+          } else if (status === 'CANCELED' && payment.status !== 'failed') {
+            // Update payment status to failed
+            await storage.updatePaymentStatus(payment.id, 'failed');
+          }
+        }
+      }
+
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("PayOS webhook error:", error);
+      res.status(500).json({ error: error.message || 'Failed to process PayOS webhook' });
     }
   });
   

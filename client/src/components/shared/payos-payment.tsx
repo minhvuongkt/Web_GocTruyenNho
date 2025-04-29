@@ -1,204 +1,185 @@
-import { useState, useEffect } from "react";
-import { createPayOSPaymentLink, checkPayOSPaymentStatus } from "@/services/payos-api";
-import { Loader2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { useState, useEffect } from 'react';
+import { createPayOSPaymentLink, checkPayOSPaymentStatus } from '@/services/payos-api';
+import { Loader2, ExternalLink, CheckCircle, AlertTriangle, Clock } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { useToast } from '@/hooks/use-toast';
+import { Card, CardContent } from '@/components/ui/card';
 
 interface PayOSPaymentProps {
-  amount: number;
-  username: string;
-  onSuccess: (transactionId: string) => void;
-  onCancel: () => void;
+  payment: {
+    id: number;
+    transactionId: string;
+    amount: number;
+  };
+  onSuccess: () => void;
+  onError: (error: string) => void;
 }
 
-export function PayOSPayment({ amount, username, onSuccess, onCancel }: PayOSPaymentProps) {
+export function PayOSPayment({ payment, onSuccess, onError }: PayOSPaymentProps) {
   const [loading, setLoading] = useState(true);
+  const [checking, setChecking] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [paymentInfo, setPaymentInfo] = useState<{
-    checkoutUrl?: string;
-    qrCode?: string;
-    orderCode?: string;
-    id?: string;
-  }>({});
-  
-  // Generate a unique order code based on timestamp and username
-  const generateOrderCode = () => {
-    const timestamp = new Date().getTime();
-    const randomStr = Math.random().toString(36).substring(2, 8);
-    return `PAY_${username}_${timestamp}_${randomStr}`;
-  };
-  
-  // Create payment on component mount
+  const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null);
+  const [qrCode, setQrCode] = useState<string | null>(null);
+  const [orderCode, setOrderCode] = useState<string | null>(null);
+  const [statusText, setStatusText] = useState<string | null>(null);
+  const [statusColor, setStatusColor] = useState<string>('text-muted-foreground');
+  const { toast } = useToast();
+
+  // Create payment link on component mount
   useEffect(() => {
-    const createPayment = async () => {
-      setLoading(true);
-      setError(null);
-      
+    async function createPayment() {
       try {
-        // Current URL for return and cancel URLs
-        const baseUrl = window.location.origin;
-        const returnUrl = `${baseUrl}/payment?status=success`;
-        const cancelUrl = `${baseUrl}/payment?status=cancelled`;
+        setLoading(true);
         
-        // Create order code
-        const orderCode = generateOrderCode();
+        const paymentData = {
+          amount: payment.amount,
+          orderCode: payment.transactionId,
+          description: `Nạp tiền vào tài khoản`,
+          returnUrl: `${window.location.origin}/payment?status=success`,
+          cancelUrl: `${window.location.origin}/payment?status=cancel`, 
+          expiredAt: Math.floor(Date.now() / 1000) + 600 // 10 minutes expiry
+        };
         
-        // Create payment through PayOS
-        const response = await createPayOSPaymentLink({
-          amount: amount,
-          orderCode: orderCode,
-          description: `Nạp tiền tài khoản - ${username}`,
-          returnUrl,
-          cancelUrl
-        });
+        const response = await createPayOSPaymentLink(paymentData);
         
-        if (response.code === 'SUCCESS' && response.data) {
-          setPaymentInfo({
-            checkoutUrl: response.data.checkoutUrl,
-            qrCode: response.data.qrCode,
-            orderCode: response.data.orderCode,
-            id: response.data.id
-          });
-          
-          // Start polling to check payment status
-          startPollingPaymentStatus(response.data.orderCode);
-        } else {
-          setError(response.desc || "Không thể tạo giao dịch, vui lòng thử lại sau.");
+        if (response.code !== '00') {
+          throw new Error(response.desc || 'Không thể tạo thanh toán');
+        }
+        
+        if (response.data) {
+          setOrderCode(response.data.orderCode);
+          setCheckoutUrl(response.data.checkoutUrl);
+          setQrCode(response.data.qrCode);
+          setStatusText('Đang chờ thanh toán');
+          setStatusColor('text-amber-500');
         }
       } catch (err: any) {
-        setError(err.message || "Có lỗi xảy ra, vui lòng thử lại sau.");
+        setError(err.message || 'Lỗi khi tạo thanh toán');
+        onError(err.message || 'Lỗi khi tạo thanh toán');
       } finally {
         setLoading(false);
       }
-    };
-    
+    }
+
     createPayment();
+  }, [payment, onError]);
+
+  // Function to check payment status
+  const checkPaymentStatus = async () => {
+    if (!orderCode) return;
     
-    // Clean up any polling on unmount
-    return () => {
-      if (window.paymentStatusInterval) {
-        clearInterval(window.paymentStatusInterval);
-      }
-    };
-  }, [amount, username]);
-  
-  // Poll for payment status
-  const startPollingPaymentStatus = (orderCode: string) => {
-    // Poll every 5 seconds
-    const intervalId = setInterval(async () => {
-      try {
-        const response = await checkPayOSPaymentStatus(orderCode);
-        
-        // Check if payment is successful
-        if (response.code === 'SUCCESS' && response.data && response.data.status === 'PAID') {
-          // Clear interval
-          clearInterval(intervalId);
-          
-          // Call success callback
-          onSuccess(response.data.id);
-        }
-      } catch (err) {
-        console.error("Error checking payment status:", err);
-      }
-    }, 5000);
-    
-    // Save interval ID for cleanup
-    window.paymentStatusInterval = intervalId;
-  };
-  
-  // Handle URL change for redirect back from payment gateway
-  useEffect(() => {
-    const handlePaymentReturn = () => {
-      const urlParams = new URLSearchParams(window.location.search);
-      const status = urlParams.get('status');
+    try {
+      setChecking(true);
+      setStatusText('Đang kiểm tra trạng thái...');
       
-      // Check if we have returned from payment with success status
-      if (status === 'success' && paymentInfo.orderCode) {
-        // Check payment status once more
-        checkPayOSPaymentStatus(paymentInfo.orderCode)
-          .then(response => {
-            if (response.code === 'SUCCESS' && response.data && response.data.status === 'PAID') {
-              onSuccess(response.data.id);
-            }
-          })
-          .catch(err => {
-            console.error("Error checking payment status after return:", err);
-          });
-      } else if (status === 'cancelled') {
-        // User cancelled the payment
-        onCancel();
+      const response = await checkPayOSPaymentStatus(orderCode);
+      
+      if (response.code !== '00') {
+        throw new Error(response.desc || 'Không thể kiểm tra trạng thái thanh toán');
       }
-    };
-    
-    handlePaymentReturn();
-  }, [paymentInfo.orderCode, onSuccess, onCancel]);
-  
+      
+      if (response.data) {
+        const status = response.data.status.toLowerCase();
+        
+        if (status === 'paid' || status === 'completed' || status === 'success') {
+          setStatusText('Thanh toán thành công');
+          setStatusColor('text-green-500');
+          toast({
+            title: "Thanh toán thành công",
+            description: "Tiền đã được cộng vào tài khoản của bạn",
+            variant: "default"
+          });
+          onSuccess();
+        } else if (status === 'pending' || status === 'processing') {
+          setStatusText('Đang chờ thanh toán');
+          setStatusColor('text-amber-500');
+        } else {
+          setStatusText('Thanh toán thất bại');
+          setStatusColor('text-destructive');
+          onError('Thanh toán thất bại hoặc bị hủy');
+        }
+      }
+    } catch (err: any) {
+      setError(err.message || 'Lỗi khi kiểm tra trạng thái thanh toán');
+    } finally {
+      setChecking(false);
+    }
+  };
+
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center py-8">
-        <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
-        <p className="text-muted-foreground">Đang tạo giao dịch thanh toán...</p>
+      <div className="flex justify-center items-center py-8">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <span className="ml-2">Đang khởi tạo thanh toán...</span>
       </div>
     );
   }
-  
+
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center py-8 text-center">
-        <p className="text-red-500 mb-4">{error}</p>
-        <Button onClick={onCancel}>Thử lại</Button>
-      </div>
+      <Card className="border-destructive bg-destructive/10">
+        <CardContent className="pt-6">
+          <div className="flex flex-col items-center text-center">
+            <AlertTriangle className="h-12 w-12 text-destructive mb-4" />
+            <h3 className="text-lg font-semibold mb-2">Lỗi thanh toán</h3>
+            <p className="text-sm text-muted-foreground mb-4">{error}</p>
+            <Button onClick={() => window.location.reload()} variant="outline">
+              Thử lại
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
     );
   }
-  
+
   return (
-    <div className="flex flex-col items-center space-y-6">
-      <div className="text-center mb-2">
-        <h3 className="text-lg font-medium">Thanh toán với PayOS</h3>
-        <p className="text-sm text-muted-foreground">
-          Số tiền: <span className="font-medium">{amount.toLocaleString('vi-VN')} VNĐ</span>
-        </p>
+    <div className="flex flex-col space-y-4">
+      {qrCode && (
+        <div className="flex flex-col items-center mb-4">
+          <p className="text-sm text-muted-foreground mb-2">Quét mã QR để thanh toán</p>
+          <img src={qrCode} alt="PayOS QR Code" className="max-w-[250px] rounded" />
+        </div>
+      )}
+      
+      <div className="text-center">
+        <p className="text-sm font-medium">Trạng thái: <span className={statusColor}>{statusText || 'Đang chờ thanh toán'}</span></p>
+      </div>
+
+      <div className="flex flex-col sm:flex-row gap-2 justify-center">
+        {checkoutUrl && (
+          <Button asChild variant="outline" className="gap-1">
+            <a href={checkoutUrl} target="_blank" rel="noopener noreferrer">
+              <ExternalLink className="h-4 w-4 mr-1" />
+              Thanh toán trực tuyến
+            </a>
+          </Button>
+        )}
+        
+        <Button 
+          onClick={checkPaymentStatus} 
+          disabled={checking}
+          variant="default"
+          className="gap-1"
+        >
+          {checking ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin mr-1" />
+              Đang kiểm tra...
+            </>
+          ) : (
+            <>
+              <Clock className="h-4 w-4 mr-1" />
+              Kiểm tra trạng thái
+            </>
+          )}
+        </Button>
       </div>
       
-      {paymentInfo.qrCode && (
-        <div className="border border-border rounded-md p-4 flex flex-col items-center bg-background">
-          <p className="text-sm text-muted-foreground mb-2">Quét mã QR để thanh toán</p>
-          <img 
-            src={paymentInfo.qrCode} 
-            alt="QR Code" 
-            className="w-64 h-64 object-contain"
-          />
-        </div>
-      )}
-      
-      {paymentInfo.checkoutUrl && (
-        <div className="space-y-2 w-full">
-          <Button
-            className="w-full"
-            onClick={() => window.open(paymentInfo.checkoutUrl, '_blank')}
-          >
-            Mở trang thanh toán
-          </Button>
-          
-          <Button
-            variant="outline"
-            className="w-full"
-            onClick={onCancel}
-          >
-            Hủy giao dịch
-          </Button>
-        </div>
-      )}
-      
-      <p className="text-xs text-muted-foreground">
-        Mã đơn hàng: {paymentInfo.orderCode}
+      <p className="text-xs text-muted-foreground text-center mt-2">
+        Thanh toán sẽ hết hạn sau 10 phút. Nếu bạn đã thanh toán nhưng chưa được cập nhật, 
+        vui lòng kiểm tra trạng thái hoặc liên hệ admin.
       </p>
     </div>
   );
-}
-
-// Add PaymentStatusInterval to Window interface
-declare global {
-  interface Window {
-    paymentStatusInterval: NodeJS.Timeout;
-  }
 }

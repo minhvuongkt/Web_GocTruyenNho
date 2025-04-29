@@ -13,22 +13,39 @@ interface PayOSPaymentRequest {
 }
 
 /**
- * PayOS payment response interface
+ * PayOS payment data schema - cấu trúc thông tin phản hồi từ PayOS
+ */
+interface PayOSPaymentData {
+  id?: string;
+  checkoutUrl?: string;
+  qrCode?: string;
+  orderCode?: string;
+  status?: string;
+  amount?: number;
+  description?: string;
+  cancelUrl?: string;
+  returnUrl?: string;
+}
+
+/**
+ * PayOS payment response interface - dùng cho cả cấu trúc format mới và cũ
  */
 interface PayOSPaymentResponse {
-  code: string;
-  desc: string;
-  data?: {
-    id: string;
-    checkoutUrl: string;
-    qrCode: string;
-    orderCode: string;
-    status: string;
-    amount: number;
-    description: string;
-    cancelUrl: string;
-    returnUrl: string;
-  };
+  // Format chuẩn từ PayOS API
+  code?: string;
+  desc?: string;
+  data?: PayOSPaymentData;
+  
+  // Đặc biệt: dành cho các response được băng bọc do tương thích
+  id?: string;
+  checkoutUrl?: string;
+  qrCode?: string;
+  orderCode?: string;
+  status?: string;
+  amount?: number;
+  description?: string;
+  cancelUrl?: string;
+  returnUrl?: string;
 }
 
 /**

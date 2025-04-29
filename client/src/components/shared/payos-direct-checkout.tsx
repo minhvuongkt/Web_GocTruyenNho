@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
 import { apiRequest } from '@/lib/queryClient';
+import { extractPayOSPaymentData, isValidPayOSResponse, extractPayOSErrorMessage } from '@/utils/payos-helpers';
 
 interface PayOSDirectCheckoutProps {
   amount: number;
@@ -51,29 +52,18 @@ export function PayOSDirectCheckout({
       const result = await response.json();
       console.log("PayOS response:", result);
       
-      // Biến để lưu QR code và checkout URL
-      let extractedQrCode = null;
-      let extractedCheckoutUrl = null;
+      // Sử dụng utility để trích xuất dữ liệu từ các định dạng khác nhau
+      const paymentData = extractPayOSPaymentData(result);
+      console.log("Extracted payment data:", paymentData);
       
-      // Xử lý cả hai loại response có thể nhận được từ PayOS
-      // Loại 1: Cấu trúc { code, desc, data }
-      if (result.code === '00' && result.data) {
-        extractedQrCode = result.data.qrCode;
-        extractedCheckoutUrl = result.data.checkoutUrl;
-      } 
-      // Loại 2: Response trực tiếp từ PayOS SDK (không có code, desc, data)
-      else if (result.qrCode && result.checkoutUrl) {
-        extractedQrCode = result.qrCode;
-        extractedCheckoutUrl = result.checkoutUrl;
-      }
-      // Không có cấu trúc phù hợp
-      else {
-        throw new Error('Không thể tạo link thanh toán');
+      // Kiểm tra xem phản hồi có hợp lệ không
+      if (!isValidPayOSResponse(paymentData)) {
+        throw new Error(extractPayOSErrorMessage(result));
       }
       
       // Lưu giá trị đã trích xuất
-      setQrCode(extractedQrCode);
-      setCheckoutUrl(extractedCheckoutUrl);
+      setQrCode(paymentData.qrCode || null);
+      setCheckoutUrl(paymentData.checkoutUrl || null);
       
       // Start the countdown timer (10 minutes = 600 seconds)
       setCountdown(600);
@@ -127,17 +117,11 @@ export function PayOSDirectCheckout({
         const data = await response.json();
         console.log("Payment status check response:", data);
         
-        // Kiểm tra trạng thái thanh toán trong cả hai loại response
-        let isPaid = false;
+        // Sử dụng utility để trích xuất dữ liệu từ các định dạng khác nhau
+        const paymentData = extractPayOSPaymentData(data);
         
-        // Kiểm tra trạng thái từ cấu trúc mới (code, data)
-        if (data.code === '00' && data.data && data.data.status === 'PAID') {
-          isPaid = true;
-        } 
-        // Kiểm tra trạng thái từ cấu trúc cũ (trực tiếp từ API)
-        else if (data.status === 'PAID') {
-          isPaid = true;
-        }
+        // Kiểm tra trạng thái thanh toán
+        const isPaid = paymentData.status === 'PAID';
         
         if (isPaid) {
           setMessage("Thanh toán thành công!");
@@ -172,17 +156,11 @@ export function PayOSDirectCheckout({
       .then(data => {
         console.log("Manual payment check response:", data);
         
-        // Kiểm tra trạng thái thanh toán trong cả hai loại response
-        let isPaid = false;
+        // Sử dụng utility để trích xuất dữ liệu từ các định dạng khác nhau
+        const paymentData = extractPayOSPaymentData(data);
         
-        // Kiểm tra trạng thái từ cấu trúc mới (code, data)
-        if (data.code === '00' && data.data && data.data.status === 'PAID') {
-          isPaid = true;
-        } 
-        // Kiểm tra trạng thái từ cấu trúc cũ (trực tiếp từ API)
-        else if (data.status === 'PAID') {
-          isPaid = true;
-        }
+        // Kiểm tra trạng thái thanh toán
+        const isPaid = paymentData.status === 'PAID';
         
         if (isPaid) {
           setMessage("Thanh toán thành công!");

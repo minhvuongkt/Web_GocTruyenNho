@@ -431,7 +431,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     },
   );
 
-  app.patch("/api/chapters/:id", ensureAdmin, async (req, res) => {
+  // Common handler for chapter updates
+  const updateChapterHandler = async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
       const updatedChapter = await storage.updateChapter(id, req.body);
@@ -443,6 +444,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(updatedChapter);
     } catch (error) {
       res.status(500).json({ error: "Failed to update chapter" });
+    }
+  };
+
+  // Support both PATCH and PUT for chapter updates
+  app.patch("/api/chapters/:id", ensureAdmin, updateChapterHandler);
+  app.put("/api/chapters/:id", ensureAdmin, updateChapterHandler);
+  
+  // Chapter lock/unlock endpoint
+  app.patch("/api/chapters/:id/lock", ensureAdmin, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { isLocked, unlockPrice } = req.body;
+      
+      const updatedChapter = await storage.updateChapter(id, { isLocked, unlockPrice });
+
+      if (!updatedChapter) {
+        return res.status(404).json({ error: "Chapter not found" });
+      }
+
+      res.json(updatedChapter);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update chapter lock status" });
     }
   });
 
@@ -476,7 +499,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     },
   );
 
-  app.patch("/api/chapter-content/:id", ensureAdmin, async (req, res) => {
+  // Handler for chapter content updates
+  const updateChapterContentHandler = async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
       const updatedContent = await storage.updateChapterContent(id, req.body);
@@ -489,7 +513,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       res.status(500).json({ error: "Failed to update chapter content" });
     }
-  });
+  };
+
+  // Support both PATCH and PUT for chapter content updates
+  app.patch("/api/chapter-content/:id", ensureAdmin, updateChapterContentHandler);
+  app.put("/api/chapter-content/:id", ensureAdmin, updateChapterContentHandler);
 
   app.delete("/api/chapter-content/:id", ensureAdmin, async (req, res) => {
     try {
@@ -1173,46 +1201,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
     },
   );
 
-  app.patch(
-    "/api/ads/:id",
-    ensureAdmin,
-    upload.single("image"),
-    async (req, res) => {
-      try {
-        const id = parseInt(req.params.id);
-        const adData: any = { ...req.body };
+  // Handler for updating ads
+  const updateAdHandler = async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const adData: any = { ...req.body };
 
-        // Handle image update if provided
-        if (req.file) {
-          adData.imageUrl = `/uploads/${req.file.filename}`;
-        }
-
-        // Parse dates if provided
-        if (adData.startDate) {
-          adData.startDate = new Date(adData.startDate);
-        }
-
-        if (adData.endDate) {
-          adData.endDate = new Date(adData.endDate);
-        }
-
-        // Parse boolean
-        if (adData.isActive !== undefined) {
-          adData.isActive = adData.isActive === "true";
-        }
-
-        const updatedAd = await storage.updateAdvertisement(id, adData);
-
-        if (!updatedAd) {
-          return res.status(404).json({ error: "Ad not found" });
-        }
-
-        res.json(updatedAd);
-      } catch (error) {
-        res.status(500).json({ error: "Failed to update ad" });
+      // Handle image update if provided
+      if (req.file) {
+        adData.imageUrl = `/uploads/${req.file.filename}`;
       }
-    },
-  );
+
+      // Parse dates if provided
+      if (adData.startDate) {
+        adData.startDate = new Date(adData.startDate);
+      }
+
+      if (adData.endDate) {
+        adData.endDate = new Date(adData.endDate);
+      }
+
+      // Parse boolean
+      if (adData.isActive !== undefined) {
+        adData.isActive = adData.isActive === "true";
+      }
+
+      const updatedAd = await storage.updateAdvertisement(id, adData);
+
+      if (!updatedAd) {
+        return res.status(404).json({ error: "Ad not found" });
+      }
+
+      res.json(updatedAd);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update ad" });
+    }
+  };
+
+  // Support both PATCH and PUT for ad updates
+  app.patch("/api/ads/:id", ensureAdmin, upload.single("image"), updateAdHandler);
+  app.put("/api/ads/:id", ensureAdmin, upload.single("image"), updateAdHandler);
 
   app.delete("/api/ads/:id", ensureAdmin, async (req, res) => {
     try {

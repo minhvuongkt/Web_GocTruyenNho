@@ -258,11 +258,22 @@ export function PayOSDirectCheckout({
                 )}
                 
                 <div className="bg-white p-2 border border-gray-200 rounded-md">
-                  <img 
-                    src={qrCode} 
-                    alt="QR Code thanh toán" 
-                    className="w-48 h-48 mx-auto" 
-                  />
+                  {qrCode ? (
+                    <img 
+                      src={`data:image/png;base64,${btoa(qrCode)}`} 
+                      alt="QR Code thanh toán" 
+                      className="w-48 h-48 mx-auto"
+                      onError={(e) => {
+                        // Nếu không thể hiển thị dưới dạng base64, thử hiển thị trực tiếp chuỗi QR
+                        e.currentTarget.src = qrCode;
+                        console.log("QR code display fallback", qrCode);
+                      }}
+                    />
+                  ) : (
+                    <div className="w-48 h-48 mx-auto flex items-center justify-center bg-gray-100">
+                      <p className="text-sm text-gray-500">Không thể tải mã QR</p>
+                    </div>
+                  )}
                 </div>
                 
                 <div className="text-center space-y-1">

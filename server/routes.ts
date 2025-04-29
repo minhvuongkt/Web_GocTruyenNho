@@ -995,7 +995,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: "Failed to get VietQR config" });
     }
   });
-
+  
   app.get("/api/payment-settings/pricing", async (req, res) => {
     try {
       let settings = await storage.getPaymentSettings();
@@ -1006,10 +1006,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const priceConfig = settings.priceConfig as any;
       
-      res.json({
-        priceConfig: priceConfig,
-        discountTiers: priceConfig?.discountTiers || [],
-      });
+      if (!priceConfig) {
+        return res.status(404).json({ error: "Price config not found" });
+      }
+
+      res.json(priceConfig);
     } catch (error) {
       res.status(500).json({ error: "Failed to get pricing settings" });
     }

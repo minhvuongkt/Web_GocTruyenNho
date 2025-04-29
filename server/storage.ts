@@ -53,6 +53,7 @@ import {
   lt,
   not,
   inArray,
+  count,
 } from "drizzle-orm";
 import session from "express-session";
 import { hashPassword, comparePasswords } from "./auth";

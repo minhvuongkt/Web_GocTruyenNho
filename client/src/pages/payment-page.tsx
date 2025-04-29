@@ -334,7 +334,7 @@ export function PaymentPage() {
                 {/* Payment Tab */}
                 <TabsContent value="payment">
                   {!paymentStatus.processing ? (
-                    <div className="space-y-6">
+                    <div className="max-w-md mx-auto space-y-6">
                       <div className="space-y-4">
                         <Label htmlFor="amount">Số tiền (VNĐ)</Label>
                         <Input
@@ -541,31 +541,40 @@ export function PaymentPage() {
 
                       {/* Nếu là thanh toán qua PayOS */}
                       {paymentStatus.transactionId && paymentMethod === 'payos' && (
-                        <div className="max-w-md mx-auto">
-                          <PayOSPayment 
-                            amount={parseInt(amount)}
-                            username={user.username}
-                            onSuccess={(transId) => {
-                              toast({
-                                title: "Thanh toán thành công",
-                                description: "Tiền đã được nạp vào tài khoản của bạn",
-                              });
-                              
-                              // Refresh dữ liệu
-                              queryClient.invalidateQueries({ queryKey: ["/api/payments"] });
-                              queryClient.invalidateQueries({ queryKey: ["/api/user"] });
-                              
-                              // Chuyển sang tab lịch sử
-                              setActiveTab("history");
-                              
-                              // Reset trạng thái thanh toán
-                              setPaymentStatus({ processing: false });
-                              setPaymentDate(null);
-                            }}
-                            onCancel={() => {
-                              setPaymentStatus({ processing: false });
-                            }}
-                          />
+                        <div className="max-w-2xl mx-auto">
+                          <div className="text-center mb-6">
+                            <h2 className="text-xl font-semibold mb-2">Thanh toán trực tuyến</h2>
+                            <p className="text-muted-foreground">
+                              Đang chuyển đến cổng thanh toán PayOS
+                            </p>
+                          </div>
+                          
+                          <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
+                            <PayOSPayment 
+                              amount={parseInt(amount)}
+                              username={user.username}
+                              onSuccess={(transId) => {
+                                toast({
+                                  title: "Thanh toán thành công",
+                                  description: "Tiền đã được nạp vào tài khoản của bạn",
+                                });
+                                
+                                // Refresh dữ liệu
+                                queryClient.invalidateQueries({ queryKey: ["/api/payments"] });
+                                queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+                                
+                                // Chuyển sang tab lịch sử
+                                setActiveTab("history");
+                                
+                                // Reset trạng thái thanh toán
+                                setPaymentStatus({ processing: false });
+                                setPaymentDate(null);
+                              }}
+                              onCancel={() => {
+                                setPaymentStatus({ processing: false });
+                              }}
+                            />
+                          </div>
                         </div>
                       )}
                     </>

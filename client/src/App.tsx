@@ -17,7 +17,6 @@ import MangaReaderPage from "@/pages/manga-reader-page";
 import NovelReaderPage from "@/pages/novel-reader-page";
 import ProfilePage from "@/pages/profile-page";
 import PaymentPage from "@/pages/payment-page";
-import NapTienPage from "@/pages/nap-tien-page";
 import SearchPage from "@/pages/search-page";
 import { PaymentTestPage } from "@/pages/payment-test-page";
 
@@ -69,10 +68,7 @@ function Router() {
       
       {/* Protected user routes */}
       <ProtectedRoute path="/profile" component={ProfilePage} />
-      
-      {/* Payment routes */}
-      <Route path="/payment" component={PaymentPage} />
-      <ProtectedRoute path="/nap-tien" component={NapTienPage} />
+      <ProtectedRoute path="/payment" component={PaymentPage} />
       
       {/* Test payment page */}
       <Route path="/payment-test" component={PaymentTestPage} />

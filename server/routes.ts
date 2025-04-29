@@ -721,9 +721,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/chapters/:chapterId/comments", async (req, res) => {
     try {
       const chapterId = parseInt(req.params.chapterId);
+      
+      // Verify chapterId is a valid number
+      if (isNaN(chapterId)) {
+        return res.status(400).json({ error: "Invalid chapter ID" });
+      }
+      
       const comments = await storage.getCommentsByChapter(chapterId);
-      res.json(comments);
+      
+      // Always return an array, even if empty
+      res.json(comments || []);
     } catch (error) {
+      console.error("Error fetching chapter comments:", error);
       res.status(500).json({ error: "Failed to get comments" });
     }
   });

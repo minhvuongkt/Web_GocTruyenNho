@@ -54,6 +54,7 @@ import {
   not,
   inArray,
   count,
+  isNull,
 } from "drizzle-orm";
 import session from "express-session";
 import { hashPassword, comparePasswords } from "./auth";

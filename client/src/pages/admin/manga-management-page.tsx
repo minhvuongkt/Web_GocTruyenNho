@@ -202,6 +202,33 @@ export function MangaManagementPage() {
     }
   });
 
+  // Update content mutation
+  const updateContentMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const response = await apiRequest("PUT", `/api/content/${data.id}`, data);
+      return await response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Cập nhật truyện thành công",
+        description: "Thông tin truyện đã được cập nhật",
+      });
+      // Reset form and close dialog
+      setIsEditDialogOpen(false);
+      setEditContent(null);
+      // Refresh content list
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/content"] });
+    },
+    onError: (error) => {
+      console.error("Update error:", error);
+      toast({
+        title: "Không thể cập nhật truyện",
+        description: error instanceof Error ? error.message : "Đã xảy ra lỗi khi cập nhật truyện",
+        variant: "destructive",
+      });
+    }
+  });
+
   // Delete content mutation
   const deleteContentMutation = useMutation({
     mutationFn: async (id: number) => {

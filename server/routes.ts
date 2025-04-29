@@ -634,25 +634,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = (req.user as any).id;
       const { contentId, chapterId } = req.body;
-
-      await storage.addReadingHistory(userId, contentId, chapterId);
+      
+      // Validate input parameters
+      if (!contentId || !chapterId) {
+        return res.status(400).json({ error: "Content ID and Chapter ID are required" });
+      }
+      
+      // Ensure they're valid numbers
+      const contentIdNum = parseInt(contentId);
+      const chapterIdNum = parseInt(chapterId);
+      
+      if (isNaN(contentIdNum) || isNaN(chapterIdNum)) {
+        return res.status(400).json({ error: "Invalid Content ID or Chapter ID" });
+      }
+      
+      await storage.addReadingHistory(userId, contentIdNum, chapterIdNum);
       res.status(201).json({ success: true });
     } catch (error) {
-      res
-        .status(500)
-        .json({ error: "Failed to add reading history " + error.message });
+      console.error("Error adding reading history:", error);
+      res.status(500).json({ 
+        error: "Failed to add reading history", 
+        message: error instanceof Error ? error.message : "Unknown error"
+      });
     }
   });
 
   app.get("/api/reading-history", ensureAuthenticated, async (req, res) => {
     try {
       const userId = (req.user as any).id;
+      
+      if (!userId) {
+        return res.status(400).json({ error: "User ID is required" });
+      }
+      
       const history = await storage.getReadingHistory(userId);
-      res.json(history);
+      
+      // Always return an array, even if empty
+      res.json(history || []);
     } catch (error) {
-      res
-        .status(500)
-        .json({ error: "Failed to get reading history " + error.message });
+      console.error("Error fetching reading history:", error);
+      res.status(500).json({ 
+        error: "Failed to get reading history", 
+        message: error instanceof Error ? error.message : "Unknown error"
+      });
     }
   });
 

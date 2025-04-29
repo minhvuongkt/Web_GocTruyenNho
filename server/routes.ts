@@ -903,45 +903,63 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Xác nhận thanh toán theo transactionId thay vì paymentId
   app.post(
-    "/api/payments/:id/confirm",
+    "/api/payments/confirm",
     ensureAuthenticated,
     async (req, res) => {
       try {
-        const paymentId = parseInt(req.params.id);
+        const { transactionId } = req.body;
+        if (!transactionId) {
+          return res.status(400).json({ 
+            success: false,
+            error: "Transaction ID is required" 
+          });
+        }
+
         const userId = (req.user as any).id;
 
-        // Get the payment
-        const payment = await storage.getPayment(paymentId);
+        // Lấy payment dựa vào transactionId
+        const payment = await storage.getPaymentByTransactionId(transactionId);
 
         if (!payment) {
-          return res.status(404).json({ error: "Payment not found" });
+          return res.status(404).json({ 
+            success: false,
+            error: "Payment not found" 
+          });
         }
 
-        // Check if the payment belongs to the user
+        // Kiểm tra payment của user
         if (payment.userId !== userId) {
-          return res.status(403).json({ error: "Forbidden" });
+          return res.status(403).json({ 
+            success: false,
+            error: "Forbidden" 
+          });
         }
 
-        // Check if payment is already completed or failed
+        // Kiểm tra trạng thái hiện tại
         if (payment.status !== "pending") {
-          return res
-            .status(400)
-            .json({ error: `Payment is already ${payment.status}` });
+          return res.status(400).json({ 
+            success: false,
+            error: `Payment is already ${payment.status}` 
+          });
         }
 
-        // Check if payment is expired (10 minutes)
+        // Kiểm tra thời gian hết hạn (10 phút mặc định)
         const expiryTime = new Date(
           payment.createdAt.getTime() + 10 * 60 * 1000,
         );
         if (new Date() > expiryTime) {
-          await storage.updatePaymentStatus(paymentId, "failed");
-          return res.status(400).json({ error: "Payment expired" });
+          await storage.updatePaymentStatus(payment.id, "failed");
+          return res.status(400).json({ 
+            success: false,
+            error: "Payment expired" 
+          });
         }
 
-        // Mark as completed (will be verified by admin)
+        // Không thay đổi trạng thái (vẫn là pending), chỉ đánh dấu là đã được xác nhận 
         const updatedPayment = await storage.updatePaymentStatus(
-          paymentId,
+          payment.id,
           "pending",
         );
 
@@ -952,7 +970,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
             "Payment confirmation sent. Please wait for admin verification.",
         });
       } catch (error) {
-        res.status(500).json({ error: "Failed to confirm payment" });
+        console.error("Payment confirm error:", error);
+        res.status(500).json({ 
+          success: false,
+          error: "Failed to confirm payment" 
+        });
       }
     },
   );

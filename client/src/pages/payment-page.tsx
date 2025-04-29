@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { MainLayout } from "@/components/layouts/main-layout";
@@ -7,7 +7,7 @@ import { formatCurrency, formatDate } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { generateVietQR, getBankAcqId } from "@/services/vietqr-api";
 import { QRCode } from "@/components/shared/qr-code";
-import { PayOSPayment } from "@/components/shared/payos-payment";
+import { PayOSCheckout } from "@/components/shared/payos-checkout";
 import {
   Card,
   CardContent,
@@ -677,7 +677,7 @@ export function PaymentPage() {
                           </div>
                           
                           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 mb-6">
-                            <PayOSPayment 
+                            <PayOSCheckout 
                               amount={parseInt(amount)}
                               username={user.username}
                               onSuccess={(transId) => {
@@ -780,9 +780,6 @@ export function PaymentPage() {
                     ) : (
                       <div className="text-center py-8 text-muted-foreground">
                         <p>Bạn chưa có giao dịch nào.</p>
-                        <Button onClick={() => setActiveTab("payment")} className="mt-4">
-                          Tạo giao dịch mới
-                        </Button>
                       </div>
                     )}
                   </div>

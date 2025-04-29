@@ -237,16 +237,17 @@ export function PayOSDirectCheckout({
                 
                 <div className="bg-white p-2 border border-gray-200 rounded-md">
                   {qrCode ? (
-                    <img 
-                      src={`data:image/png;base64,${btoa(qrCode)}`} 
-                      alt="QR Code thanh toán" 
-                      className="w-48 h-48 mx-auto"
-                      onError={(e) => {
-                        // Nếu không thể hiển thị dưới dạng base64, thử hiển thị trực tiếp chuỗi QR
-                        e.currentTarget.src = qrCode;
-                        console.log("QR code display fallback", qrCode);
-                      }}
-                    />
+                    <div>
+                      {/* Hiển thị QR code bằng thư viện bên ngoài */}
+                      <img 
+                        src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrCode)}`}
+                        alt="QR Code thanh toán" 
+                        className="w-48 h-48 mx-auto"
+                      />
+                      <p className="text-xs text-center mt-1 text-gray-500">
+                        Sử dụng ứng dụng ngân hàng để quét mã QR
+                      </p>
+                    </div>
                   ) : (
                     <div className="w-48 h-48 mx-auto flex items-center justify-center bg-gray-100">
                       <p className="text-sm text-gray-500">Không thể tải mã QR</p>

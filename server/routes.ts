@@ -2205,6 +2205,118 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // API endpoint to check payment status
+  app.get("/api/payos/status/:orderCode", async (req, res) => {
+    try {
+      const { orderCode } = req.params;
+      
+      if (!orderCode) {
+        return res.status(400).json({ error: "Cần mã đơn hàng để kiểm tra" });
+      }
+      
+      // Lấy cấu hình PayOS từ cơ sở dữ liệu
+      const paymentSettings = await storage.getPaymentSettings();
+      
+      if (!paymentSettings || !paymentSettings.payosConfig) {
+        return res.status(500).json({ error: "Chưa cấu hình PayOS" });
+      }
+      
+      // Parse JSON from unknown type
+      const payosConfigObj = paymentSettings.payosConfig ? 
+        (typeof paymentSettings.payosConfig === 'string' 
+          ? JSON.parse(paymentSettings.payosConfig as string) 
+          : paymentSettings.payosConfig as Record<string, any>) 
+        : {};
+      
+      const payosConfig = {
+        clientId: payosConfigObj.clientId || "",
+        apiKey: payosConfigObj.apiKey || "",
+        checksumKey: payosConfigObj.checksumKey || "",
+        baseUrl: payosConfigObj.baseUrl || "https://api-sandbox.payos.vn"
+      };
+      
+      // Kiểm tra trạng thái thanh toán từ PayOS
+      const paymentStatus = await checkPayOSPaymentStatus(payosConfig, orderCode);
+      
+      res.json(paymentStatus);
+    } catch (error) {
+      console.error("Lỗi khi kiểm tra trạng thái thanh toán:", error);
+      res.status(500).json({ error: "Đã xảy ra lỗi khi kiểm tra trạng thái thanh toán" });
+    }
+  });
+
+  // Update payment status API endpoint
+  app.post("/api/payments/update-status", async (req, res) => {
+    try {
+      const { orderCode, paymentId, status } = req.body;
+      
+      if (!orderCode && !paymentId) {
+        return res.status(400).json({ error: "Cần mã giao dịch hoặc mã thanh toán" });
+      }
+      
+      // Xác thực trạng thái thanh toán hợp lệ
+      if (!['pending', 'completed', 'failed'].includes(status)) {
+        return res.status(400).json({ error: "Trạng thái thanh toán không hợp lệ" });
+      }
+      
+      // Tìm giao dịch dựa trên mã giao dịch hoặc mã thanh toán
+      let payment;
+      
+      if (orderCode) {
+        payment = await storage.getPaymentByTransactionId(orderCode);
+      } else if (paymentId) {
+        payment = await storage.getPaymentByTransactionId(paymentId);
+      }
+      
+      if (!payment) {
+        return res.status(404).json({ error: "Không tìm thấy thông tin thanh toán" });
+      }
+      
+      // Kiểm tra nếu thanh toán đã được cập nhật rồi
+      if (payment.status === status) {
+        return res.json({ 
+          success: true, 
+          message: "Trạng thái thanh toán không thay đổi", 
+          payment 
+        });
+      }
+      
+      // Cập nhật trạng thái thanh toán
+      const updatedPayment = await storage.updatePaymentStatus(payment.id, status);
+      
+      // Nếu thanh toán hoàn tất, cập nhật số dư tài khoản
+      if (status === 'completed' && payment.status !== 'completed') {
+        // Lấy thông tin người dùng
+        const user = await storage.getUser(payment.userId);
+        
+        if (user) {
+          // Cập nhật số dư tài khoản
+          await storage.updateUserBalance(user.id, user.balance + payment.amount);
+          console.log(`Đã cập nhật số dư cho người dùng ${user.id}: +${payment.amount}`);
+        }
+      }
+      
+      res.json({ 
+        success: true, 
+        message: "Cập nhật trạng thái thanh toán thành công", 
+        payment: updatedPayment 
+      });
+    } catch (error) {
+      console.error("Lỗi khi cập nhật trạng thái thanh toán:", error);
+      res.status(500).json({ error: "Đã xảy ra lỗi khi cập nhật trạng thái thanh toán" });
+    }
+  });
+
+  // Handle payment callback URL
+  app.get("/payment", (req, res) => {
+    // Check URL parameters
+    const urlParams = req.query;
+    console.log("Payment callback received:", urlParams);
+    
+    // Forward to the frontend for handling
+    res.sendFile(path.resolve(".", "client", "index.html"));
+  });
+
   // Create HTTP server without starting it
   return new Server(app);
 }

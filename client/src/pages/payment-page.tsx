@@ -7,6 +7,7 @@ import { formatCurrency, formatDate } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { generateVietQR, getBankAcqId } from "@/services/vietqr-api";
 import { QRCode } from "@/components/shared/qr-code";
+import { PayOSPayment } from "@/components/shared/payos-payment";
 import {
   Card,
   CardContent,
@@ -44,11 +45,13 @@ import {
   AlertTriangle,
   Clock,
 } from "lucide-react";
+import { useLocation } from "wouter";
 
 export function PaymentPage() {
   const { user } = useAuth();
   const { toast } = useToast();
-  const paymentMethod = "bank_transfer"; // Chỉ hỗ trợ chuyển khoản ngân hàng
+  const [location, setLocation] = useLocation();
+  const [paymentMethod, setPaymentMethod] = useState("bank_transfer"); // Default to bank transfer
   const [amount, setAmount] = useState("50000");
   const [copyStatus, setCopyStatus] = useState<{
     account: boolean;

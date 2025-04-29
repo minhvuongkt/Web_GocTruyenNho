@@ -866,11 +866,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           console.log("PayOS payment response:", payosResponse);
           
-          // Kiểm tra response
-          if (!payosResponse || payosResponse.code !== '00' || !payosResponse.data || !payosResponse.data.checkoutUrl) {
-            console.error("Invalid PayOS response:", payosResponse);
+          // Kiểm tra response - Xử lý cả 2 dạng response từ PayOS
+          let paymentLink = '';
+          let qrCode = null;
+          
+          if (payosResponse) {
+            // Kiểm tra xem response có dạng mới (code, data) không
+            if (payosResponse.code === '00' && payosResponse.data && payosResponse.data.checkoutUrl) {
+              paymentLink = payosResponse.data.checkoutUrl;
+              qrCode = payosResponse.data.qrCode || null;
+            } 
+            // Hoặc dạng cũ (trả về trực tiếp từ SDK)
+            else if (payosResponse.checkoutUrl) {
+              paymentLink = payosResponse.checkoutUrl;
+              qrCode = payosResponse.qrCode || null;
+            }
+            // Nếu không có cấu trúc nào phù hợp
+            else {
+              console.error("Invalid PayOS response format:", payosResponse);
+              await storage.updatePaymentStatus(newPayment.id, "failed");
+              return res.status(500).json({ error: "Invalid PayOS response format" });
+            }
+          } else {
+            console.error("Empty PayOS response");
             await storage.updatePaymentStatus(newPayment.id, "failed");
-            return res.status(500).json({ error: "Invalid PayOS response: " + (payosResponse?.desc || "Unknown error") });
+            return res.status(500).json({ error: "Empty PayOS response" });
           }
           
           // Lấy thời gian hết hạn từ cấu hình (mặc định 15 phút)
@@ -879,8 +899,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           res.status(201).json({
             payment: newPayment,
-            paymentLink: payosResponse.data.checkoutUrl,
-            qrCode: payosResponse.data.qrCode || null,
+            paymentLink: paymentLink,
+            qrCode: qrCode,
             expiresAt: expiresAt
           });
         } catch (error) {

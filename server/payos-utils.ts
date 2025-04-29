@@ -1,8 +1,7 @@
 /**
  * Utility functions for handling payments through PayOS
  */
-
-import PayOS from "@payos/node";
+import { default as PayOS } from "@payos/node";
 import crypto from "crypto";
 
 // PayOS Configuration Types
@@ -129,6 +128,46 @@ export async function checkPayOSPaymentStatus(
     return response;
   } catch (error) {
     console.error("PayOS payment status check failed:", error);
+    throw error;
+  }
+}
+
+/**
+ * Cancel a payment via PayOS API
+ * 
+ * @param config PayOS API configuration
+ * @param orderCode The order code to cancel
+ * @returns Cancellation result
+ */
+export async function cancelPayOSPayment(
+  config: PayOSConfig, 
+  orderCode: string
+) {
+  try {
+    const { clientId, apiKey, checksumKey } = config;
+    
+    // Initialize PayOS SDK
+    const payOS = new PayOS(clientId, apiKey, checksumKey);
+    
+    // Extract only digits and convert to number as PayOS SDK expects numeric orderCode
+    const numericOrderCode = Number(orderCode.replace(/\D/g, ""));
+    
+    // Check for valid numeric orderCode
+    if (isNaN(numericOrderCode)) {
+      throw new Error("Invalid orderCode format for payment cancellation");
+    }
+    
+    // Use SDK to cancel payment - check if the SDK supports this method
+    if (typeof payOS.cancelPaymentLink === 'function') {
+      const response = await payOS.cancelPaymentLink(numericOrderCode);
+      console.log("PayOS Cancel Response:", JSON.stringify(response, null, 2));
+      return response;
+    } else {
+      // Fallback if the SDK doesn't directly support cancellation
+      throw new Error("PayOS SDK does not support direct payment cancellation");
+    }
+  } catch (error) {
+    console.error("PayOS payment cancellation failed:", error);
     throw error;
   }
 }

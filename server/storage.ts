@@ -1201,34 +1201,39 @@ export class DatabaseStorage implements IStorage {
   async getReadingHistory(
     userId: number,
   ): Promise<{ content: Content; chapter: Chapter }[]> {
-    const historyEntries = await db
-      .select()
-      .from(readingHistory)
-      .where(eq(readingHistory.userId, userId))
-      .orderBy(desc(readingHistory.updatedAt));
-
-    const result: { content: Content; chapter: Chapter }[] = [];
-
-    for (const entry of historyEntries) {
-      const [contentItem] = await db
+    try {
+      const historyEntries = await db
         .select()
-        .from(content)
-        .where(eq(content.id, entry.contentId));
+        .from(readingHistory)
+        .where(eq(readingHistory.userId, userId))
+        .orderBy(desc(readingHistory.lastReadAt));  // Use the correct column name
 
-      const [chapterItem] = await db
-        .select()
-        .from(chapters)
-        .where(eq(chapters.id, entry.chapterId));
+      const result: { content: Content; chapter: Chapter }[] = [];
 
-      if (contentItem && chapterItem) {
-        result.push({
-          content: contentItem,
-          chapter: chapterItem,
-        });
+      for (const entry of historyEntries) {
+        const [contentItem] = await db
+          .select()
+          .from(content)
+          .where(eq(content.id, entry.contentId));
+
+        const [chapterItem] = await db
+          .select()
+          .from(chapters)
+          .where(eq(chapters.id, entry.chapterId));
+
+        if (contentItem && chapterItem) {
+          result.push({
+            content: contentItem,
+            chapter: chapterItem,
+          });
+        }
       }
+      
+      return result;
+    } catch (error) {
+      console.error("Error fetching reading history:", error);
+      return [];
     }
-
-    return result;
   }
 
   async unlockChapter(userId: number, chapterId: number): Promise<boolean> {

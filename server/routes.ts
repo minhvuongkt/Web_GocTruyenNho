@@ -702,9 +702,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/content/:contentId/comments", async (req, res) => {
     try {
       const contentId = parseInt(req.params.contentId);
+      
+      // Verify contentId is a valid number
+      if (isNaN(contentId)) {
+        return res.status(400).json({ error: "Invalid content ID" });
+      }
+      
       const comments = await storage.getCommentsByContent(contentId);
-      res.json(comments);
+      
+      // Always return an array, even if empty
+      res.json(comments || []);
     } catch (error) {
+      console.error("Error fetching comments:", error);
       res.status(500).json({ error: "Failed to get comments" });
     }
   });

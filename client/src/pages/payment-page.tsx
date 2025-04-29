@@ -262,27 +262,39 @@ export function PaymentPage() {
   
   // Check payment expiration
   useEffect(() => {
-    if (paymentDate && paymentStatus.processing) {
+    if (paymentDate && paymentStatus.processing && paymentStatus.transactionId) {
       const timer = setInterval(() => {
         const now = new Date();
         const diff = now.getTime() - paymentDate.getTime();
         
         // If more than 10 minutes have passed, consider the payment expired
         if (diff > 10 * 60 * 1000) {
-          setPaymentStatus({ processing: false });
-          setPaymentDate(null);
-          toast({
-            title: "Giao dịch hết hạn",
-            description: "Vui lòng tạo giao dịch mới",
-            variant: "destructive",
+          // Automatically update payment status to failed in the database
+          apiRequest("POST", "/api/payments/update-status", {
+            transactionId: paymentStatus.transactionId,
+            status: "failed"
+          }).then(() => {
+            setPaymentStatus({ processing: false });
+            setPaymentDate(null);
+            toast({
+              title: "Giao dịch hết hạn",
+              description: "Giao dịch đã được đánh dấu là thất bại do hết thời gian. Vui lòng tạo giao dịch mới.",
+              variant: "destructive",
+            });
+            
+            // Refresh payment data
+            queryClient.invalidateQueries({ queryKey: ["/api/payments"] });
+          }).catch(error => {
+            console.error("Failed to update payment status:", error);
           });
+          
           clearInterval(timer);
         }
-      }, 10000); // Check every 10 seconds
+      }, 1000); // Check every second for more real-time updates
       
       return () => clearInterval(timer);
     }
-  }, [paymentDate, paymentStatus.processing, toast]);
+  }, [paymentDate, paymentStatus.processing, paymentStatus.transactionId, toast, queryClient]);
   
   // Format remaining time
   const getRemainingTimeText = () => {
@@ -608,13 +620,48 @@ export function PaymentPage() {
                               )}
                             </Button>
                             
-                            <Button
-                              variant="outline"
-                              className="w-full mt-2"
-                              onClick={() => setPaymentStatus({ processing: false })}
-                            >
-                              Tạo giao dịch mới
-                            </Button>
+                            {/* Thêm trường chỉnh sửa thời gian hết hạn */}
+                            <div className="mt-4">
+                              <Label htmlFor="expiration-time">Thời gian hết hạn (phút)</Label>
+                              <div className="flex items-center gap-2 mt-1">
+                                <Input
+                                  id="expiration-time"
+                                  type="number"
+                                  defaultValue={10}
+                                  min={1}
+                                  max={60}
+                                  onChange={(e) => {
+                                    // Cập nhật thời gian hết hạn khi người dùng thay đổi
+                                    if (paymentDate) {
+                                      const newExpiryMinutes = parseInt(e.target.value) || 10;
+                                      const newPaymentDate = new Date(
+                                        new Date().getTime() - (10 * 60 * 1000) + (newExpiryMinutes * 60 * 1000)
+                                      );
+                                      setPaymentDate(newPaymentDate);
+                                      
+                                      toast({
+                                        title: "Đã cập nhật thời gian",
+                                        description: `Giao dịch sẽ hết hạn sau ${newExpiryMinutes} phút`,
+                                      });
+                                    }
+                                  }}
+                                />
+                                <Button 
+                                  variant="outline" 
+                                  size="sm"
+                                  onClick={() => {
+                                    // Reset thời gian về thời điểm hiện tại + 10 phút
+                                    setPaymentDate(new Date());
+                                    toast({
+                                      title: "Đã cập nhật thời gian",
+                                      description: "Giao dịch sẽ hết hạn sau 10 phút",
+                                    });
+                                  }}
+                                >
+                                  Reset
+                                </Button>
+                              </div>
+                            </div>
                           </div>
                         </div>
                       )}
@@ -625,12 +672,12 @@ export function PaymentPage() {
                           <div className="text-center mb-6">
                             <h2 className="text-xl font-semibold mb-2">Thanh toán trực tuyến</h2>
                             <p className="text-muted-foreground">
-                              Đang chuyển đến cổng thanh toán PayOS
+                              Chọn phương thức thanh toán qua cổng thanh toán PayOS
                             </p>
                           </div>
                           
-                          <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
-                            <PayOSPayment 
+                          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 mb-6">
+                            <PayOSCheckout 
                               amount={parseInt(amount)}
                               username={user.username}
                               onSuccess={(transId) => {

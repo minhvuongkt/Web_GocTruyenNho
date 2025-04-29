@@ -213,8 +213,13 @@ export function PaymentPage() {
         throw new Error("Không tìm thấy mã giao dịch");
       }
       
+      // Lấy URL hiện tại để sử dụng làm returnUrl
+      const currentPath = window.location.pathname;
+      const returnUrl = currentPath === '/payment' ? '/' : currentPath;
+      
       const resp = await apiRequest("POST", "/api/payments/confirm", {
-        transactionId: paymentStatus.transactionId
+        transactionId: paymentStatus.transactionId,
+        returnUrl: returnUrl
       });
       
       return resp.json();
@@ -232,6 +237,13 @@ export function PaymentPage() {
         // Refresh payment data
         queryClient.invalidateQueries({ queryKey: ["/api/payments"] });
         queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+        
+        // Chuyển hướng người dùng nếu server trả về redirectUrl
+        if (data.redirectUrl) {
+          setTimeout(() => {
+            window.location.href = data.redirectUrl;
+          }, 2000); // Delay 2s để người dùng thấy thông báo thành công
+        }
       } else {
         toast({
           title: "Không thể xác nhận",

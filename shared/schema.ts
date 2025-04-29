@@ -164,6 +164,18 @@ export const paymentSettings = pgTable("payment_settings", {
   vietQRConfig: jsonb("viet_qr_config").notNull(),
   payosConfig: jsonb("payos_config").notNull().default({}),
   priceConfig: jsonb("price_config").notNull(),
+  emailConfig: jsonb("email_config").notNull().default({
+    smtpHost: "",
+    smtpPort: 587,
+    smtpUser: "",
+    smtpPass: "",
+    senderEmail: "",
+    adminEmail: "hlmvuong123@gmail.com" // Email mặc định
+  }),
+  expiryConfig: jsonb("expiry_config").notNull().default({
+    bankTransfer: 10, // Số phút hết hạn cho giao dịch chuyển khoản
+    payos: 15 // Số phút hết hạn cho giao dịch PayOS
+  }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

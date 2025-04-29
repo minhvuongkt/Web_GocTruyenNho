@@ -859,14 +859,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
             cancelUrl: cancelUrl
           };
           
+          console.log("PayOS payment request:", paymentData);
+          
           // Tạo payment link qua PayOS API
           const payosResponse = await createPayOSPaymentLink(config, paymentData);
           
+          console.log("PayOS payment response:", payosResponse);
+          
           // Kiểm tra response
-          if (!payosResponse || !payosResponse.data || !payosResponse.data.checkoutUrl) {
+          if (!payosResponse || payosResponse.code !== '00' || !payosResponse.data || !payosResponse.data.checkoutUrl) {
             console.error("Invalid PayOS response:", payosResponse);
             await storage.updatePaymentStatus(newPayment.id, "failed");
-            return res.status(500).json({ error: "Invalid PayOS response" });
+            return res.status(500).json({ error: "Invalid PayOS response: " + (payosResponse?.desc || "Unknown error") });
           }
           
           // Lấy thời gian hết hạn từ cấu hình (mặc định 15 phút)

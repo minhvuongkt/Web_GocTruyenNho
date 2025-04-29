@@ -61,18 +61,25 @@ export async function createPayOSPaymentLink(
 
   // Make API request
   try {
+    console.log("PayOS Request:", {
+      url: `${baseUrl}/v2/payment-requests`,
+      clientId,
+      requestBody
+    });
+    
     const response = await fetch(`${baseUrl}/v2/payment-requests`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "x-client-id": clientId,
         "x-api-key": apiKey,
-        "x-checksum-key": checksum,
+        "Signature": checksum,
       },
       body: dataRaw,
     });
 
     const data = await response.json();
+    console.log("PayOS Response:", data);
     return data;
   } catch (error) {
     console.error("PayOS payment link creation failed:", error);

@@ -17,7 +17,8 @@ import {
   Eye as ViewsIcon,
   MousePointer,
   Calendar,
-  Image
+  Image,
+  AlertCircle
 } from "lucide-react";
 import { 
   Select,
@@ -27,11 +28,60 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { formatDate, formatCurrency } from "@/lib/utils";
+import { AdvertisementFormDialog } from "@/components/admin/advertisement-form-dialog";
+import { useToast } from "@/hooks/use-toast";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 export function AdManagementPage() {
   const [search, setSearch] = useState("");
   const [positionFilter, setPositionFilter] = useState("all");
   const [activeTab, setActiveTab] = useState("active");
+  const { toast } = useToast();
+  
+  // Form dialog states
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [currentAd, setCurrentAd] = useState<any>(null);
+  
+  // Delete dialog states
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [adToDelete, setAdToDelete] = useState<number | null>(null);
+  
+  // Delete advertisement mutation
+  const deleteAdMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const response = await apiRequest("DELETE", `/api/ads/${id}`);
+      if (!response.ok) {
+        throw new Error('Failed to delete advertisement');
+      }
+      return id;
+    },
+    onSuccess: () => {
+      toast({
+        title: "Xóa thành công",
+        description: "Quảng cáo đã được xóa khỏi hệ thống"
+      });
+      // Refresh ad list
+      queryClient.invalidateQueries({ queryKey: ["/api/ads"] });
+      setIsDeleteDialogOpen(false);
+    },
+    onError: (error) => {
+      toast({
+        title: "Lỗi",
+        description: error instanceof Error ? error.message : "Không thể xóa quảng cáo",
+        variant: "destructive"
+      });
+    }
+  });
   
   // Fetch advertisements
   const { data, isLoading } = useQuery({
@@ -100,7 +150,7 @@ export function AdManagementPage() {
       <div className="space-y-6">
         <div className="flex justify-between items-center">
           <h1 className="text-2xl font-bold tracking-tight">Quản lý quảng cáo</h1>
-          <Button>
+          <Button onClick={() => setIsAddDialogOpen(true)}>
             <Plus className="mr-2 h-4 w-4" />
             Thêm quảng cáo
           </Button>
@@ -223,13 +273,36 @@ export function AdManagementPage() {
                             </TableCell>
                             <TableCell className="text-center">
                               <div className="flex justify-center space-x-2">
-                                <Button variant="ghost" size="icon">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => {
+                                    window.open(ad.targetUrl, '_blank');
+                                  }}
+                                  title="Xem trang đích"
+                                >
                                   <Eye className="h-4 w-4" />
                                 </Button>
-                                <Button variant="ghost" size="icon">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => {
+                                    setCurrentAd(ad);
+                                    setIsEditDialogOpen(true);
+                                  }}
+                                  title="Chỉnh sửa"
+                                >
                                   <Pencil className="h-4 w-4" />
                                 </Button>
-                                <Button variant="ghost" size="icon">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => {
+                                    setAdToDelete(ad.id);
+                                    setIsDeleteDialogOpen(true);
+                                  }}
+                                  title="Xóa"
+                                >
                                   <Trash2 className="h-4 w-4" />
                                 </Button>
                               </div>
@@ -245,6 +318,46 @@ export function AdManagementPage() {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Add Advertisement Dialog */}
+      <AdvertisementFormDialog
+        open={isAddDialogOpen}
+        onOpenChange={setIsAddDialogOpen}
+        mode="add"
+      />
+
+      {/* Edit Advertisement Dialog */}
+      <AdvertisementFormDialog
+        open={isEditDialogOpen}
+        onOpenChange={setIsEditDialogOpen}
+        advertisement={currentAd}
+        mode="edit"
+      />
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Xác nhận xóa</AlertDialogTitle>
+            <AlertDialogDescription>
+              Bạn có chắc chắn muốn xóa quảng cáo này? Hành động này không thể hoàn tác.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Hủy</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (adToDelete) {
+                  deleteAdMutation.mutate(adToDelete);
+                }
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Xóa
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </AdminLayout>
   );
 }

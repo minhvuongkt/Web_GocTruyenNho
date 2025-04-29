@@ -677,7 +677,7 @@ export function PaymentPage() {
                           </div>
                           
                           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 mb-6">
-                            <PayOSCheckout 
+                            <PayOSPayment 
                               amount={parseInt(amount)}
                               username={user.username}
                               onSuccess={(transId) => {

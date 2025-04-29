@@ -5,8 +5,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from '@/hooks/use-toast';
 
-// Import từ thư viện chính thức của PayOS
-import { PayOS } from '@payos/payos-checkout';
+// Không import trực tiếp PayOS ở đây, sẽ sử dụng script từ CDN
+// @payos/node được sử dụng ở phía server
 
 interface PayOSCheckoutProps {
   amount: number;
@@ -43,63 +43,16 @@ export function PayOSCheckout({ amount, username, onSuccess, onCancel }: PayOSCh
         const data = await response.json();
         setPaymentData(data);
         
-        // Nếu có clientToken từ PayOS, khởi tạo form thanh toán
-        if (data.clientToken) {
-          // Khởi tạo PayOS với client token
-          payOSRef.current = new PayOS(data.clientToken);
-          
-          // Khởi tạo PayOS checkout form
-          if (containerRef.current) {
-            payOSRef.current.createPaymentForm({
-              container: containerRef.current,
-              amount: amount,
-              orderId: data.payment?.transactionId || `ORDER_${Date.now()}`,
-              description: `Nạp tiền của ${username}`,
-              currency: 'VND',
-              mode: 'popup', // có thể là 'popup' hoặc 'inline'
-              buttonLabel: 'Thanh toán ngay',
-              buttonClassName: 'payos-payment-button custom-button',
-              onSuccess: (response: any) => {
-                toast({
-                  title: "Thanh toán thành công",
-                  description: "Tiền đã được nạp vào tài khoản của bạn",
-                });
-                onSuccess(data.payment?.transactionId);
-              },
-              onError: (error: any) => {
-                console.error("PayOS payment error:", error);
-                setError("Lỗi thanh toán: " + (error.message || "Vui lòng thử lại sau"));
-                if (onCancel) onCancel();
-              },
-              onCancel: () => {
-                toast({
-                  title: "Thanh toán đã bị hủy",
-                  description: "Bạn đã hủy thanh toán",
-                  variant: "destructive"
-                });
-                if (onCancel) onCancel();
-              }
-            });
-          }
-        } else {
-          throw new Error('Không nhận được token thanh toán từ PayOS');
-        }
+        // Chuyển sang chế độ thanh toán chuyển khoản qua NgânLượng/PayOS
+        setLoading(false);
       } catch (err: any) {
         console.error("PayOS initialization error:", err);
         setError(err.message || 'Đã xảy ra lỗi khi khởi tạo thanh toán');
-      } finally {
         setLoading(false);
       }
     };
     
     initPayment();
-    
-    // Cleanup function
-    return () => {
-      if (payOSRef.current) {
-        payOSRef.current = null;
-      }
-    };
   }, [amount, username, toast, onSuccess, onCancel]);
   
   if (loading) {
@@ -137,12 +90,77 @@ export function PayOSCheckout({ amount, username, onSuccess, onCancel }: PayOSCh
         </p>
       </div>
       
-      {/* Container cho form thanh toán PayOS */}
-      <div ref={containerRef} className="w-full min-h-[300px]"></div>
+      {paymentData && paymentData.paymentLink && (
+        <div className="flex flex-col items-center gap-4">
+          {paymentData.qrCode && (
+            <div className="p-4 bg-white rounded-lg shadow">
+              <img 
+                src={paymentData.qrCode} 
+                alt="QR Code thanh toán" 
+                className="w-full max-w-[250px]" 
+              />
+              <p className="text-center text-sm mt-2">Quét mã QR để thanh toán</p>
+            </div>
+          )}
+          
+          <Button 
+            asChild 
+            className="w-full max-w-xs"
+          >
+            <a 
+              href={paymentData.paymentLink} 
+              target="_blank" 
+              rel="noopener noreferrer"
+              onClick={() => {
+                // Theo dõi khi người dùng click vào link thanh toán
+                console.log("Redirecting to payment page:", paymentData.paymentLink);
+                
+                // Sau khi chuyển đến trang thanh toán, bắt đầu kiểm tra trạng thái
+                const checkInterval = window.setInterval(() => {
+                  // Kiểm tra trạng thái thanh toán mỗi 10 giây
+                  if (paymentData.payment?.transactionId) {
+                    apiRequest("GET", `/api/payments/status/${paymentData.payment.transactionId}`)
+                      .then(res => res.json())
+                      .then(data => {
+                        if (data.status === "completed") {
+                          // Nếu thanh toán thành công, thông báo và xóa interval
+                          window.clearInterval(checkInterval);
+                          toast({
+                            title: "Thanh toán thành công",
+                            description: "Tiền đã được nạp vào tài khoản của bạn",
+                          });
+                          onSuccess(paymentData.payment.transactionId);
+                        }
+                      })
+                      .catch(error => {
+                        console.error("Error checking payment status:", error);
+                      });
+                  }
+                }, 10000);
+                
+                // Lưu interval ID vào localStorage để có thể xóa nếu cần
+                window.localStorage.setItem("paymentCheckInterval", checkInterval.toString());
+              }}
+            >
+              Thanh toán ngay
+            </a>
+          </Button>
+          
+          <Button 
+            variant="outline" 
+            className="w-full max-w-xs"
+            onClick={() => {
+              if (onCancel) onCancel();
+            }}
+          >
+            Hủy thanh toán
+          </Button>
+        </div>
+      )}
       
       <div className="text-xs text-muted-foreground mt-4 text-center">
         <p>
-          Giao dịch được bảo mật bởi PayOS. Nếu bạn gặp vấn đề trong quá trình thanh toán, 
+          Giao dịch được bảo mật bởi PayOS. Nếu bạn đã thanh toán nhưng hệ thống chưa ghi nhận,
           vui lòng liên hệ với chúng tôi để được hỗ trợ.
         </p>
       </div>

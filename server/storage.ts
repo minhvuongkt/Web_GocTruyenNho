@@ -1443,14 +1443,21 @@ export class DatabaseStorage implements IStorage {
         accountName: "CONG TY TNHH GOC TRUYEN NHO",
         bankName: "Vietcombank",
         bankBranch: "Ho Chi Minh",
-        transferContent: "GTN_{username}_{amount}"
+        transferContent: "NAP_{username}"
       },
       vietQRConfig: {
         enabled: true,
         accountNumber: "0123456789",
         accountName: "CONG TY TNHH GOC TRUYEN NHO",
         bankId: "VCB",
-        template: "GTN_{username}_{amount}"
+        template: "compact2"
+      },
+      payosConfig: {
+        enabled: false,
+        clientId: "",
+        apiKey: "",
+        checksumKey: "",
+        baseUrl: "https://api-merchant.payos.vn"
       },
       priceConfig: {
         coinConversionRate: 1000,

@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Label } from '@/components/ui/label';
-import { PayOSCheckout } from '@/components/payment/payos-checkout';
+import { PayOSEmbeddedCheckout } from '@/components/payment/payos-embedded-checkout';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
 import { Loader2 } from 'lucide-react';
@@ -151,7 +151,7 @@ export function PaymentPage() {
                   Thanh toán an toàn qua cổng PayOS (hỗ trợ thẻ Visa, ATM, Momo, ZaloPay...)
                 </p>
                 
-                <PayOSCheckout 
+                <PayOSEmbeddedCheckout 
                   amount={amount}
                   onSuccess={handlePaymentSuccess}
                   onCancel={handlePaymentCancel}

@@ -912,7 +912,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     ensureAuthenticated,
     async (req, res) => {
       try {
-        const { transactionId } = req.body;
+        const { transactionId, returnUrl } = req.body;
         if (!transactionId) {
           return res.status(400).json({ 
             success: false,
@@ -921,6 +921,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
 
         const userId = (req.user as any).id;
+        const username = (req.user as any).username;
 
         // Lấy payment dựa vào transactionId
         const payment = await storage.getPaymentByTransactionId(transactionId);
@@ -978,11 +979,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
           "pending",
         );
 
+        // Import function gửi email
+        const { sendPaymentConfirmationEmail } = await import('./email-utils');
+
+        // Gửi email thông báo cho admin
+        await sendPaymentConfirmationEmail(
+          transactionId,
+          payment.amount,
+          username,
+          payment.method
+        );
+
+        // Thêm redirectUrl vào response để client chuyển hướng
         res.json({
           success: true,
           payment: updatedPayment,
-          message:
-            "Payment confirmation sent. Please wait for admin verification.",
+          message: "Payment confirmation sent. Please wait for admin verification.",
+          redirectUrl: returnUrl || '/' // Nếu không có returnUrl thì chuyển về trang chủ
         });
       } catch (error) {
         console.error("Payment confirm error:", error);

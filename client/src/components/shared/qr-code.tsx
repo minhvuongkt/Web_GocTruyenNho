@@ -80,6 +80,17 @@ export function QRCode({ amount, accountNo, accountName, bankId, addInfo, templa
     };
   }, []);
 
+  const handleConfirmLeave = () => {
+    if (leavePath) {
+      window.location.href = leavePath;
+    }
+    setShowLeaveConfirm(false);
+  };
+
+  const handleCancelLeave = () => {
+    setShowLeaveConfirm(false);
+  };
+
   return (
     <div className="flex flex-col items-center">
       <div className="mb-3 text-center">
@@ -107,6 +118,23 @@ export function QRCode({ amount, accountNo, accountName, bankId, addInfo, templa
       <div className="mt-2 text-center">
         <p className="text-xs text-muted-foreground">Sử dụng app ngân hàng để quét</p>
       </div>
+
+      {/* Dialog xác nhận trước khi rời trang */}
+      <AlertDialog open={showLeaveConfirm} onOpenChange={setShowLeaveConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Xác nhận rời trang?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Bạn vẫn chưa xác nhận thanh toán. Nếu đã thanh toán xong, hãy xác nhận trước khi rời đi.
+              Rời đi ngay sẽ dẫn đến việc hủy giao dịch.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={handleCancelLeave}>Ở lại</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmLeave}>Rời trang</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

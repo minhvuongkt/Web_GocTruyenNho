@@ -853,7 +853,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Sử dụng PayOS API để tạo payment link
           const paymentData = {
             amount: amount,
-            description: `Nạp tiền tài khoản cho ${(req.user as any).username}`,
+            description: "Nạp tiền", // Keep description short (PayOS has 25 char limit)
             orderCode: newPayment.transactionId,
             returnUrl: returnUrl,
             cancelUrl: cancelUrl

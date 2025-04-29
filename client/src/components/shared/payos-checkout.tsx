@@ -5,9 +5,6 @@ import { Card, CardContent } from '@/components/ui/card';
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from '@/hooks/use-toast';
 
-// Không import trực tiếp PayOS ở đây, sẽ sử dụng script từ CDN
-// @payos/node được sử dụng ở phía server
-
 interface PayOSCheckoutProps {
   amount: number;
   username: string;
@@ -19,42 +16,123 @@ export function PayOSCheckout({ amount, username, onSuccess, onCancel }: PayOSCh
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [paymentData, setPaymentData] = useState<any>(null);
+  const payosFormRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
-  
-  const payOSRef = useRef<any>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
 
+  // Kiểm tra URL xem có callback từ PayOS không
   useEffect(() => {
-    // Khởi tạo thanh toán
-    const initPayment = async () => {
+    const paymentData = new URLSearchParams(window.location.search);
+    const status = paymentData.get('status');
+    const paymentId = paymentData.get('id');
+    
+    // Xử lý callback từ PayOS
+    if (status === 'success' && paymentId) {
+      toast({
+        title: "Đang xác nhận thanh toán",
+        description: "Vui lòng đợi trong giây lát..."
+      });
+      
+      // Thông báo thành công và chuyển về tab lịch sử
+      onSuccess(paymentId);
+      return;
+    } else if (status === 'cancel' && onCancel) {
+      onCancel();
+      return;
+    }
+  }, [onSuccess, onCancel, toast]);
+
+  // Lấy thông tin thanh toán từ API
+  useEffect(() => {
+    const createPayment = async () => {
       try {
         setLoading(true);
         
-        // Tạo giao dịch mới qua API backend
+        // Tạo thanh toán qua API
         const response = await apiRequest('POST', '/api/payments', {
           amount: amount,
           method: 'payos'
         });
         
         if (!response.ok) {
-          throw new Error('Không thể tạo thanh toán. Vui lòng thử lại sau.');
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Không thể tạo thanh toán. Vui lòng thử lại sau.');
         }
         
         const data = await response.json();
         setPaymentData(data);
-        
-        // Chuyển sang chế độ thanh toán chuyển khoản qua NgânLượng/PayOS
-        setLoading(false);
       } catch (err: any) {
-        console.error("PayOS initialization error:", err);
-        setError(err.message || 'Đã xảy ra lỗi khi khởi tạo thanh toán');
+        setError(err.message || 'Đã xảy ra lỗi khi tạo thanh toán');
+        console.error("PayOS payment error:", err);
+      } finally {
         setLoading(false);
       }
     };
     
-    initPayment();
-  }, [amount, username, toast, onSuccess, onCancel]);
-  
+    createPayment();
+  }, [amount, username]);
+
+  // Khởi tạo PayOS form khi có dữ liệu
+  useEffect(() => {
+    // Nếu không có PayOS Client Token hoặc chưa có dữ liệu, không làm gì cả
+    if (!paymentData || !paymentData.clientToken || !payosFormRef.current) return;
+
+    // Thêm script PayOS từ CDN
+    const script = document.createElement('script');
+    script.src = 'https://cdn.payos.vn/checkout/checkout.js';
+    script.async = true;
+    script.onload = () => {
+      // Tạo đối tượng PayOS từ window object
+      const PayOS = (window as any).PayOS;
+      if (!PayOS) {
+        console.error('PayOS script loaded but PayOS object not found');
+        setError('Không thể khởi tạo PayOS. Vui lòng thử lại sau.');
+        return;
+      }
+
+      try {
+        // Khởi tạo PayOS Checkout
+        const payOS = new PayOS(paymentData.clientToken);
+        
+        // Khởi tạo thanh toán
+        payOS.checkout({
+          containerId: 'payos-checkout-container',
+          amount: amount,
+          orderId: paymentData.payment.transactionId,
+          description: `Nạp tiền tài khoản cho ${username}`,
+          currency: 'VND',
+          onSuccess: (data: any) => {
+            console.log('Payment success:', data);
+            onSuccess(paymentData.payment.transactionId);
+          },
+          onError: (error: any) => {
+            console.error('Payment error:', error);
+            setError('Thanh toán thất bại: ' + (error.message || 'Lỗi không xác định'));
+          },
+          onCancel: () => {
+            console.log('Payment cancelled');
+            if (onCancel) onCancel();
+          }
+        });
+      } catch (err: any) {
+        console.error('Error initializing PayOS:', err);
+        setError(`Không thể khởi tạo PayOS: ${err.message || 'Lỗi không xác định'}`);
+      }
+    };
+
+    script.onerror = () => {
+      setError('Không thể tải thư viện PayOS. Vui lòng thử lại sau.');
+    };
+
+    document.body.appendChild(script);
+
+    return () => {
+      // Cleanup script on unmount
+      if (document.body.contains(script)) {
+        document.body.removeChild(script);
+      }
+    };
+  }, [paymentData, amount, username, onSuccess, onCancel]);
+
   if (loading) {
     return (
       <div className="flex justify-center items-center py-8">
@@ -111,59 +189,15 @@ export function PayOSCheckout({ amount, username, onSuccess, onCancel }: PayOSCh
               href={paymentData.paymentLink} 
               target="_blank" 
               rel="noopener noreferrer"
-              onClick={() => {
-                // Theo dõi khi người dùng click vào link thanh toán
-                console.log("Redirecting to payment page:", paymentData.paymentLink);
-                
-                // Sau khi chuyển đến trang thanh toán, bắt đầu kiểm tra trạng thái
-                const checkInterval = window.setInterval(() => {
-                  // Kiểm tra trạng thái thanh toán mỗi 10 giây
-                  if (paymentData.payment?.transactionId) {
-                    apiRequest("GET", `/api/payments/status/${paymentData.payment.transactionId}`)
-                      .then(res => res.json())
-                      .then(data => {
-                        if (data.status === "completed") {
-                          // Nếu thanh toán thành công, thông báo và xóa interval
-                          window.clearInterval(checkInterval);
-                          toast({
-                            title: "Thanh toán thành công",
-                            description: "Tiền đã được nạp vào tài khoản của bạn",
-                          });
-                          onSuccess(paymentData.payment.transactionId);
-                        }
-                      })
-                      .catch(error => {
-                        console.error("Error checking payment status:", error);
-                      });
-                  }
-                }, 10000);
-                
-                // Lưu interval ID vào localStorage để có thể xóa nếu cần
-                window.localStorage.setItem("paymentCheckInterval", checkInterval.toString());
-              }}
             >
-              Thanh toán ngay
+              Thanh toán bằng ví điện tử/Thẻ
             </a>
-          </Button>
-          
-          <Button 
-            variant="outline" 
-            className="w-full max-w-xs"
-            onClick={() => {
-              if (onCancel) onCancel();
-            }}
-          >
-            Hủy thanh toán
           </Button>
         </div>
       )}
       
-      <div className="text-xs text-muted-foreground mt-4 text-center">
-        <p>
-          Giao dịch được bảo mật bởi PayOS. Nếu bạn đã thanh toán nhưng hệ thống chưa ghi nhận,
-          vui lòng liên hệ với chúng tôi để được hỗ trợ.
-        </p>
-      </div>
+      {/* Container cho PayOS Checkout form */}
+      <div id="payos-checkout-container" ref={payosFormRef} className="min-h-[400px]"></div>
     </div>
   );
 }

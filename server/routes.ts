@@ -2028,17 +2028,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Check payment status
       const result = await checkPayOSPaymentStatus(payosConfig, orderCode);
-
-      // If payment is completed, update payment and user balance
-      if (result.code === '00' && result.data && result.data.status === 'PAID') {
-        // Find payment with this order code/transaction ID
+      console.log("PayOS status check result:", JSON.stringify(result, null, 2));
+      
+      // Biến để theo dõi trạng thái thanh toán
+      let paymentStatus = null;
+      
+      // Xử lý cả hai dạng response có thể nhận được từ PayOS
+      if (result) {
+        // Kiểm tra dạng response mới (có code, data)
+        if (result.code === '00' && result.data && result.data.status) {
+          paymentStatus = result.data.status;
+        } 
+        // Kiểm tra dạng response trực tiếp từ SDK
+        else if (result.status) {
+          paymentStatus = result.status;
+        }
+      }
+      
+      console.log("PayOS payment status:", paymentStatus);
+      
+      // Nếu tìm thấy trạng thái và đã thanh toán
+      if (paymentStatus === 'PAID') {
+        // Tìm payment với order code/transaction ID này
         const payment = await storage.getPaymentByTransactionId(orderCode);
         
         if (payment && payment.status !== 'completed') {
-          // Update payment status
+          // Cập nhật trạng thái payment
           await storage.updatePaymentStatus(payment.id, 'completed');
           
-          // Update user balance
+          // Cập nhật số dư người dùng
           const user = await storage.getUser(payment.userId);
           
           if (user) {
@@ -2049,9 +2067,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         }
       }
-
-      // Return the result
-      res.json(result);
+      
+      // Trả về kết quả
+      // Chuyển đổi dữ liệu theo định dạng thống nhất 
+      // để client xử lý dễ dàng
+      res.json({
+        code: '00',
+        desc: 'Success',
+        data: {
+          status: paymentStatus,
+          orderCode: orderCode,
+          // Thêm các trường khác từ result nếu có
+          ...(result.data || result)
+        }
+      });
     } catch (error: any) {
       console.error("PayOS status check error:", error);
       res.status(500).json({ 

@@ -1176,13 +1176,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     upload.single("image"),
     async (req, res) => {
       try {
-        const { title, targetUrl, position, startDate, endDate } = req.body;
+        const { title, targetUrl, position, startDate, endDate, imageUrl: providedImageUrl, isActive } = req.body;
 
-        if (!req.file) {
-          return res.status(400).json({ error: "Image file is required" });
+        // Use either uploaded file or provided imageUrl
+        let imageUrl = providedImageUrl;
+        
+        if (req.file) {
+          imageUrl = `/uploads/${req.file.filename}`;
         }
-
-        const imageUrl = `/uploads/${req.file.filename}`;
+        
+        if (!imageUrl) {
+          return res.status(400).json({ error: "Image URL is required" });
+        }
 
         const newAd = await storage.createAdvertisement({
           title,
@@ -1191,11 +1196,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           position: position as "banner" | "sidebar" | "popup",
           startDate: new Date(startDate),
           endDate: new Date(endDate),
-          isActive: true,
+          isActive: isActive === undefined ? true : isActive === "true" || isActive === true,
         });
 
         res.status(201).json(newAd);
       } catch (error) {
+        console.error("Error creating ad:", error);
         res.status(500).json({ error: "Failed to create ad" });
       }
     },
@@ -1211,6 +1217,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (req.file) {
         adData.imageUrl = `/uploads/${req.file.filename}`;
       }
+      // No need to check for imageUrl separately since it's included in adData
+      // if it's passed in the request body
 
       // Parse dates if provided
       if (adData.startDate) {
@@ -1221,9 +1229,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         adData.endDate = new Date(adData.endDate);
       }
 
-      // Parse boolean
+      // Parse boolean - handle both string and boolean types
       if (adData.isActive !== undefined) {
-        adData.isActive = adData.isActive === "true";
+        adData.isActive = adData.isActive === true || adData.isActive === "true";
       }
 
       const updatedAd = await storage.updateAdvertisement(id, adData);
@@ -1234,6 +1242,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json(updatedAd);
     } catch (error) {
+      console.error("Error updating ad:", error);
       res.status(500).json({ error: "Failed to update ad" });
     }
   };

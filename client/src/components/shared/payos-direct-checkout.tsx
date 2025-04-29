@@ -239,13 +239,19 @@ export function PayOSDirectCheckout({
                   {qrCode ? (
                     <>
                       {/* Thử nhiều cách khác nhau để hiển thị mã QR */}
-                      {qrCode.startsWith('000201') ? (
+                      {qrCode.startsWith('000201') || qrCode.startsWith('00020101') ? (
                         <div className="w-48 h-48 mx-auto flex flex-col items-center justify-center bg-gray-50 p-3 text-center">
                           <p className="text-sm text-gray-700 font-medium mb-2">Mở ứng dụng ngân hàng</p>
                           <p className="text-xs text-gray-500 mb-3">Quét mã VietQR hoặc chuyển khoản theo thông tin bên dưới</p>
-                          <p className="text-xs bg-white p-2 border border-gray-200 rounded text-gray-600 w-full overflow-hidden">
-                            {orderCode}
-                          </p>
+                          <div className="border border-gray-200 rounded-md p-2 bg-white mb-2">
+                            <p className="text-xs font-medium">Mã giao dịch</p>
+                            <p className="text-sm text-gray-600 break-all">{orderCode}</p>
+                          </div>
+                          <div className="text-xs text-left w-full bg-yellow-50 p-2 rounded-md border border-yellow-200">
+                            <p className="font-medium text-yellow-700 mb-1">Thông tin chuyển khoản:</p>
+                            <p>- Nội dung CK: <span className="font-medium">{orderCode}</span></p>
+                            <p>- Số tiền: <span className="font-medium">{amount?.toLocaleString('vi-VN')}đ</span></p>
+                          </div>
                         </div>
                       ) : qrCode.startsWith('data:image') ? (
                         <img 

@@ -80,7 +80,8 @@ export function extractPayOSPaymentData(response: PayOSPaymentResponse): PayOSPa
  */
 export function isValidPayOSResponse(data: PayOSPaymentData): boolean {
   // Kiểm tra các thông tin tối thiểu cho workflow thanh toán
-  return !!(data.qrCode && data.orderCode);
+  // Hoặc có mã QR, hoặc có checkoutUrl là đủ để tiếp tục
+  return !!(data.qrCode || data.checkoutUrl);
 }
 
 /**

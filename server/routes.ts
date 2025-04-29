@@ -1026,6 +1026,85 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Support both PATCH and PUT for payment status updates
   app.patch("/api/payments/:id/status", ensureAdmin, updatePaymentStatusHandler);
   app.put("/api/payments/:id/status", ensureAdmin, updatePaymentStatusHandler);
+  
+  // Add API endpoint for updating payment status by transaction ID (can be called by users)
+  app.post("/api/payments/update-status", ensureAuthenticated, async (req, res) => {
+    try {
+      const { transactionId, status } = req.body;
+      
+      if (!transactionId || !status) {
+        return res.status(400).json({ 
+          success: false,
+          error: "Transaction ID and status are required" 
+        });
+      }
+      
+      // Validate status
+      type PaymentStatusType = "pending" | "completed" | "failed";
+      if (!["pending", "completed", "failed"].includes(status)) {
+        return res.status(400).json({ 
+          success: false,
+          error: "Invalid status" 
+        });
+      }
+      
+      // Get payment by transaction ID
+      const payment = await storage.getPaymentByTransactionId(transactionId);
+      
+      if (!payment) {
+        return res.status(404).json({ 
+          success: false,
+          error: "Payment not found" 
+        });
+      }
+      
+      // For user requests, only allow updating to failed status and only their own payments
+      const userId = (req.user as any).id;
+      const isAdmin = (req.user as any).isAdmin;
+      
+      if (!isAdmin) {
+        if (payment.userId !== userId) {
+          return res.status(403).json({ 
+            success: false,
+            error: "Forbidden" 
+          });
+        }
+        
+        if (status !== "failed") {
+          return res.status(403).json({ 
+            success: false,
+            error: "Users can only update to failed status" 
+          });
+        }
+      }
+      
+      // Update status
+      let newStatus: PaymentStatusType = status as PaymentStatusType;
+      const updatedPayment = await storage.updatePaymentStatus(payment.id, newStatus);
+      
+      // Add the amount to user balance if completed
+      if (newStatus === "completed") {
+        const user = await storage.getUser(payment.userId);
+        if (user) {
+          await storage.updateUserBalance(
+            user.id,
+            user.balance + payment.amount
+          );
+        }
+      }
+      
+      res.json({
+        success: true,
+        payment: updatedPayment
+      });
+    } catch (error) {
+      console.error("Error updating payment status by transaction ID:", error);
+      res.status(500).json({ 
+        success: false,
+        error: "Failed to update payment status" 
+      });
+    }
+  });
 
   // Payment Settings Routes
   app.get("/api/payment-settings", ensureAdmin, async (req, res) => {

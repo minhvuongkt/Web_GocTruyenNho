@@ -162,6 +162,7 @@ export const paymentSettings = pgTable("payment_settings", {
   id: serial("id").primaryKey(),
   bankConfig: jsonb("bank_config").notNull(),
   vietQRConfig: jsonb("viet_qr_config").notNull(),
+  payosConfig: jsonb("payos_config").notNull().default({}),
   priceConfig: jsonb("price_config").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
@@ -344,6 +345,7 @@ export const insertPaymentSettingsSchema = createInsertSchema(
 ).pick({
   bankConfig: true,
   vietQRConfig: true,
+  payosConfig: true,
   priceConfig: true,
 });
 

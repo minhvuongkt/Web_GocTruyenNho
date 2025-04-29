@@ -10,6 +10,7 @@ import * as schema from "@shared/schema";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { generateVietQRURL } from "./payment-utils";
+import { createPayOSPaymentLink, checkPayOSPaymentStatus, verifyPayOSWebhook } from "./payos-utils";
 import { setupAuth } from "./auth";
 
 const ensureAuthenticated = (

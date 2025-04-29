@@ -167,7 +167,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/users/:id", ensureAdmin, async (req, res) => {
+  // Common handler for user updates
+  const updateUserHandler = async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
       const user = await storage.getUser(id);
@@ -181,7 +182,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       res.status(500).json({ error: "Failed to update user" });
     }
-  });
+  };
+
+  // Support both PATCH and PUT for user updates
+  app.patch("/api/users/:id", ensureAdmin, updateUserHandler);
+  app.put("/api/users/:id", ensureAdmin, updateUserHandler);
 
   app.delete("/api/users/:id", ensureAdmin, async (req, res) => {
     try {
@@ -832,7 +837,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     },
   );
 
-  app.patch("/api/payments/:id/status", ensureAdmin, async (req, res) => {
+  // Common handler for payment status updates
+  const updatePaymentStatusHandler = async (req: Request, res: Response) => {
     try {
       const paymentId = parseInt(req.params.id);
       const { status } = req.body;
@@ -864,15 +870,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
           );
         }
       }
-
-      res.json({
+      
+      return res.json({
         success: true,
-        payment: updatedPayment,
+        payment: updatedPayment
       });
     } catch (error) {
-      res.status(500).json({ error: "Failed to update payment status" });
+      console.error("Error updating payment status:", error);
+      return res.status(500).json({ error: "Failed to update payment status" });
     }
-  });
+  };
+
+  // Support both PATCH and PUT for payment status updates
+  app.patch("/api/payments/:id/status", ensureAdmin, updatePaymentStatusHandler);
+  app.put("/api/payments/:id/status", ensureAdmin, updatePaymentStatusHandler);
 
   // Payment Settings Routes
   app.get("/api/payment-settings", ensureAdmin, async (req, res) => {
@@ -890,6 +901,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.patch("/api/payment-settings", ensureAdmin, async (req, res) => {
+    try {
+      const updatedSettings = await storage.updatePaymentSettings(req.body);
+      res.json(updatedSettings);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update payment settings" });
+    }
+  });
+  
+  // Add PUT endpoint to match client request
+  app.put("/api/payment-settings", ensureAdmin, async (req, res) => {
     try {
       const updatedSettings = await storage.updatePaymentSettings(req.body);
       res.json(updatedSettings);

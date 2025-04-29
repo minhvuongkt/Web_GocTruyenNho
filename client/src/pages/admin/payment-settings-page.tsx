@@ -641,6 +641,142 @@ export function PaymentSettingsPage() {
               </CardFooter>
             </Card>
           </TabsContent>
+
+          <TabsContent value="email" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Cấu hình Email</CardTitle>
+                <CardDescription>
+                  Thiết lập kết nối SMTP để gửi thông báo qua email
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="smtp-host">SMTP Host</Label>
+                    <Input 
+                      id="smtp-host"
+                      placeholder="smtp.gmail.com"
+                      value={emailConfig.smtpHost}
+                      onChange={(e) => setEmailConfig({...emailConfig, smtpHost: e.target.value})}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Địa chỉ máy chủ SMTP, ví dụ: smtp.gmail.com
+                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="smtp-port">SMTP Port</Label>
+                    <Input 
+                      id="smtp-port"
+                      type="number"
+                      placeholder="587"
+                      value={emailConfig.smtpPort}
+                      onChange={(e) => setEmailConfig({...emailConfig, smtpPort: parseInt(e.target.value) || 587})}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Cổng kết nối SMTP, thường là 587 (TLS) hoặc 465 (SSL)
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="smtp-user">Tên đăng nhập SMTP</Label>
+                    <Input 
+                      id="smtp-user"
+                      placeholder="example@gmail.com"
+                      value={emailConfig.smtpUser}
+                      onChange={(e) => setEmailConfig({...emailConfig, smtpUser: e.target.value})}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Thường là địa chỉ email của bạn
+                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="smtp-pass">Mật khẩu SMTP</Label>
+                    <Input 
+                      id="smtp-pass"
+                      type="password"
+                      placeholder="********"
+                      value={emailConfig.smtpPass}
+                      onChange={(e) => setEmailConfig({...emailConfig, smtpPass: e.target.value})}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Đối với Gmail, sử dụng mật khẩu ứng dụng
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="sender-email">Email người gửi</Label>
+                    <Input 
+                      id="sender-email"
+                      placeholder="noreply@gotruyennho.com"
+                      value={emailConfig.senderEmail}
+                      onChange={(e) => setEmailConfig({...emailConfig, senderEmail: e.target.value})}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Email hiển thị khi gửi thông báo
+                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="admin-email">Email quản trị viên</Label>
+                    <Input 
+                      id="admin-email"
+                      placeholder="admin@gotruyennho.com"
+                      value={emailConfig.adminEmail}
+                      onChange={(e) => setEmailConfig({...emailConfig, adminEmail: e.target.value})}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Email nhận thông báo thanh toán
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="expiry" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Cấu hình thời gian hết hạn</CardTitle>
+                <CardDescription>
+                  Thiết lập thời gian hết hạn cho các phương thức thanh toán
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="bank-expiry-time">Thời gian hết hạn chuyển khoản (phút)</Label>
+                    <Input 
+                      id="bank-expiry-time"
+                      type="number"
+                      placeholder="10"
+                      value={expiryConfig.bankTransfer}
+                      onChange={(e) => setExpiryConfig({...expiryConfig, bankTransfer: parseInt(e.target.value) || 10})}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Thời gian tối đa để người dùng xác nhận đã thanh toán
+                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="payos-expiry-time">Thời gian hết hạn PayOS (phút)</Label>
+                    <Input 
+                      id="payos-expiry-time"
+                      type="number"
+                      placeholder="15"
+                      value={expiryConfig.payos}
+                      onChange={(e) => setExpiryConfig({...expiryConfig, payos: parseInt(e.target.value) || 15})}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Thời gian tối đa để người dùng hoàn tất thanh toán qua PayOS
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
         </Tabs>
       </div>
     </AdminLayout>

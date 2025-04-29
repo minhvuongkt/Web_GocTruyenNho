@@ -1243,47 +1243,22 @@ export function MangaManagementPage() {
               </DialogDescription>
             </DialogHeader>
             {editContent && (
-              <form onSubmit={async (e) => {
+              <form onSubmit={(e) => {
                 e.preventDefault();
-                try {
-                  // Convert genreIds to array of numbers if it's an array of strings
-                  const formattedContent = {
-                    ...editContent,
-                    genreIds: Array.isArray(editContent.genreIds) 
-                      ? editContent.genreIds.map(id => typeof id === 'string' ? parseInt(id) : id)
-                      : [],
-                    authorId: parseInt(editContent.authorId.toString()),
-                    translationGroupId: editContent.translationGroupId 
-                      ? parseInt(editContent.translationGroupId.toString()) 
-                      : null
-                  };
-                  
-                  // Call the API
-                  const response = await apiRequest(
-                    "PUT", 
-                    `/api/content/${editContent.id}`, 
-                    formattedContent
-                  );
-                  
-                  if (!response.ok) {
-                    throw new Error('Lỗi khi cập nhật thông tin truyện');
-                  }
-                  
-                  toast({
-                    title: "Cập nhật thành công",
-                    description: "Thông tin truyện đã được cập nhật"
-                  });
-                  
-                  // Refresh content list
-                  queryClient.invalidateQueries({ queryKey: ["/api/admin/content"] });
-                  setIsEditDialogOpen(false);
-                } catch (error) {
-                  toast({
-                    title: "Lỗi cập nhật",
-                    description: error instanceof Error ? error.message : "Đã xảy ra lỗi khi cập nhật truyện",
-                    variant: "destructive"
-                  });
-                }
+                // Convert genreIds to array of numbers if it's an array of strings
+                const formattedContent = {
+                  ...editContent,
+                  genreIds: Array.isArray(editContent.genreIds) 
+                    ? editContent.genreIds.map(id => typeof id === 'string' ? parseInt(id) : id)
+                    : [],
+                  authorId: parseInt(editContent.authorId.toString()),
+                  translationGroupId: editContent.translationGroupId 
+                    ? parseInt(editContent.translationGroupId.toString()) 
+                    : null
+                };
+                
+                // Use the mutation
+                updateContentMutation.mutate(formattedContent);
               }}>
                 <div className="grid gap-4 py-4">
                   <div className="grid grid-cols-4 items-center gap-4">
@@ -1367,9 +1342,13 @@ export function MangaManagementPage() {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="0">Không có</SelectItem>
-                        {/* Thay thế bằng dữ liệu thực từ API */}
-                        <SelectItem value="1">Nhóm dịch A</SelectItem>
-                        <SelectItem value="2">Nhóm dịch B</SelectItem>
+                        {translationGroups?.map(group => (
+                          <SelectItem key={group.id} value={group.id.toString()}>
+                            {group.name}
+                          </SelectItem>
+                        )) || (
+                          <SelectItem value="1">Nhóm dịch mặc định</SelectItem>
+                        )}
                       </SelectContent>
                     </Select>
                   </div>

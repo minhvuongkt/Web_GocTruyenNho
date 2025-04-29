@@ -20,6 +20,7 @@ export const paymentMethodEnum = pgEnum("payment_method", [
   "bank_transfer",
   "credit_card",
   "e_wallet",
+  "payos",
 ]);
 export const paymentStatusEnum = pgEnum("payment_status", [
   "pending",

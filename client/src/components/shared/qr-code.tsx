@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { generateVietQR, getBankAcqId } from '@/services/vietqr-api';
+import { generateVietQR, getBankAcqId, getBankCodeFromBin } from '@/services/vietqr-api';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -28,10 +28,12 @@ export function QRCode({ amount, accountNo, accountName, bankId, addInfo }: QRCo
         try {
           // Sử dụng URL trực tiếp từ server thay vì gọi API
           // Encode nội dung thanh toán để tránh lỗi URL
-          const encodedAddInfo = encodeURIComponent(addInfo || `NAP_${accountName} ${amount}`);
+          const encodedAddInfo = encodeURIComponent(addInfo || `NAP_${accountName}`);
           
-          // Tạo URL VietQR trực tiếp
-          const qrData = `https://img.vietqr.io/image/${bankId}/${accountNo}/compact2?amount=${amount}&addInfo=${encodedAddInfo}`;
+          // Tạo URL VietQR theo định dạng chính xác: https://img.vietqr.io/image/mb-0862713897-compact2.jpg?amount=50000&addInfo=NAP_admin&accountName=g%C3%B3c%20truy%E1%BB%87n%20nh%E1%BB%8F
+          const bankCode = getBankCodeFromBin(bankId);
+          const encodedAccountName = encodeURIComponent(accountName || "");
+          const qrData = `https://img.vietqr.io/image/${bankCode}-${accountNo}-compact2.jpg?amount=${amount}&addInfo=${encodedAddInfo}&accountName=${encodedAccountName}`;
           console.log("QR URL:", qrData);
           setQrImage(qrData);
           return;

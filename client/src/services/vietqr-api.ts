@@ -17,6 +17,19 @@ const BANK_ID_MAPPING: Record<string, string> = {
   'TPB': 'TPBVVNVX', // TPBank
 };
 
+// Bank ID mapping to Bank Code for URL format
+const BANK_CODE_MAPPING: Record<string, string> = {
+  '970422': 'mb', // MB bank
+  '970415': 'vietcombank', // Vietcombank
+  '970423': 'techcombank', // Techcombank
+  '970421': 'vpbank', // VPBank
+  '970441': 'vib', // VIB
+  '970416': 'acb', // ACB
+  '970418': 'tpbank', // TPBank
+  '970403': 'sacombank', // Sacombank
+  '970454': 'vietcapitalbank', // Vietcapital Bank
+};
+
 // Default bank if not specified
 const DEFAULT_BANK = 'MB';
 
@@ -39,6 +52,13 @@ export function getBankAcqId(bankId: string): string {
   // Convert to uppercase and lookup in mapping
   const upperBankId = bankId.toUpperCase();
   return BANK_ID_MAPPING[upperBankId] || BANK_ID_MAPPING[DEFAULT_BANK];
+}
+
+/**
+ * Convert a bank BIN to bank code for use in image URL
+ */
+export function getBankCodeFromBin(bankBin: string): string {
+  return BANK_CODE_MAPPING[bankBin] || 'mb'; // Default to MB bank if not found
 }
 
 /**

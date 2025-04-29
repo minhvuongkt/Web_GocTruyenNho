@@ -2163,9 +2163,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   );
 
   // PayOS endpoints for embedded checkout
-  app.post("/api/payos/create-payment", async (req, res) => {
+  app.post("/api/payos/create-payment", ensureAuthenticated, async (req, res) => {
     try {
-      const { amount, orderCode, description, returnUrl, cancelUrl } = req.body;
+      const { amount, orderCode, description, returnUrl, cancelUrl, expiryTime } = req.body;
 
       // Validate required fields
       if (!amount || !orderCode || !description || !returnUrl || !cancelUrl) {
@@ -2175,6 +2175,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           data: null,
         });
       }
+      
+      // Get expiry time in seconds (default: 10 minutes)
+      const paymentExpiryTime = expiryTime && Number(expiryTime) > 0 ? 
+        Number(expiryTime) : 600;
 
       // Get PayOS settings
       const settings = await storage.getPaymentSettings();
@@ -2323,7 +2327,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/payos/status/:orderCode", async (req, res) => {
+  app.get("/api/payos/status/:orderCode", ensureAuthenticated, async (req, res) => {
     try {
       const { orderCode } = req.params;
 

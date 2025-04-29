@@ -25,19 +25,34 @@ export function QRCode({ amount, accountNo, accountName, bankId, addInfo }: QRCo
         setLoading(true);
         setError(null);
         
-        // Convert bank ID to VietQR acqId format
-        const acqId = getBankAcqId(bankId);
+        try {
+          // Sử dụng URL trực tiếp từ server thay vì gọi API
+          const qrData = `https://img.vietqr.io/image/${bankId}/${accountNo}/compact2?amount=${amount}&addInfo=${addInfo || `Nap tien ${amount}`}`;
+          setQrImage(qrData);
+          return;
+        } catch (innerErr) {
+          console.error('Error with direct VietQR URL:', innerErr);
+        }
         
-        // Generate QR code
-        const qrData = await generateVietQR({
-          accountNo,
-          accountName,
-          acqId,
-          amount,
-          addInfo: addInfo || `Nạp tiền ${amount}đ`
-        });
+        // Fallback to API if direct URL fails
+        try {
+          // Convert bank ID to VietQR acqId format
+          const acqId = getBankAcqId(bankId);
+          
+          // Generate QR code
+          const qrData = await generateVietQR({
+            accountNo,
+            accountName, 
+            acqId,
+            amount,
+            addInfo: addInfo || `Nạp tiền ${amount}đ`
+          });
+          setQrImage(qrData);
+        } catch (apiErr) {
+          console.error('Error generating QR via API:', apiErr);
+          throw apiErr;
+        }
         
-        setQrImage(qrData);
       } catch (err) {
         console.error('Error generating QR code:', err);
         setError('Không thể tạo mã QR. Vui lòng thử lại sau.');

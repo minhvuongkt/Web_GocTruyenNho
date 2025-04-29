@@ -97,6 +97,13 @@ export function PaymentPage() {
       'VIB': 'VIB',
       'ACB': 'ACB',
       'TPB': 'TPBank',
+      '970422': 'MB Bank',
+      '970436': 'Vietcombank',
+      '970407': 'Techcombank',
+      '970432': 'VPBank',
+      '970441': 'VIB',
+      '970416': 'ACB',
+      '970423': 'TPBank',
     };
     return bankNames[bankId] || bankId;
   }

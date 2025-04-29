@@ -1,11 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
-import { Loader2, AlertCircle, CreditCard, CheckCircle } from 'lucide-react';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { createPayOSPaymentLink, checkPayOSPaymentStatus } from '@/services/payos-api';
-import { useToast } from '@/hooks/use-toast';
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { useState, useEffect } from "react";
+import { createPayOSPaymentLink, checkPayOSPaymentStatus } from "@/services/payos-api";
+import { Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 interface PayOSPaymentProps {
   amount: number;
@@ -15,250 +11,194 @@ interface PayOSPaymentProps {
 }
 
 export function PayOSPayment({ amount, username, onSuccess, onCancel }: PayOSPaymentProps) {
-  const { toast } = useToast();
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [paymentData, setPaymentData] = useState<{
-    orderCode: string;
-    checkoutUrl: string;
-    qrCode: string;
-    status: string;
-  } | null>(null);
-  const [statusCheckInterval, setStatusCheckInterval] = useState<NodeJS.Timeout | null>(null);
-  const [remainingTime, setRemainingTime] = useState(600); // 10 minutes in seconds
-
-  // Timer for countdown
-  useEffect(() => {
-    if (paymentData && remainingTime > 0) {
-      const timer = setInterval(() => {
-        setRemainingTime(prev => prev - 1);
-      }, 1000);
-      
-      return () => clearInterval(timer);
-    }
-  }, [paymentData, remainingTime]);
-
-  // Format remaining time
-  const formatRemainingTime = () => {
-    const minutes = Math.floor(remainingTime / 60);
-    const seconds = remainingTime % 60;
-    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+  const [paymentInfo, setPaymentInfo] = useState<{
+    checkoutUrl?: string;
+    qrCode?: string;
+    orderCode?: string;
+    id?: string;
+  }>({});
+  
+  // Generate a unique order code based on timestamp and username
+  const generateOrderCode = () => {
+    const timestamp = new Date().getTime();
+    const randomStr = Math.random().toString(36).substring(2, 8);
+    return `PAY_${username}_${timestamp}_${randomStr}`;
   };
-
-  // Create PayOS payment link
+  
+  // Create payment on component mount
   useEffect(() => {
     const createPayment = async () => {
+      setLoading(true);
+      setError(null);
+      
       try {
-        setLoading(true);
-        setError(null);
+        // Current URL for return and cancel URLs
+        const baseUrl = window.location.origin;
+        const returnUrl = `${baseUrl}/payment?status=success`;
+        const cancelUrl = `${baseUrl}/payment?status=cancelled`;
         
-        // Generate unique order code with current timestamp and username
-        const timestamp = new Date().getTime();
-        const orderCode = `P${timestamp}_${username}`;
-
-        // Create payment request data
-        const requestData = {
+        // Create order code
+        const orderCode = generateOrderCode();
+        
+        // Create payment through PayOS
+        const response = await createPayOSPaymentLink({
           amount: amount,
           orderCode: orderCode,
-          description: `Nạp tiền ${amount}đ cho tài khoản ${username}`,
-          returnUrl: `${window.location.origin}/payment?result=success&order=${orderCode}`,
-          cancelUrl: `${window.location.origin}/payment?result=cancel&order=${orderCode}`,
-          expiredAt: Math.floor(Date.now() / 1000) + 600 // 10 minutes
-        };
-
-        // Call PayOS API
-        const response = await createPayOSPaymentLink(requestData);
+          description: `Nạp tiền tài khoản - ${username}`,
+          returnUrl,
+          cancelUrl
+        });
         
-        if (response.code === '00') {
-          setPaymentData({
-            orderCode: response.data.orderCode,
+        if (response.code === 'SUCCESS' && response.data) {
+          setPaymentInfo({
             checkoutUrl: response.data.checkoutUrl,
             qrCode: response.data.qrCode,
-            status: response.data.status
+            orderCode: response.data.orderCode,
+            id: response.data.id
           });
-
-          // Start status check interval
-          const interval = setInterval(async () => {
-            await checkPaymentStatus(response.data.orderCode);
-          }, 5000); // Check every 5 seconds
           
-          setStatusCheckInterval(interval);
+          // Start polling to check payment status
+          startPollingPaymentStatus(response.data.orderCode);
         } else {
-          setError(`Không thể tạo liên kết thanh toán: ${response.desc}`);
+          setError(response.desc || "Không thể tạo giao dịch, vui lòng thử lại sau.");
         }
       } catch (err: any) {
-        setError(`Lỗi tạo thanh toán: ${err.message || 'Đã có lỗi xảy ra'}`);
-        console.error('PayOS payment error:', err);
+        setError(err.message || "Có lỗi xảy ra, vui lòng thử lại sau.");
       } finally {
         setLoading(false);
       }
     };
-
+    
     createPayment();
-
-    // Cleanup interval on unmount
+    
+    // Clean up any polling on unmount
     return () => {
-      if (statusCheckInterval) {
-        clearInterval(statusCheckInterval);
+      if (window.paymentStatusInterval) {
+        clearInterval(window.paymentStatusInterval);
       }
     };
   }, [amount, username]);
-
-  // Check payment status
-  const checkPaymentStatus = async (orderCode: string) => {
-    try {
-      const response = await checkPayOSPaymentStatus(orderCode);
-      
-      if (response.code === '00') {
-        if (response.data.status === 'PAID') {
-          // Payment successful
-          if (statusCheckInterval) {
-            clearInterval(statusCheckInterval);
-          }
+  
+  // Poll for payment status
+  const startPollingPaymentStatus = (orderCode: string) => {
+    // Poll every 5 seconds
+    const intervalId = setInterval(async () => {
+      try {
+        const response = await checkPayOSPaymentStatus(orderCode);
+        
+        // Check if payment is successful
+        if (response.code === 'SUCCESS' && response.data && response.data.status === 'PAID') {
+          // Clear interval
+          clearInterval(intervalId);
           
-          toast({
-            title: "Thanh toán thành công",
-            description: "Tiền đã được nạp vào tài khoản của bạn",
-            variant: "default",
-          });
-          
+          // Call success callback
           onSuccess(response.data.id);
-        } else if (response.data.status === 'CANCELLED' || response.data.status === 'EXPIRED') {
-          // Payment cancelled or expired
-          if (statusCheckInterval) {
-            clearInterval(statusCheckInterval);
-          }
-          
-          setError('Thanh toán đã bị hủy hoặc hết hạn');
-          setPaymentData(prev => prev ? { ...prev, status: response.data.status } : null);
         }
+      } catch (err) {
+        console.error("Error checking payment status:", err);
       }
-    } catch (err) {
-      console.error('Error checking payment status:', err);
-    }
+    }, 5000);
+    
+    // Save interval ID for cleanup
+    window.paymentStatusInterval = intervalId;
   };
-
-  // Handle expiration
+  
+  // Handle URL change for redirect back from payment gateway
   useEffect(() => {
-    if (remainingTime <= 0) {
-      if (statusCheckInterval) {
-        clearInterval(statusCheckInterval);
+    const handlePaymentReturn = () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const status = urlParams.get('status');
+      
+      // Check if we have returned from payment with success status
+      if (status === 'success' && paymentInfo.orderCode) {
+        // Check payment status once more
+        checkPayOSPaymentStatus(paymentInfo.orderCode)
+          .then(response => {
+            if (response.code === 'SUCCESS' && response.data && response.data.status === 'PAID') {
+              onSuccess(response.data.id);
+            }
+          })
+          .catch(err => {
+            console.error("Error checking payment status after return:", err);
+          });
+      } else if (status === 'cancelled') {
+        // User cancelled the payment
+        onCancel();
       }
-      setError('Thanh toán đã hết hạn');
-      setPaymentData(prev => prev ? { ...prev, status: 'EXPIRED' } : null);
-    }
-  }, [remainingTime, statusCheckInterval]);
-
-  // Handle payment cancellation
-  const handleCancel = () => {
-    if (statusCheckInterval) {
-      clearInterval(statusCheckInterval);
-    }
-    onCancel();
-  };
-
+    };
+    
+    handlePaymentReturn();
+  }, [paymentInfo.orderCode, onSuccess, onCancel]);
+  
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center py-8">
         <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
-        <p>Đang tạo thanh toán PayOS...</p>
+        <p className="text-muted-foreground">Đang tạo giao dịch thanh toán...</p>
       </div>
     );
   }
-
+  
   if (error) {
     return (
-      <Alert variant="destructive">
-        <AlertCircle className="h-4 w-4" />
-        <AlertTitle>Lỗi thanh toán</AlertTitle>
-        <AlertDescription>{error}</AlertDescription>
-        <Button onClick={onCancel} variant="outline" className="mt-4">
-          Thử lại
-        </Button>
-      </Alert>
-    );
-  }
-
-  if (!paymentData) {
-    return (
-      <div className="flex flex-col items-center justify-center py-8">
-        <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
-        <p>Đang khởi tạo...</p>
+      <div className="flex flex-col items-center justify-center py-8 text-center">
+        <p className="text-red-500 mb-4">{error}</p>
+        <Button onClick={onCancel}>Thử lại</Button>
       </div>
     );
   }
-
-  const isExpiredOrCancelled = 
-    paymentData.status === 'EXPIRED' || 
-    paymentData.status === 'CANCELLED' || 
-    remainingTime <= 0;
-
+  
   return (
-    <Card className="w-full">
-      <CardHeader>
-        <div className="flex justify-between items-center">
-          <CardTitle>PayOS - Thanh toán an toàn</CardTitle>
-          <Badge variant={isExpiredOrCancelled ? "destructive" : "outline"}>
-            {isExpiredOrCancelled 
-              ? "Đã hết hạn" 
-              : `Còn lại: ${formatRemainingTime()}`}
-          </Badge>
+    <div className="flex flex-col items-center space-y-6">
+      <div className="text-center mb-2">
+        <h3 className="text-lg font-medium">Thanh toán với PayOS</h3>
+        <p className="text-sm text-muted-foreground">
+          Số tiền: <span className="font-medium">{amount.toLocaleString('vi-VN')} VNĐ</span>
+        </p>
+      </div>
+      
+      {paymentInfo.qrCode && (
+        <div className="border border-border rounded-md p-4 flex flex-col items-center bg-background">
+          <p className="text-sm text-muted-foreground mb-2">Quét mã QR để thanh toán</p>
+          <img 
+            src={paymentInfo.qrCode} 
+            alt="QR Code" 
+            className="w-64 h-64 object-contain"
+          />
         </div>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {!isExpiredOrCancelled ? (
-          <>
-            <div className="flex flex-col items-center">
-              {paymentData.qrCode ? (
-                <div className="border border-muted p-4 rounded-lg my-4">
-                  <img 
-                    src={paymentData.qrCode} 
-                    alt="PayOS QR Code" 
-                    className="mx-auto max-w-full h-auto"
-                  />
-                </div>
-              ) : (
-                <Alert>
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertTitle>Không thể tạo mã QR</AlertTitle>
-                  <AlertDescription>Vui lòng sử dụng nút thanh toán bên dưới</AlertDescription>
-                </Alert>
-              )}
-              <p className="text-center font-semibold">
-                Quét mã QR để thanh toán
-              </p>
-              <p className="text-center text-sm text-muted-foreground">
-                {amount.toLocaleString()}đ
-              </p>
-            </div>
-            
-            <div className="text-center mt-4">
-              <Button 
-                variant="default" 
-                size="lg" 
-                onClick={() => window.open(paymentData.checkoutUrl, '_blank')}
-                className="w-full"
-              >
-                <CreditCard className="mr-2 h-4 w-4" />
-                Thanh toán ngay
-              </Button>
-            </div>
-          </>
-        ) : (
-          <div className="text-center py-6">
-            <AlertCircle className="h-12 w-12 mx-auto mb-3 text-destructive" />
-            <h3 className="font-medium text-lg">Thanh toán đã hết hạn</h3>
-            <p className="text-muted-foreground">
-              Vui lòng tạo giao dịch mới để tiếp tục
-            </p>
-          </div>
-        )}
-      </CardContent>
-      <CardFooter className="flex justify-end">
-        <Button variant="outline" onClick={handleCancel}>
-          {isExpiredOrCancelled ? "Tạo giao dịch mới" : "Hủy"}
-        </Button>
-      </CardFooter>
-    </Card>
+      )}
+      
+      {paymentInfo.checkoutUrl && (
+        <div className="space-y-2 w-full">
+          <Button
+            className="w-full"
+            onClick={() => window.open(paymentInfo.checkoutUrl, '_blank')}
+          >
+            Mở trang thanh toán
+          </Button>
+          
+          <Button
+            variant="outline"
+            className="w-full"
+            onClick={onCancel}
+          >
+            Hủy giao dịch
+          </Button>
+        </div>
+      )}
+      
+      <p className="text-xs text-muted-foreground">
+        Mã đơn hàng: {paymentInfo.orderCode}
+      </p>
+    </div>
   );
+}
+
+// Add PaymentStatusInterval to Window interface
+declare global {
+  interface Window {
+    paymentStatusInterval: NodeJS.Timeout;
+  }
 }

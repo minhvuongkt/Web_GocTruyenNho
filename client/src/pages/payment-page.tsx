@@ -29,490 +29,546 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import {
+  Clock,
+  CheckCircle,
+  Loader2,
+  RefreshCw,
+  Check,
+  Clipboard,
+  ClipboardCheck,
+  AlertTriangle,
   CreditCard,
   Landmark,
   Wallet,
-  Clipboard,
-  ClipboardCheck,
-  Loader2,
-  Check,
-  CheckCircle,
-  AlertTriangle,
-  Clock,
 } from "lucide-react";
-import { useLocation } from "wouter";
 
-export function PaymentPage() {
-  const { user } = useAuth();
-  const { toast } = useToast();
-  const [location, setLocation] = useLocation();
-  const [paymentMethod, setPaymentMethod] = useState("bank_transfer"); // Default to bank transfer
-  const [amount, setAmount] = useState("50000");
-  const [copyStatus, setCopyStatus] = useState<{
-    account: boolean;
-    content: boolean;
-  }>({ account: false, content: false });
-  const [activeTab, setActiveTab] = useState("payment");
-  const [paymentStatus, setPaymentStatus] = useState<{
-    processing: boolean;
-    transactionId?: string;
-    qrCode?: string;
-  }>({
-    processing: false,
-  });
-
-  // Fetch bank settings from backend
-  const { data: vietQRConfig, isLoading: loadingVietQRConfig } = useQuery({
-    queryKey: ["/api/payment-settings/vietqr-config"],
-    queryFn: async () => {
-      try {
-        const res = await apiRequest("GET", "/api/payment-settings/vietqr-config");
-        return res.json();
-      } catch (error) {
-        console.error("Failed to fetch VietQR config", error);
-        return null;
-      }
-    }
-  });
-  
-  // Bank account details from backend config
-  const bankDetails = {
-    bankName: vietQRConfig?.bankId 
-              ? getBankName(vietQRConfig.bankId) 
-              : "MB Bank",
-    accountNumber: vietQRConfig?.accountNumber || "9999123456789",
-    accountName: vietQRConfig?.accountName || "GocTruyenNho",
-    bankBin: vietQRConfig?.bankId || "970422" // MB Bank BIN
+function getBankName(bankId: string): string {
+  const banks: Record<string, string> = {
+    'MBBANK': 'MB Bank',
+    'VIETCOMBANK': 'Vietcombank',
+    'VIETINBANK': 'VietinBank',
+    'BIDV': 'BIDV',
+    'TECHCOMBANK': 'Techcombank',
+    'VPBANK': 'VPBank',
+    'AGRIBANK': 'Agribank',
+    'TPBANK': 'TPBank',
+    'ACB': 'ACB',
+    'SACOMBANK': 'Sacombank',
+    'OCB': 'OCB',
+    'MSB': 'MSB',
+    'VIB': 'VIB',
+    'HDBANK': 'HDBank',
+    'SEABANK': 'SeABank',
+    'PVCOMBANK': 'PVcomBank',
+    'ABBANK': 'ABBank',
+    'BAOVIETBANK': 'BaoViet Bank',
+    'EXIMBANK': 'Eximbank',
+    'LPB': 'LienVietPostBank',
+    'NCBBANK': 'NCB',
+    'VIETABANK': 'VietABank',
+    'VIETCAPITALBANK': 'Viet Capital Bank',
+    'PGBANK': 'PGBank',
+    'SHB': 'SHB',
+    'NAMABANK': 'Nam A Bank',
+    'VRB': 'VRB',
+    'KIENLONGBANK': 'Kiên Long Bank',
+    'OCEANBANK': 'OceanBank',
+    'BACABANK': 'BacABank',
+    'SAIGONBANK': 'SaigonBank',
+    'SCBBANK': 'SCB',
+    'COOPBANK': 'Co-opBank',
+    'PBVNBANK': 'Public Bank Vietnam',
+    'WOORIBANK': 'Woori Bank Vietnam',
+    'UOB': 'UOB Vietnam',
+    'HSBC': 'HSBC Vietnam',
+    'CBBANK': 'CB Bank',
+    'IBKBANK': 'IBK Bank Vietnam'
   };
   
-  // Helper function to get bank name from ID
-  function getBankName(bankId: string): string {
-    const bankNames: Record<string, string> = {
-      'MB': 'MB Bank',
-      'VCB': 'Vietcombank',
-      'TCB': 'Techcombank',
-      'VPB': 'VPBank',
-      'VIB': 'VIB',
-      'ACB': 'ACB',
-      'TPB': 'TPBank',
-      '970422': 'MB Bank',
-      '970436': 'Vietcombank',
-      '970407': 'Techcombank',
-      '970432': 'VPBank',
-      '970441': 'VIB',
-      '970416': 'ACB',
-      '970423': 'TPBank',
-    };
-    return bankNames[bankId] || bankId;
-  }
+  return banks[bankId] || bankId;
+}
 
-  // Fetch payment history
+export function PaymentPage() {
+  const { user, isLoading: isLoadingUser } = useAuth();
+  const { toast } = useToast();
+  
+  const [activeTab, setActiveTab] = useState("payment");
+  const [amount, setAmount] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState("bank_transfer");
+  const [paymentStatus, setPaymentStatus] = useState<{
+    processing?: boolean;
+    transactionId?: string;
+  }>({ processing: false });
+  const [paymentDate, setPaymentDate] = useState<Date | null>(null);
+  const [confirmCooldown, setConfirmCooldown] = useState(0);
+  const [copyStatus, setCopyStatus] = useState({
+    account: false,
+    content: false
+  });
+  
+  // Fetch payment settings
+  const { data: paymentSettings, isLoading: isLoadingSettings } = useQuery({
+    queryKey: ["/api/payment-settings/pricing"],
+    queryFn: async () => {
+      const resp = await apiRequest("GET", "/api/payment-settings/pricing");
+      return resp.json();
+    },
+    enabled: !!user,
+  });
+  
+  // Fetch user's payment history
   const { data: payments, isLoading: loadingPayments } = useQuery({
     queryKey: ["/api/payments"],
     queryFn: async () => {
-      const res = await apiRequest("GET", "/api/payments");
-      return res.json();
+      const resp = await apiRequest("GET", "/api/payments");
+      return resp.json();
     },
-    enabled: activeTab === "history",
-  });
-
-  // Fetch bank settings (could be part of user profile)
-  const { data: bankSettings } = useQuery({
-    queryKey: ["/api/payment-settings/pricing"],
-    queryFn: async () => {
-      try {
-        const res = await apiRequest("GET", "/api/payment-settings/pricing");
-        return res.json();
-      } catch (error) {
-        console.error("Failed to fetch payment settings", error);
-        return null;
-      }
-    }
+    enabled: !!user && activeTab === "history",
   });
   
-  // State for payment confirmation cooldown
-  const [confirmCooldown, setConfirmCooldown] = useState(0);
-  const [paymentDate, setPaymentDate] = useState<Date | null>(null);
-  
-  // Timer for payment confirmation cooldown
-  useEffect(() => {
-    let timer: NodeJS.Timeout;
-    if (confirmCooldown > 0) {
-      timer = setInterval(() => {
-        setConfirmCooldown(prev => Math.max(0, prev - 1));
-      }, 1000);
-    }
-    return () => {
-      if (timer) clearInterval(timer);
-    };
-  }, [confirmCooldown]);
-  
-  // Calculate remaining time text
-  const getRemainingTimeText = (): string => {
-    if (!paymentDate) return '';
-    
-    const now = new Date();
-    const created = new Date(paymentDate);
-    const diffMs = created.getTime() + 10 * 60 * 1000 - now.getTime(); // 10 minutes in milliseconds
-    
-    if (diffMs <= 0) return 'Đã hết thời gian';
-    
-    const minutes = Math.floor(diffMs / (60 * 1000));
-    const seconds = Math.floor((diffMs % (60 * 1000)) / 1000);
-    
-    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+  // Bank details for transfer
+  const bankDetails = {
+    bankBin: paymentSettings?.bankBin || "MBBANK",
+    bankName: getBankName(paymentSettings?.bankBin || "MBBANK"),
+    accountNumber: paymentSettings?.accountNumber || "0862713897",
+    accountName: paymentSettings?.accountName || "góc truyện nhỏ",
   };
-
-  // Create payment mutation
+  
+  // Create a new payment
   const createPaymentMutation = useMutation({
     mutationFn: async () => {
-      // Validate amount
-      const numAmount = parseInt(amount);
-      if (isNaN(numAmount) || numAmount < 10000 || numAmount % 1000 !== 0) {
-        throw new Error("Số tiền phải ít nhất 10,000 VNĐ và chia hết cho 1,000");
+      if (!amount) {
+        throw new Error("Vui lòng nhập số tiền");
       }
-
-      setPaymentStatus({ processing: true });
-      const response = await apiRequest("POST", "/api/payments", {
-        amount: numAmount,
-        method: paymentMethod,
+      
+      if (parseInt(amount) < 10000) {
+        throw new Error("Số tiền tối thiểu là 10,000 VNĐ");
+      }
+      
+      if (parseInt(amount) % 1000 !== 0) {
+        throw new Error("Số tiền phải là bội số của 1,000 VNĐ");
+      }
+      
+      const resp = await apiRequest("POST", "/api/payments", {
+        amount: parseInt(amount),
+        method: paymentMethod
       });
-      return response.json();
+      
+      return resp.json();
     },
     onSuccess: (data) => {
-      toast({
-        title: "Tạo giao dịch thành công",
-        description: "Vui lòng hoàn tất thanh toán để nạp tiền vào tài khoản.",
-      });
-
-      // Set payment status and date
       setPaymentStatus({
-        processing: false,
-        transactionId: data.payment.transactionId,
-        qrCode: data.qrCodeURL // Lưu URL QR code để hiển thị
+        processing: true,
+        transactionId: data.payment.transactionId
       });
-      setPaymentDate(new Date(data.payment.createdAt));
+      setPaymentDate(new Date());
       
-      // Set initial cooldown to prevent spam clicking
-      setConfirmCooldown(30); // 30 seconds cooldown
+      // Refresh payment history
+      queryClient.invalidateQueries({ queryKey: ["/api/payments"] });
     },
     onError: (error: Error) => {
-      setPaymentStatus({ processing: false });
       toast({
-        title: "Tạo giao dịch thất bại",
-        description: error.message || "Đã xảy ra lỗi khi tạo giao dịch.",
+        title: "Lỗi tạo giao dịch",
+        description: error.message,
         variant: "destructive",
       });
     },
   });
   
-  // Confirm payment mutation
+  // Confirm payment
   const confirmPaymentMutation = useMutation({
     mutationFn: async () => {
       if (!paymentStatus.transactionId) {
-        throw new Error("Không có giao dịch để xác nhận");
+        throw new Error("Không tìm thấy mã giao dịch");
       }
       
-      const response = await apiRequest("PUT", `/api/payments/${paymentStatus.transactionId}/confirm`, {});
-      return response.json();
-    },
-    onSuccess: () => {
-      toast({
-        title: "Xác nhận thanh toán thành công",
-        description: "Chúng tôi sẽ kiểm tra và cập nhật số dư của bạn trong thời gian sớm nhất.",
+      const resp = await apiRequest("POST", "/api/payments/confirm", {
+        transactionId: paymentStatus.transactionId
       });
       
-      // Refresh payments and user data
-      queryClient.invalidateQueries({ queryKey: ["/api/payments"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/user"] });
-      
-      // Switch to history tab
-      setActiveTab("history");
-      
-      // Reset payment status
-      setPaymentStatus({ processing: false });
-      setPaymentDate(null);
+      return resp.json();
+    },
+    onSuccess: (data) => {
+      if (data.success) {
+        toast({
+          title: "Xác nhận thành công",
+          description: "Hệ thống đang xử lý giao dịch của bạn",
+        });
+        
+        // Start cooldown
+        setConfirmCooldown(30);
+        
+        // Refresh payment data
+        queryClient.invalidateQueries({ queryKey: ["/api/payments"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+      } else {
+        toast({
+          title: "Không thể xác nhận",
+          description: data.message || "Chưa nhận được tiền, vui lòng thử lại sau",
+          variant: "destructive",
+        });
+      }
     },
     onError: (error: Error) => {
       toast({
-        title: "Xác nhận thanh toán thất bại",
-        description: error.message || "Đã xảy ra lỗi khi xác nhận thanh toán.",
+        title: "Lỗi xác nhận giao dịch",
+        description: error.message,
         variant: "destructive",
       });
     },
   });
-
-  const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value.replace(/\D/g, "");
-    setAmount(value);
+  
+  // Implement countdown
+  useEffect(() => {
+    if (confirmCooldown > 0) {
+      const timer = setTimeout(() => {
+        setConfirmCooldown(prev => prev - 1);
+      }, 1000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [confirmCooldown]);
+  
+  // Check payment expiration
+  useEffect(() => {
+    if (paymentDate && paymentStatus.processing) {
+      const timer = setInterval(() => {
+        const now = new Date();
+        const diff = now.getTime() - paymentDate.getTime();
+        
+        // If more than 10 minutes have passed, consider the payment expired
+        if (diff > 10 * 60 * 1000) {
+          setPaymentStatus({ processing: false });
+          setPaymentDate(null);
+          toast({
+            title: "Giao dịch hết hạn",
+            description: "Vui lòng tạo giao dịch mới",
+            variant: "destructive",
+          });
+          clearInterval(timer);
+        }
+      }, 10000); // Check every 10 seconds
+      
+      return () => clearInterval(timer);
+    }
+  }, [paymentDate, paymentStatus.processing, toast]);
+  
+  // Format remaining time
+  const getRemainingTimeText = () => {
+    if (!paymentDate) return "-";
+    
+    const now = new Date();
+    const expiry = new Date(paymentDate.getTime() + 10 * 60 * 1000);
+    const diff = Math.max(0, expiry.getTime() - now.getTime());
+    
+    const minutes = Math.floor(diff / 60000);
+    const seconds = Math.floor((diff % 60000) / 1000);
+    
+    return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
   };
-
-  const handleCreatePayment = () => {
-    createPaymentMutation.mutate();
-  };
-
-  const handleCopyText = (text: string, type: "account" | "content") => {
-    navigator.clipboard.writeText(text);
-    setCopyStatus((prev) => ({ ...prev, [type]: true }));
-
-    // Reset copy status after 2 seconds
-    setTimeout(() => {
-      setCopyStatus((prev) => ({ ...prev, [type]: false }));
-    }, 2000);
-
-    toast({
-      title: "Đã sao chép",
-      description: "Thông tin đã được sao chép vào clipboard.",
+  
+  // Handle text copying
+  const handleCopyText = (text: string, type: 'account' | 'content') => {
+    navigator.clipboard.writeText(text).then(() => {
+      setCopyStatus(prev => ({ ...prev, [type]: true }));
+      
+      setTimeout(() => {
+        setCopyStatus(prev => ({ ...prev, [type]: false }));
+      }, 3000);
     });
   };
-
-  // Không còn cần hàm này vì chỉ có một phương thức thanh toán
-
-  if (!user) {
+  
+  if (isLoadingUser) {
     return (
       <MainLayout>
-        <div className="container mx-auto px-4 py-16 text-center">
-          <AlertTriangle className="h-12 w-12 text-destructive mx-auto mb-4" />
-          <h2 className="text-2xl font-bold mb-2">Bạn chưa đăng nhập</h2>
-          <p className="text-muted-foreground mb-4">
-            Vui lòng đăng nhập để sử dụng tính năng nạp tiền.
-          </p>
-          <Button asChild>
-            <a href="/auth">Đăng nhập</a>
-          </Button>
+        <div className="container py-10">
+          <div className="flex items-center justify-center h-[40vh]">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          </div>
         </div>
       </MainLayout>
     );
   }
-
+  
+  if (!user) {
+    return (
+      <MainLayout>
+        <div className="container py-10">
+          <div className="text-center py-10">
+            <h1 className="text-2xl font-bold mb-4">Bạn cần đăng nhập</h1>
+            <p className="mb-6 text-muted-foreground">
+              Vui lòng đăng nhập để truy cập tính năng này
+            </p>
+            <Button asChild className="mx-auto">
+              <a href="/login">Đăng nhập</a>
+            </Button>
+          </div>
+        </div>
+      </MainLayout>
+    );
+  }
+  
   return (
     <MainLayout>
-      <div className="container mx-auto px-4 py-8">
+      <div className="container py-8">
         <div className="max-w-3xl mx-auto">
-          <h1 className="text-3xl font-bold mb-6">Nạp tiền</h1>
-          
           <Card>
             <CardHeader>
-              <CardTitle>Tài khoản của bạn</CardTitle>
+              <CardTitle>Thanh toán</CardTitle>
               <CardDescription>
-                Số dư hiện tại và lịch sử giao dịch
+                Nạp tiền vào tài khoản để mở khóa các chương truyện cao cấp
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="text-center mb-4">
-                <p className="text-sm text-muted-foreground">Số dư hiện tại:</p>
-                <p className="text-3xl font-bold text-primary">
-                  {formatCurrency(user.balance)}
-                </p>
-              </div>
-              
-              <Tabs value={activeTab} onValueChange={setActiveTab}>
-                <TabsList className="grid w-full grid-cols-2">
+              <Tabs defaultValue="payment" value={activeTab} onValueChange={setActiveTab}>
+                <TabsList className="grid w-full grid-cols-2 mb-4">
                   <TabsTrigger value="payment">Nạp tiền</TabsTrigger>
                   <TabsTrigger value="history">Lịch sử giao dịch</TabsTrigger>
                 </TabsList>
                 
                 {/* Payment Tab */}
-                <TabsContent value="payment" className="space-y-4 pt-4">
-                  {!paymentStatus.transactionId ? (
-                    <>
+                <TabsContent value="payment">
+                  {!paymentStatus.processing ? (
+                    <div className="space-y-6">
                       <div className="space-y-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="amount">Số tiền</Label>
-                          <Input
-                            id="amount"
-                            type="text"
-                            value={amount}
-                            onChange={handleAmountChange}
-                          />
-                          <p className="text-muted-foreground text-xs">
-                            Tối thiểu: 10,000 VNĐ (Mọi số tiền phải chia hết cho 1,000)
-                          </p>
-                          {amount && !isNaN(parseInt(amount)) && (
-                            <p className="text-sm font-medium">
-                              = {formatCurrency(parseInt(amount))}
-                            </p>
-                          )}
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label htmlFor="payment-method">Phương thức thanh toán</Label>
-                          <div className="flex items-center p-3 border rounded-md">
-                            <Landmark className="mr-2 h-4 w-4 text-primary" />
-                            <span>Chuyển khoản ngân hàng</span>
-                          </div>
-                          <input type="hidden" name="payment-method" value="bank_transfer" />
-                        </div>
-
-                        <Button
-                          onClick={handleCreatePayment}
-                          className="w-full"
-                          disabled={
-                            paymentStatus.processing ||
-                            !amount ||
-                            isNaN(parseInt(amount)) ||
-                            parseInt(amount) < 10000 ||
-                            parseInt(amount) % 1000 !== 0
-                          }
-                        >
-                          {paymentStatus.processing ? (
-                            <>
-                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                              Đang xử lý...
-                            </>
-                          ) : (
-                            "Nạp tiền"
-                          )}
-                        </Button>
+                        <Label htmlFor="amount">Số tiền (VNĐ)</Label>
+                        <Input
+                          id="amount"
+                          placeholder="Nhập số tiền (ví dụ: 50000)"
+                          value={amount}
+                          onChange={(e) => setAmount(e.target.value)}
+                          type="number"
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          Tối thiểu 10,000 VNĐ. Số tiền phải là bội số của 1,000 VNĐ.
+                        </p>
                       </div>
                       
-                      {/* Payment method specific instructions */}
-                      <div className="mt-6 pt-6 border-t border-border">
-                        <h3 className="text-sm font-medium mb-2">Thông tin thanh toán:</h3>
-                        
-                        {paymentMethod === "bank_transfer" && (
-                          <div className="space-y-2 text-sm">
-                            <p className="text-muted-foreground">
-                              Chuyển khoản đến tài khoản ngân hàng của chúng tôi. 
-                              Sau khi nhận được thanh toán, chúng tôi sẽ nạp tiền vào tài khoản của bạn.
-                            </p>
-                          </div>
-                        )}
-                        
-
-                      </div>
-                    </>
-                  ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div className="flex flex-col items-center justify-center border border-border rounded-md p-4">
-                        {parseInt(amount) && paymentStatus.transactionId && (
-                          <QRCode 
-                            amount={parseInt(amount)}
-                            accountNo={bankDetails.accountNumber}
-                            accountName={bankDetails.accountName}
-                            bankId={bankDetails.bankBin}
-                            addInfo={`NAP_${user.username}`}
-                          />
-                        )}
-                      </div>
-
                       <div className="space-y-4">
-                        <div>
-                          <p className="text-sm font-medium">Thông tin chuyển khoản:</p>
-                          <div className="mt-2 space-y-3 text-sm">
-                            <div className="flex justify-between items-baseline">
-                              <span className="text-muted-foreground">Số tiền:</span>
-                              <span className="font-medium">{formatCurrency(parseInt(amount))}</span>
-                            </div>
-                            <Separator />
-                            <div className="flex justify-between">
-                              <span className="text-muted-foreground">Ngân hàng:</span>
-                              <span>{bankDetails.bankName}</span>
-                            </div>
-                            <div className="flex justify-between items-center">
-                              <span className="text-muted-foreground">Số tài khoản:</span>
+                        <Label htmlFor="payment-method">Phương thức thanh toán</Label>
+                        <Select 
+                          value={paymentMethod} 
+                          onValueChange={setPaymentMethod}
+                        >
+                          <SelectTrigger id="payment-method">
+                            <SelectValue placeholder="Chọn phương thức thanh toán" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="bank_transfer">
                               <div className="flex items-center">
-                                <span className="font-medium">{bankDetails.accountNumber}</span>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-7 w-7 ml-1"
-                                  onClick={() => handleCopyText(bankDetails.accountNumber, 'account')}
-                                >
-                                  {copyStatus.account ? (
-                                    <ClipboardCheck className="h-3.5 w-3.5 text-green-500" />
-                                  ) : (
-                                    <Clipboard className="h-3.5 w-3.5" />
-                                  )}
-                                </Button>
+                                <Landmark className="h-4 w-4 mr-2" />
+                                <span>Chuyển khoản ngân hàng</span>
                               </div>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-muted-foreground">Chủ tài khoản:</span>
-                              <span>{bankDetails.accountName}</span>
-                            </div>
-                            <div className="flex justify-between items-center">
-                              <span className="text-muted-foreground">Nội dung CK:</span>
+                            </SelectItem>
+                            <SelectItem value="payos">
                               <div className="flex items-center">
-                                <span className="font-medium">NAP_{user.username}</span>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-7 w-7 ml-1"
-                                  onClick={() => handleCopyText(`NAP_${user.username}`, 'content')}
-                                >
-                                  {copyStatus.content ? (
-                                    <ClipboardCheck className="h-3.5 w-3.5 text-green-500" />
-                                  ) : (
-                                    <Clipboard className="h-3.5 w-3.5" />
-                                  )}
-                                </Button>
+                                <CreditCard className="h-4 w-4 mr-2" />
+                                <span>Thanh toán trực tuyến (PayOS)</span>
                               </div>
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="rounded-md bg-muted p-3 text-xs text-muted-foreground">
-                          <p>
-                            Sau khi chuyển khoản, vui lòng đợi hệ thống xác nhận (thường trong vòng 5 phút).
-                            Tiền sẽ được cộng vào tài khoản sau khi xác nhận thành công.
-                          </p>
-                        </div>
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
                         
-                        {/* Thời gian còn lại */}
-                        {paymentDate && (
-                          <div className="flex flex-col gap-2 pt-2 pb-2">
-                            <div className="flex justify-between items-center">
-                              <div className="text-sm text-muted-foreground">Thời gian còn lại:</div>
-                              <div className="font-medium text-amber-500">
-                                {getRemainingTimeText()}
-                              </div>
-                            </div>
-                            <p className="text-xs text-muted-foreground">
-                              Giao dịch sẽ tự động hết hạn sau 10 phút nếu không được xác nhận
+                        {paymentMethod === 'bank_transfer' && (
+                          <div className="rounded-md bg-muted p-3 text-xs text-muted-foreground">
+                            <p>
+                              Chuyển khoản thông qua ứng dụng ngân hàng của bạn. Hệ thống sẽ tự động
+                              xác nhận giao dịch trong vòng vài phút.
                             </p>
                           </div>
                         )}
                         
-                        {/* Nút xác nhận thanh toán */}
-                        <Button
-                          onClick={() => confirmPaymentMutation.mutate()}
-                          disabled={confirmCooldown > 0 || confirmPaymentMutation.isPending}
-                          className="w-full mt-2"
-                          variant="default"
-                        >
-                          {confirmPaymentMutation.isPending ? (
-                            <>
-                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                              Đang xác nhận...
-                            </>
-                          ) : confirmCooldown > 0 ? (
-                            <>
-                              <Clock className="mr-2 h-4 w-4" />
-                              Xác nhận thanh toán ({confirmCooldown}s)
-                            </>
-                          ) : (
-                            <>
-                              <CheckCircle className="mr-2 h-4 w-4" />
-                              Tôi đã thanh toán
-                            </>
-                          )}
-                        </Button>
-                        
-                        <Button
-                          variant="outline"
-                          className="w-full mt-2"
-                          onClick={() => setPaymentStatus({ processing: false })}
-                        >
-                          Tạo giao dịch mới
-                        </Button>
+                        {paymentMethod === 'payos' && (
+                          <div className="rounded-md bg-muted p-3 text-xs text-muted-foreground">
+                            <p>
+                              Thanh toán an toàn qua cổng thanh toán PayOS, hỗ trợ thẻ ngân hàng nội địa, 
+                              thẻ quốc tế và ví điện tử.
+                            </p>
+                          </div>
+                        )}
                       </div>
+                      
+                      <Button
+                        onClick={() => createPaymentMutation.mutate()}
+                        disabled={!amount || createPaymentMutation.isPending}
+                        className="w-full"
+                      >
+                        {createPaymentMutation.isPending ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Đang xử lý...
+                          </>
+                        ) : (
+                          <>Tiếp tục</>
+                        )}
+                      </Button>
                     </div>
+                  ) : (
+                    <>
+                      {/* Nếu là thanh toán chuyển khoản ngân hàng (VietQR) */}
+                      {paymentStatus.transactionId && paymentMethod === 'bank_transfer' && (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          <div className="flex flex-col items-center justify-center border border-border rounded-md p-4">
+                            {parseInt(amount) && (
+                              <QRCode 
+                                amount={parseInt(amount)}
+                                accountNo={bankDetails.accountNumber}
+                                accountName={bankDetails.accountName}
+                                bankId={bankDetails.bankBin}
+                                addInfo={`NAP_${user.username}`}
+                              />
+                            )}
+                          </div>
+
+                          <div className="space-y-4">
+                            <div>
+                              <p className="text-sm font-medium">Thông tin chuyển khoản:</p>
+                              <div className="mt-2 space-y-3 text-sm">
+                                <div className="flex justify-between items-baseline">
+                                  <span className="text-muted-foreground">Số tiền:</span>
+                                  <span className="font-medium">{formatCurrency(parseInt(amount))}</span>
+                                </div>
+                                <Separator />
+                                <div className="flex justify-between">
+                                  <span className="text-muted-foreground">Ngân hàng:</span>
+                                  <span>{bankDetails.bankName}</span>
+                                </div>
+                                <div className="flex justify-between items-center">
+                                  <span className="text-muted-foreground">Số tài khoản:</span>
+                                  <div className="flex items-center">
+                                    <span className="font-medium">{bankDetails.accountNumber}</span>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-7 w-7 ml-1"
+                                      onClick={() => handleCopyText(bankDetails.accountNumber, 'account')}
+                                    >
+                                      {copyStatus.account ? (
+                                        <ClipboardCheck className="h-3.5 w-3.5 text-green-500" />
+                                      ) : (
+                                        <Clipboard className="h-3.5 w-3.5" />
+                                      )}
+                                    </Button>
+                                  </div>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span className="text-muted-foreground">Chủ tài khoản:</span>
+                                  <span>{bankDetails.accountName}</span>
+                                </div>
+                                <div className="flex justify-between items-center">
+                                  <span className="text-muted-foreground">Nội dung CK:</span>
+                                  <div className="flex items-center">
+                                    <span className="font-medium">NAP_{user.username}</span>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-7 w-7 ml-1"
+                                      onClick={() => handleCopyText(`NAP_${user.username}`, 'content')}
+                                    >
+                                      {copyStatus.content ? (
+                                        <ClipboardCheck className="h-3.5 w-3.5 text-green-500" />
+                                      ) : (
+                                        <Clipboard className="h-3.5 w-3.5" />
+                                      )}
+                                    </Button>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="rounded-md bg-muted p-3 text-xs text-muted-foreground">
+                              <p>
+                                Sau khi chuyển khoản, vui lòng đợi hệ thống xác nhận (thường trong vòng 5 phút).
+                                Tiền sẽ được cộng vào tài khoản sau khi xác nhận thành công.
+                              </p>
+                            </div>
+                            
+                            {/* Thời gian còn lại */}
+                            {paymentDate && (
+                              <div className="flex flex-col gap-2 pt-2 pb-2">
+                                <div className="flex justify-between items-center">
+                                  <div className="text-sm text-muted-foreground">Thời gian còn lại:</div>
+                                  <div className="font-medium text-amber-500">
+                                    {getRemainingTimeText()}
+                                  </div>
+                                </div>
+                                <p className="text-xs text-muted-foreground">
+                                  Giao dịch sẽ tự động hết hạn sau 10 phút nếu không được xác nhận
+                                </p>
+                              </div>
+                            )}
+                            
+                            {/* Nút xác nhận thanh toán */}
+                            <Button
+                              onClick={() => confirmPaymentMutation.mutate()}
+                              disabled={confirmCooldown > 0 || confirmPaymentMutation.isPending}
+                              className="w-full mt-2"
+                              variant="default"
+                            >
+                              {confirmPaymentMutation.isPending ? (
+                                <>
+                                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                  Đang xác nhận...
+                                </>
+                              ) : confirmCooldown > 0 ? (
+                                <>
+                                  <Clock className="mr-2 h-4 w-4" />
+                                  Xác nhận thanh toán ({confirmCooldown}s)
+                                </>
+                              ) : (
+                                <>
+                                  <CheckCircle className="mr-2 h-4 w-4" />
+                                  Tôi đã thanh toán
+                                </>
+                              )}
+                            </Button>
+                            
+                            <Button
+                              variant="outline"
+                              className="w-full mt-2"
+                              onClick={() => setPaymentStatus({ processing: false })}
+                            >
+                              Tạo giao dịch mới
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Nếu là thanh toán qua PayOS */}
+                      {paymentStatus.transactionId && paymentMethod === 'payos' && (
+                        <div className="max-w-md mx-auto">
+                          <PayOSPayment 
+                            amount={parseInt(amount)}
+                            username={user.username}
+                            onSuccess={(transId) => {
+                              toast({
+                                title: "Thanh toán thành công",
+                                description: "Tiền đã được nạp vào tài khoản của bạn",
+                              });
+                              
+                              // Refresh dữ liệu
+                              queryClient.invalidateQueries({ queryKey: ["/api/payments"] });
+                              queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+                              
+                              // Chuyển sang tab lịch sử
+                              setActiveTab("history");
+                              
+                              // Reset trạng thái thanh toán
+                              setPaymentStatus({ processing: false });
+                              setPaymentDate(null);
+                            }}
+                            onCancel={() => {
+                              setPaymentStatus({ processing: false });
+                            }}
+                          />
+                        </div>
+                      )}
+                    </>
                   )}
                 </TabsContent>
                 

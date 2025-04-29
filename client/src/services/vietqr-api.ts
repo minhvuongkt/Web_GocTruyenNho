@@ -1,126 +1,60 @@
 /**
- * VietQR API Integration
- * This service handles API calls to VietQR for generating payment QR codes
- * See: https://vietqr.io/en/developer-docs
+ * Generate a VietQR URL with the specified parameters
+ * 
+ * @param bankId Bank ID (ACB, MBBANK, etc)
+ * @param accountNumber Account number
+ * @param amount Amount to transfer
+ * @param message Transfer message/content
+ * @param template QR template type
+ * @returns URL for the VietQR image
  */
-
-import { apiRequest } from "@/lib/queryClient";
-
-// Bank ID mapping to VietQR acquirer ID
-const BANK_ID_MAPPING: Record<string, string> = {
-  'MB': 'BMBVNVX', // MB bank
-  'VCB': 'BFTVVNVX', // Vietcombank
-  'TCB': 'SHBVVNVX', // Techcombank
-  'VPB': 'VPBKVNVX', // VPBank
-  'VIB': 'VIBVVNVX', // VIB
-  'ACB': 'ASCBVNVX', // ACB
-  'TPB': 'TPBVVNVX', // TPBank
-};
-
-// Bank ID mapping to Bank Code for URL format
-const BANK_CODE_MAPPING: Record<string, string> = {
-  '970422': 'mb', // MB bank
-  '970415': 'vietcombank', // Vietcombank
-  '970423': 'techcombank', // Techcombank
-  '970421': 'vpbank', // VPBank
-  '970441': 'vib', // VIB
-  '970416': 'acb', // ACB
-  '970418': 'tpbank', // TPBank
-  '970403': 'sacombank', // Sacombank
-  '970454': 'vietcapitalbank', // Vietcapital Bank
-};
-
-// Default bank if not specified
-const DEFAULT_BANK = 'MB';
-
-interface VietQRParams {
-  accountNo: string;     // Account number
-  accountName: string;   // Account holder name
-  acqId: string;         // Bank acquirer ID in VietQR format
-  amount: number;        // Payment amount
-  addInfo?: string;      // Additional payment info (transaction reference, etc)
-  template?: string;     // QR code template
+export function generateVietQR(
+  bankId: string,
+  accountNumber: string,
+  amount: number,
+  message: string,
+  template: 'compact' | 'compact2' | 'qr_only' = 'compact2'
+): string {
+  const encodedMessage = encodeURIComponent(message);
+  return `https://img.vietqr.io/image/${bankId}-${accountNumber}-${template}.jpg?amount=${amount}&addInfo=${encodedMessage}`;
 }
 
 /**
- * Convert a simple bank code to VietQR acquirer ID format
+ * Get bank acquisition ID based on bank code
+ * 
+ * @param bankCode Bank code
+ * @returns Acquisition ID for the bank
  */
-export function getBankAcqId(bankId: string): string {
-  // If the bank ID already looks like an acquirer ID, return as is
-  if (bankId.length > 5) return bankId;
+export function getBankAcqId(bankCode: string): string {
+  const bankAcqIds: Record<string, string> = {
+    'MBBANK': '970422',
+    'VIETCOMBANK': '970436',
+    'VIETINBANK': '970415',
+    'BIDV': '970418',
+    'TECHCOMBANK': '970407',
+    'ACB': '970416',
+    'VPBANK': '970432',
+    'SACOMBANK': '970403',
+    'AGRIBANK': '970405',
+    'TPBANK': '970423',
+    'OCB': '970448',
+    'MSB': '970426',
+    'HDBANK': '970437',
+    'VIB': '970441',
+    'SEABANK': '970440',
+    'LPB': '970449',
+    'SCB': '970429',
+    'ABBANK': '970425',
+    'EXIMBANK': '970431',
+    'SHBANK': '970443',
+    'BAOVIETBANK': '970438',
+    'NAMABANK': '970428',
+    'PVBANK': '970412',
+    'SAIGONBANK': '970400',
+    'KIENLONGBANK': '970452',
+    'BACABANK': '970409',
+    'VIETABANK': '970427',
+  };
   
-  // Convert to uppercase and lookup in mapping
-  const upperBankId = bankId.toUpperCase();
-  return BANK_ID_MAPPING[upperBankId] || BANK_ID_MAPPING[DEFAULT_BANK];
-}
-
-/**
- * Convert a bank BIN to bank code for use in image URL
- */
-export function getBankCodeFromBin(bankBin: string): string {
-  return BANK_CODE_MAPPING[bankBin] || 'mb'; // Default to MB bank if not found
-}
-
-/**
- * Generate a VietQR payment QR code
- * @param params QR code parameters
- * @returns URL to the generated QR image
- */
-export async function generateVietQR(params: VietQRParams): Promise<string> {
-  try {
-    // First, get API credentials from our backend
-    const configResponse = await apiRequest('GET', '/api/payment-settings/vietqr-config');
-    const { clientId, apiKey, bankSettings } = await configResponse.json();
-    
-    if (!clientId || !apiKey) {
-      throw new Error('Missing VietQR API credentials');
-    }
-
-    // Use bank settings from database if available
-    const accountNo = bankSettings?.accountNumber || params.accountNo;
-    const accountName = bankSettings?.accountName || params.accountName;
-    const acqId = bankSettings && bankSettings.bankId ? 
-                 getBankAcqId(bankSettings.bankId) : params.acqId;
-    
-    // API endpoint for QR code generation
-    const apiUrl = 'https://api.vietqr.io/v2/generate';
-    
-    // Prepare request data
-    const requestData = {
-      clientId,
-      apiKey,
-      accountNo: accountNo,
-      accountName: accountName,
-      acqId: acqId,
-      amount: params.amount,
-      addInfo: params.addInfo || '',
-      format: 'text',
-      template: params.template || 'compact2'
-    };
-    
-    // Make API request to VietQR
-    const response = await fetch(apiUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(requestData),
-    });
-    
-    const data = await response.json();
-    
-    if (!response.ok) {
-      console.error('VietQR API error:', data);
-      throw new Error(`VietQR API error: ${data.message || 'Unknown error'}`);
-    }
-    
-    if (!data.data?.qrDataURL) {
-      throw new Error('No QR data received from VietQR API');
-    }
-    
-    return data.data.qrDataURL;
-  } catch (error) {
-    console.error('Error generating VietQR code:', error);
-    throw error;
-  }
+  return bankAcqIds[bankCode] || '970422'; // Default to MB Bank if not found
 }

@@ -1,108 +1,36 @@
-import { useEffect, useState } from 'react';
-import { generateVietQR, getBankAcqId, getBankCodeFromBin } from '@/services/vietqr-api';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Card } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { AlertCircle } from 'lucide-react';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { useMemo } from "react";
 
 interface QRCodeProps {
   amount: number;
   accountNo: string;
   accountName: string;
   bankId: string;
-  addInfo?: string;
+  addInfo: string;
 }
 
 export function QRCode({ amount, accountNo, accountName, bankId, addInfo }: QRCodeProps) {
-  const [qrImage, setQrImage] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    async function fetchQRCode() {
-      try {
-        setLoading(true);
-        setError(null);
-        
-        try {
-          // Sử dụng URL trực tiếp từ server thay vì gọi API
-          // Encode nội dung thanh toán để tránh lỗi URL
-          const encodedAddInfo = encodeURIComponent(addInfo || `NAP_${accountName}`);
-          
-          // Tạo URL VietQR theo định dạng chính xác: https://img.vietqr.io/image/mb-0862713897-compact2.jpg?amount=50000&addInfo=NAP_admin&accountName=g%C3%B3c%20truy%E1%BB%87n%20nh%E1%BB%8F
-          const bankCode = getBankCodeFromBin(bankId);
-          const encodedAccountName = encodeURIComponent(accountName || "");
-          const qrData = `https://img.vietqr.io/image/${bankCode}-${accountNo}-compact2.jpg?amount=${amount}&addInfo=${encodedAddInfo}&accountName=${encodedAccountName}`;
-          console.log("QR URL:", qrData);
-          setQrImage(qrData);
-          return;
-        } catch (innerErr) {
-          console.error('Error with direct VietQR URL:', innerErr);
-        }
-        
-        // Fallback to API if direct URL fails
-        try {
-          // Convert bank ID to VietQR acqId format
-          const acqId = getBankAcqId(bankId);
-          
-          // Generate QR code
-          const qrData = await generateVietQR({
-            accountNo,
-            accountName, 
-            acqId,
-            amount,
-            addInfo: addInfo || `Nạp tiền ${amount}đ`
-          });
-          setQrImage(qrData);
-        } catch (apiErr) {
-          console.error('Error generating QR via API:', apiErr);
-          throw apiErr;
-        }
-        
-      } catch (err) {
-        console.error('Error generating QR code:', err);
-        setError('Không thể tạo mã QR. Vui lòng thử lại sau.');
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    if (amount > 0 && accountNo && bankId) {
-      fetchQRCode();
-    } else {
-      setError('Thiếu thông tin thanh toán');
-      setLoading(false);
-    }
-  }, [amount, accountNo, accountName, bankId, addInfo]);
-
-  if (loading) {
-    return (
-      <div className="flex flex-col items-center p-4">
-        <Skeleton className="h-48 w-48 rounded" />
-        <Skeleton className="h-4 w-32 mt-2" />
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <Alert variant="destructive">
-        <AlertCircle className="h-4 w-4" />
-        <AlertTitle>Lỗi</AlertTitle>
-        <AlertDescription>{error}</AlertDescription>
-      </Alert>
-    );
-  }
+  // Generate VietQR URL with parameters
+  const qrUrl = useMemo(() => {
+    const encodedAccountName = encodeURIComponent(accountName);
+    const encodedAddInfo = encodeURIComponent(addInfo);
+    return `https://img.vietqr.io/image/${bankId}-${accountNo}-compact2.jpg?amount=${amount}&addInfo=${encodedAddInfo}&accountName=${encodedAccountName}`;
+  }, [accountNo, accountName, bankId, amount, addInfo]);
 
   return (
-    <div className="flex flex-col items-center p-4">
-      <Card className="p-2 border-2 border-primary">
-        {qrImage && <img src={qrImage} alt="QR Code" className="w-48 h-48" />}
-      </Card>
-      <div className="mt-4 text-center">
-        <p className="font-semibold">Quét mã QR để thanh toán</p>
-        <Badge variant="outline" className="mt-2">{new Intl.NumberFormat('vi-VN').format(amount)}đ</Badge>
+    <div className="flex flex-col items-center">
+      <div className="mb-3 text-center">
+        <p className="text-sm text-muted-foreground mb-1">Quét mã để thanh toán</p>
+      </div>
+      
+      <img 
+        src={qrUrl} 
+        alt="VietQR Payment QR Code" 
+        className="rounded-md max-w-full h-auto"
+        style={{ maxWidth: '250px' }}
+      />
+      
+      <div className="mt-2 text-center">
+        <p className="text-xs text-muted-foreground">Sử dụng app ngân hàng để quét</p>
       </div>
     </div>
   );

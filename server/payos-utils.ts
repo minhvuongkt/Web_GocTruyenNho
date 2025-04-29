@@ -54,10 +54,13 @@ export async function createPayOSPaymentLink(
 
   // Create checksum
   const dataRaw = JSON.stringify(requestBody);
+  // Generate checksum according to PayOS documentation
   const checksum = crypto
     .createHmac("sha256", checksumKey)
     .update(dataRaw)
     .digest("hex");
+  
+  console.log("Checksum generated:", checksum);
 
   // Make API request
   try {

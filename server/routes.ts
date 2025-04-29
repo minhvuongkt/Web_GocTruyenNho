@@ -853,10 +853,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Sử dụng @payos/node để tạo payment token
           // Thông tin client token có thể được tạo từ server và gửi cho client để render form
           // Trong PayOSCheckout component
+          
+          // Lấy thời gian hết hạn từ cấu hình (mặc định 15 phút)
+          const expiryMinutes = settings.expiryConfig?.payos || 15;
+          const expiresAt = new Date(newPayment.createdAt.getTime() + expiryMinutes * 60 * 1000);
+          
           res.status(201).json({
             payment: newPayment,
             clientToken: payosConfig.clientId, // Truyền client ID để client xử lý PayOS Checkout
-            expiresAt: new Date(newPayment.createdAt.getTime() + 15 * 60 * 1000), // 15 minutes expiry
+            expiresAt: expiresAt
           });
         } catch (error) {
           console.error("Error creating PayOS payment:", error);
@@ -867,9 +872,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       } else {
         // Cho các phương thức khác trong tương lai
+        // Lấy thời gian hết hạn từ cấu hình (mặc định 10 phút)
+        const expiryMinutes = settings.expiryConfig?.bankTransfer || 10;
+        const expiresAt = new Date(newPayment.createdAt.getTime() + expiryMinutes * 60 * 1000);
+        
         res.status(201).json({
           payment: newPayment,
-          expiresAt: new Date(newPayment.createdAt.getTime() + 10 * 60 * 1000), // 10 minutes expiry
+          expiresAt: expiresAt
         });
       }
     } catch (error) {
@@ -939,10 +948,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
         }
 
-        // Kiểm tra thời gian hết hạn (10 phút mặc định)
-        const expiryTime = new Date(
-          payment.createdAt.getTime() + 10 * 60 * 1000,
-        );
+        // Lấy cấu hình thanh toán để kiểm tra thời gian hết hạn
+        const settings = await storage.getPaymentSettings();
+        
+        // Xác định thời gian hết hạn dựa vào phương thức thanh toán
+        let expiryMinutes = 10; // Mặc định 10 phút
+        
+        if (settings && settings.expiryConfig) {
+          if (payment.method === "vietqr" || payment.method === "bank_transfer") {
+            expiryMinutes = settings.expiryConfig.bankTransfer || 10;
+          } else if (payment.method === "payos") {
+            expiryMinutes = settings.expiryConfig.payos || 15;
+          }
+        }
+        
+        const expiryTime = new Date(payment.createdAt.getTime() + expiryMinutes * 60 * 1000);
+        
         if (new Date() > expiryTime) {
           await storage.updatePaymentStatus(payment.id, "failed");
           return res.status(400).json({ 

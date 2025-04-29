@@ -1469,6 +1469,10 @@ export class DatabaseStorage implements IStorage {
           { amount: 100000, discountPercent: 10 },
           { amount: 200000, discountPercent: 15 },
         ]
+      },
+      expiryConfig: {
+        bankTransfer: 10, // 10 phút cho chuyển khoản ngân hàng
+        payos: 15, // 15 phút cho PayOS
       }
     };
 

@@ -850,9 +850,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const cancelUrl = `${appUrl}/payment?status=cancel&id=${newPayment.transactionId}`;
 
         try {
-          // Sử dụng @payos/node để tạo payment token
-          // Thông tin client token có thể được tạo từ server và gửi cho client để render form
-          // Trong PayOSCheckout component
+          // Sử dụng PayOS API để tạo payment link
+          const paymentData = {
+            amount: amount,
+            description: `Nạp tiền tài khoản cho ${(req.user as any).username}`,
+            orderCode: newPayment.transactionId,
+            returnUrl: returnUrl,
+            cancelUrl: cancelUrl
+          };
+          
+          // Tạo payment link qua PayOS API
+          const payosResponse = await createPayOSPaymentLink(config, paymentData);
+          
+          // Kiểm tra response
+          if (!payosResponse || !payosResponse.data || !payosResponse.data.checkoutUrl) {
+            console.error("Invalid PayOS response:", payosResponse);
+            await storage.updatePaymentStatus(newPayment.id, "failed");
+            return res.status(500).json({ error: "Invalid PayOS response" });
+          }
           
           // Lấy thời gian hết hạn từ cấu hình (mặc định 15 phút)
           const expiryMinutes = settings.expiryConfig?.payos || 15;
@@ -860,7 +875,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           res.status(201).json({
             payment: newPayment,
-            clientToken: payosConfig.clientId, // Truyền client ID để client xử lý PayOS Checkout
+            paymentLink: payosResponse.data.checkoutUrl,
+            qrCode: payosResponse.data.qrCode || null,
             expiresAt: expiresAt
           });
         } catch (error) {

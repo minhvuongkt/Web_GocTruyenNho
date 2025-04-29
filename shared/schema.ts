@@ -394,3 +394,146 @@ export const registerSchema = insertUserSchema
 
 export type LoginInput = z.infer<typeof loginSchema>;
 export type RegisterInput = z.infer<typeof registerSchema>;
+
+// Define table relations after all types are defined
+export const usersRelations = relations(users, ({ many }) => ({
+  payments: many(payments),
+  comments: many(comments),
+  reports: many(reports),
+  favorites: many(userFavorites),
+  readingHistories: many(readingHistory),
+  unlockedChapters: many(unlockedChapters),
+}));
+
+export const genresRelations = relations(genres, ({ many }) => ({
+  contentLinks: many(contentGenres),
+}));
+
+export const authorsRelations = relations(authors, ({ many }) => ({
+  contents: many(content),
+}));
+
+export const translationGroupsRelations = relations(translationGroups, ({ many }) => ({
+  contents: many(content),
+}));
+
+export const contentRelations = relations(content, ({ one, many }) => ({
+  author: one(authors, {
+    fields: [content.authorId],
+    references: [authors.id],
+  }),
+  translationGroup: one(translationGroups, {
+    fields: [content.translationGroupId],
+    references: [translationGroups.id],
+  }),
+  genreLinks: many(contentGenres),
+  chapters: many(chapters),
+  comments: many(comments),
+  favorites: many(userFavorites),
+  readingHistories: many(readingHistory),
+  reports: many(reports),
+}));
+
+export const contentGenresRelations = relations(contentGenres, ({ one }) => ({
+  content: one(content, {
+    fields: [contentGenres.contentId],
+    references: [content.id],
+  }),
+  genre: one(genres, {
+    fields: [contentGenres.genreId],
+    references: [genres.id],
+  }),
+}));
+
+export const chaptersRelations = relations(chapters, ({ one, many }) => ({
+  content: one(content, {
+    fields: [chapters.contentId],
+    references: [content.id],
+  }),
+  chapterContents: many(chapterContent),
+  comments: many(comments),
+  readingHistories: many(readingHistory),
+  unlocked: many(unlockedChapters),
+  reports: many(reports),
+}));
+
+export const chapterContentRelations = relations(chapterContent, ({ one }) => ({
+  chapter: one(chapters, {
+    fields: [chapterContent.chapterId],
+    references: [chapters.id],
+  }),
+}));
+
+export const userFavoritesRelations = relations(userFavorites, ({ one }) => ({
+  user: one(users, {
+    fields: [userFavorites.userId],
+    references: [users.id],
+  }),
+  content: one(content, {
+    fields: [userFavorites.contentId],
+    references: [content.id],
+  }),
+}));
+
+export const readingHistoryRelations = relations(readingHistory, ({ one }) => ({
+  user: one(users, {
+    fields: [readingHistory.userId],
+    references: [users.id],
+  }),
+  content: one(content, {
+    fields: [readingHistory.contentId],
+    references: [content.id],
+  }),
+  chapter: one(chapters, {
+    fields: [readingHistory.chapterId],
+    references: [chapters.id],
+  }),
+}));
+
+export const unlockedChaptersRelations = relations(unlockedChapters, ({ one }) => ({
+  user: one(users, {
+    fields: [unlockedChapters.userId],
+    references: [users.id],
+  }),
+  chapter: one(chapters, {
+    fields: [unlockedChapters.chapterId],
+    references: [chapters.id],
+  }),
+}));
+
+export const commentsRelations = relations(comments, ({ one }) => ({
+  user: one(users, {
+    fields: [comments.userId],
+    references: [users.id],
+  }),
+  content: one(content, {
+    fields: [comments.contentId],
+    references: [content.id],
+  }),
+  chapter: one(chapters, {
+    fields: [comments.chapterId],
+    references: [chapters.id],
+  }),
+}));
+
+export const reportsRelations = relations(reports, ({ one }) => ({
+  user: one(users, {
+    fields: [reports.userId],
+    references: [users.id],
+  }),
+  content: one(content, {
+    fields: [reports.contentId],
+    references: [content.id],
+  }),
+  chapter: one(chapters, {
+    fields: [reports.chapterId],
+    references: [chapters.id],
+  }),
+}));
+
+export const paymentsRelations = relations(payments, ({ one }) => ({
+  user: one(users, {
+    fields: [payments.userId],
+    references: [users.id],
+  }),
+}));

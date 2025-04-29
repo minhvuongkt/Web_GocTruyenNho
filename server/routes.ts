@@ -1834,7 +1834,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const paymentData = {
         amount,
-        description: `NAP_${username}`,
+        description: "Nạp tiền", // Giữ mô tả ngắn (giới hạn PayOS: 25 ký tự)
         orderCode: transactionId,
         returnUrl,
         cancelUrl

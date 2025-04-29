@@ -132,7 +132,7 @@ export function PaymentPage() {
     bankBin: paymentSettings?.bankBin || "MBBANK",
     bankName: getBankName(paymentSettings?.bankBin || "MBBANK"),
     accountNumber: paymentSettings?.accountNumber || "0862713897",
-    accountName: paymentSettings?.accountName || "góc truyện nhỏ",
+    accountName: paymentSettings?.accountName || "Mèo Đi Dịch Truyện",
   };
 
   // Get minimum deposit amount from settings
@@ -346,7 +346,9 @@ export function PaymentPage() {
       const minutes = Math.floor(diff / 60000);
       const seconds = Math.floor((diff % 60000) / 1000);
 
-      setRemainingTime(`${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`);
+      setRemainingTime(
+        `${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`,
+      );
     };
 
     // Update immediately
@@ -398,7 +400,30 @@ export function PaymentPage() {
       </MainLayout>
     );
   }
+  // Handle amount input
+  const previousAmountRef = useRef(0);
 
+  const handleChange = (e) => {
+    const newValue = parseInt(e.target.value) || 0;
+    const previous = previousAmountRef.current;
+    const delta = newValue - previous;
+    let adjusted = newValue;
+
+    if (newValue < minimumDeposit) {
+      adjusted = minimumDeposit;
+    } else if (delta === 1) {
+      adjusted = newValue + 999;
+    } else if (delta === -1) {
+      adjusted = Math.max(minimumDeposit, newValue - 999);
+    } else {
+      adjusted = newValue;
+    }
+
+    previousAmountRef.current = adjusted;
+    setAmount(String(adjusted));
+    setPresetAmount(null);
+  };
+  //end
   return (
     <MainLayout>
       <div className="container py-8">
@@ -431,18 +456,7 @@ export function PaymentPage() {
                           id="amount"
                           placeholder={`Nhập số tiền (tối thiểu ${formatCurrency(minimumDeposit)})`}
                           value={amount}
-                          onChange={(e) => {
-                            const current = parseInt(e.target.value) || 0;
-                            if (current < minimumDeposit) {
-                              setAmount(String(minimumDeposit));
-                            } else if (current > parseInt(amount)) {
-                              setAmount(String(current + 999));
-                            } else if (current < parseInt(amount)) {
-                              setAmount(String(current - 999));
-                            }
-                            setPresetAmount(null);
-                          }}
-                          onClick={() => {}}
+                          onChange={handleChange}
                           type="number"
                         />
                         {/* Preset amount buttons */}
@@ -464,6 +478,7 @@ export function PaymentPage() {
                                 onClick={() => {
                                   setAmount(tier.amount.toString());
                                   setPresetAmount(tier.amount.toString());
+                                  previousAmountRef.current = tier.amount;
                                 }}
                                 className="relative overflow-hidden"
                               >

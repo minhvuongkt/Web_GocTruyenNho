@@ -26,12 +26,24 @@ import {
   RefreshCw,
   CircleDollarSign,
   BadgePercent,
+  Mail,
+  AlarmClock,
   CreditCard as PaymentCard
 } from "lucide-react";
 
 export function PaymentSettingsPage() {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("bank");
+
+  // Email configuration state
+  const [emailConfig, setEmailConfig] = useState({
+    smtpHost: "smtp.gmail.com",
+    smtpPort: 587,
+    smtpUser: "",
+    smtpPass: "",
+    senderEmail: "",
+    adminEmail: "hlmvuong123@gmail.com"
+  });
 
   // Configuration state for different payment methods
   const [bankConfig, setBankConfig] = useState({
@@ -129,6 +141,9 @@ export function PaymentSettingsPage() {
       if (data.expiryConfig) {
         setExpiryConfig(data.expiryConfig);
       }
+      if (data.emailConfig) {
+        setEmailConfig(data.emailConfig);
+      }
     }
   }, [data]);
 
@@ -178,7 +193,8 @@ export function PaymentSettingsPage() {
       vietQRConfig,
       priceConfig,
       payosConfig,
-      expiryConfig
+      expiryConfig,
+      emailConfig
     });
   };
 
@@ -229,7 +245,7 @@ export function PaymentSettingsPage() {
         </div>
         
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full md:w-auto grid-cols-4 mb-4">
+          <TabsList className="grid w-full md:w-auto grid-cols-6 mb-4">
             <TabsTrigger value="bank" className="flex items-center">
               <Building2 className="mr-2 h-4 w-4" />
               <span className="hidden sm:inline">Ngân hàng</span>
@@ -245,6 +261,14 @@ export function PaymentSettingsPage() {
             <TabsTrigger value="pricing" className="flex items-center">
               <CircleDollarSign className="mr-2 h-4 w-4" />
               <span className="hidden sm:inline">Đơn giá</span>
+            </TabsTrigger>
+            <TabsTrigger value="email" className="flex items-center">
+              <Mail className="mr-2 h-4 w-4" />
+              <span className="hidden sm:inline">Email</span>
+            </TabsTrigger>
+            <TabsTrigger value="expiry" className="flex items-center">
+              <AlarmClock className="mr-2 h-4 w-4" />
+              <span className="hidden sm:inline">Hết hạn</span>
             </TabsTrigger>
           </TabsList>
           

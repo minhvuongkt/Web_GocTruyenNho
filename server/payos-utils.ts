@@ -2,7 +2,7 @@
  * Utility functions for handling payments through PayOS
  */
 
-// Using native fetch instead of node-fetch
+import PayOS from "@payos/node";
 import crypto from "crypto";
 
 // PayOS Configuration Types
@@ -23,7 +23,7 @@ export type PayOSPaymentData = {
 };
 
 /**
- * Create a payment link via PayOS API
+ * Create a payment link via PayOS API using official SDK
  * 
  * @param config PayOS API configuration
  * @param paymentData Payment data including amount and description
@@ -33,57 +33,37 @@ export async function createPayOSPaymentLink(
   config: PayOSConfig,
   paymentData: PayOSPaymentData
 ) {
-  const { clientId, apiKey, checksumKey, baseUrl } = config;
-  const { amount, description, orderCode, returnUrl, cancelUrl } = paymentData;
-
-  // Current time + 15 minutes (in seconds)
-  const expiredAt = Math.floor(Date.now() / 1000) + 15 * 60;
-
-  // Create request body
-  const requestBody = {
-    orderCode,
-    amount,
-    description,
-    buyerName: "User",
-    buyerEmail: "user@example.com",
-    buyerPhone: "0123456789",
-    cancelUrl,
-    returnUrl,
-    expiredAt,
-  };
-
-  // Create checksum
-  const dataRaw = JSON.stringify(requestBody);
-  // Generate checksum according to PayOS documentation
-  const checksum = crypto
-    .createHmac("sha256", checksumKey)
-    .update(dataRaw)
-    .digest("hex");
-  
-  console.log("Checksum generated:", checksum);
-
-  // Make API request
   try {
-    console.log("PayOS Request:", {
-      url: `${baseUrl}/v2/payment-requests`,
-      clientId,
-      requestBody
-    });
-    
-    const response = await fetch(`${baseUrl}/v2/payment-requests`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-client-id": clientId,
-        "x-api-key": apiKey,
-        "Signature": checksum,
-      },
-      body: dataRaw,
-    });
+    const { clientId, apiKey, checksumKey } = config;
+    const { amount, description, orderCode, returnUrl, cancelUrl } = paymentData;
 
-    const data = await response.json();
-    console.log("PayOS Response:", data);
-    return data;
+    // Initialize PayOS SDK
+    const payOS = new PayOS(clientId, apiKey, checksumKey);
+    console.log("Initializing PayOS with:", { clientId, apiKey: apiKey.substring(0, 5) + "..." });
+
+    // Create payment link request body
+    const requestBody = {
+      orderCode: Number(orderCode), // Convert to number since PayOS SDK expects number
+      amount,
+      description,
+      cancelUrl,
+      returnUrl,
+      items: [
+        {
+          name: "Nạp tiền tài khoản",
+          quantity: 1,
+          price: amount
+        }
+      ]
+    };
+
+    console.log("PayOS Request:", requestBody);
+    
+    // Use PayOS SDK to create payment link
+    const response = await payOS.createPaymentLink(requestBody);
+    console.log("PayOS Response:", response);
+    
+    return response;
   } catch (error) {
     console.error("PayOS payment link creation failed:", error);
     throw error;
@@ -101,19 +81,17 @@ export async function checkPayOSPaymentStatus(
   config: PayOSConfig, 
   orderCode: string
 ) {
-  const { clientId, apiKey, checksumKey, baseUrl } = config;
-
   try {
-    const response = await fetch(`${baseUrl}/v2/payment-requests/${orderCode}`, {
-      method: "GET",
-      headers: {
-        "x-client-id": clientId,
-        "x-api-key": apiKey,
-      },
-    });
-
-    const data = await response.json();
-    return data;
+    const { clientId, apiKey, checksumKey } = config;
+    
+    // Initialize PayOS SDK
+    const payOS = new PayOS(clientId, apiKey, checksumKey);
+    
+    // Use SDK to get payment - fix typo in method name
+    const response = await payOS.getPaymentLinkInformation(Number(orderCode));
+    console.log("PayOS Status Response:", response);
+    
+    return response;
   } catch (error) {
     console.error("PayOS payment status check failed:", error);
     throw error;
@@ -121,7 +99,7 @@ export async function checkPayOSPaymentStatus(
 }
 
 /**
- * Verify a PayOS webhook notification
+ * Verify a PayOS webhook notification using official SDK
  * 
  * @param config PayOS API configuration
  * @param bodyData Raw body data from webhook
@@ -133,12 +111,16 @@ export function verifyPayOSWebhook(
   bodyData: string,
   webhookHeader: string
 ) {
-  const { checksumKey } = config;
-  
-  const checksum = crypto
-    .createHmac("sha256", checksumKey)
-    .update(bodyData)
-    .digest("hex");
-  
-  return checksum === webhookHeader;
+  try {
+    const { clientId, apiKey, checksumKey } = config;
+    
+    // Initialize PayOS SDK
+    const payOS = new PayOS(clientId, apiKey, checksumKey);
+    
+    // Use SDK for webhook verification
+    return payOS.verifyPaymentWebhookData(bodyData, webhookHeader);
+  } catch (error) {
+    console.error("PayOS webhook verification failed:", error);
+    return false;
+  }
 }

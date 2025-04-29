@@ -18,6 +18,7 @@ import NovelReaderPage from "@/pages/novel-reader-page";
 import ProfilePage from "@/pages/profile-page";
 import PaymentPage from "@/pages/payment-page";
 import SearchPage from "@/pages/search-page";
+import { PaymentTestPage } from "@/pages/payment-test-page";
 
 // Admin Pages
 import DashboardPage from "@/pages/admin/dashboard-page";
@@ -68,6 +69,9 @@ function Router() {
       {/* Protected user routes */}
       <ProtectedRoute path="/profile" component={ProfilePage} />
       <ProtectedRoute path="/payment" component={PaymentPage} />
+      
+      {/* Test payment page */}
+      <Route path="/payment-test" component={PaymentTestPage} />
       
       {/* Admin routes */}
       <ProtectedRoute path="/admin" component={DashboardPage} requireAdmin={true} />

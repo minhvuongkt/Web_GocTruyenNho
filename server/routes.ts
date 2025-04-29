@@ -1322,7 +1322,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/payos/status/:orderCode", ensureAuthenticated, async (req, res) => {
+  app.get("/api/payment/payos/check-payment-status/:orderCode", ensureAuthenticated, async (req, res) => {
     try {
       const { orderCode } = req.params;
 

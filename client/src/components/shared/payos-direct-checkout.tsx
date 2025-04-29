@@ -111,7 +111,7 @@ export function PayOSDirectCheckout({
         const data = await response.json();
         
         // If payment is successful
-        if (data.paymentStatus === 'PAID') {
+        if (data.code === '00' && data.data && data.data.status === 'PAID') {
           setMessage("Thanh toán thành công!");
           onSuccess(orderCode);
           
@@ -142,7 +142,7 @@ export function PayOSDirectCheckout({
     fetch(`/api/payment/payos/check-payment-status/${orderCode}`)
       .then(res => res.json())
       .then(data => {
-        if (data.paymentStatus === 'PAID') {
+        if (data.code === '00' && data.data && data.data.status === 'PAID') {
           setMessage("Thanh toán thành công!");
           onSuccess(orderCode);
         } else {

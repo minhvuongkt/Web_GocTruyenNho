@@ -153,7 +153,9 @@ export function PaymentPage() {
     const sortedTiers = [...paymentSettings.discountTiers].sort((a, b) => b.amount - a.amount);
     
     // Find the applicable tier
-    const applicableTier = sortedTiers.find(tier => amount >= tier.amount);
+    const applicableTier = sortedTiers.find((tier: { amount: number; discountPercent: number }) => 
+      amount >= tier.amount
+    );
     
     if (!applicableTier) {
       return { bonus: 0, percentage: 0 };
@@ -400,7 +402,7 @@ export function PaymentPage() {
                         
                         {/* Preset amount buttons */}
                         <div className="grid grid-cols-3 gap-2 pt-2">
-                          {paymentSettings?.discountTiers?.map((tier) => (
+                          {paymentSettings?.discountTiers?.map((tier: { amount: number; discountPercent: number }) => (
                             <Button
                               key={tier.amount}
                               type="button"

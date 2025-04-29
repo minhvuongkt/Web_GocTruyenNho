@@ -853,7 +853,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Sử dụng PayOS API để tạo payment link
           const paymentData = {
             amount: amount,
-            description: "Nạp tiền", // Keep description short (PayOS has 25 char limit)
+            description: `Nạp tiền tài khoản cho ${(req.user as any).username}`,
             orderCode: newPayment.transactionId,
             returnUrl: returnUrl,
             cancelUrl: cancelUrl
@@ -866,8 +866,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           console.log("PayOS payment response:", payosResponse);
           
-          // Kiểm tra response - Phiên bản PayOS mới trả về định dạng khác
-          if (!payosResponse || (!payosResponse.checkoutUrl && !payosResponse.qrCode)) {
+          // Kiểm tra response
+          if (!payosResponse || payosResponse.code !== '00' || !payosResponse.data || !payosResponse.data.checkoutUrl) {
             console.error("Invalid PayOS response:", payosResponse);
             await storage.updatePaymentStatus(newPayment.id, "failed");
             return res.status(500).json({ error: "Invalid PayOS response: " + (payosResponse?.desc || "Unknown error") });
@@ -879,8 +879,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           res.status(201).json({
             payment: newPayment,
-            paymentLink: payosResponse.checkoutUrl,
-            qrCode: payosResponse.qrCode || null,
+            paymentLink: payosResponse.data.checkoutUrl,
+            qrCode: payosResponse.data.qrCode || null,
             expiresAt: expiresAt
           });
         } catch (error) {
@@ -1834,7 +1834,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const paymentData = {
         amount,
-        description: "Nạp tiền", // Giữ mô tả ngắn (giới hạn PayOS: 25 ký tự)
+        description: `NAP_${username}`,
         orderCode: transactionId,
         returnUrl,
         cancelUrl
@@ -1892,14 +1892,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const statusResponse = await checkPayOSPaymentStatus(config, orderCode);
       
-      // Update payment status based on PayOS response - Phiên bản mới PayOS trả về trực tiếp không qua data
-      // statusResponse có thể có cấu trúc {status: 'PAID'} hoặc {data: {status: 'PAID'}}
-      const payosStatus = statusResponse.status || statusResponse.data?.status;
-      
-      if (payosStatus) {
+      // Update payment status based on PayOS response
+      if (statusResponse.code === '00' && statusResponse.data?.status) {
         let newStatus: "pending" | "completed" | "failed" = "pending";
         
-        if (payosStatus === 'PAID') {
+        if (statusResponse.data.status === 'PAID') {
           newStatus = "completed";
           
           // If payment is completed, add the amount to the user's balance
@@ -1907,7 +1904,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (user) {
             await storage.updateUserBalance(user.id, user.balance + payment.amount);
           }
-        } else if (payosStatus === 'CANCELLED' || payosStatus === 'EXPIRED') {
+        } else if (statusResponse.data.status === 'CANCELLED' || statusResponse.data.status === 'EXPIRED') {
           newStatus = "failed";
         }
         
@@ -1919,7 +1916,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json({ 
         payment,
-        payosStatus: payosStatus || 'UNKNOWN'
+        payosStatus: statusResponse.data?.status || 'UNKNOWN'
       });
     } catch (error) {
       console.error("Error checking PayOS payment status:", error);

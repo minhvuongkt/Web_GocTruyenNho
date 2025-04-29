@@ -817,9 +817,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
           qrCodeURL,
           expiresAt: new Date(newPayment.createdAt.getTime() + 10 * 60 * 1000), // 10 minutes expiry
         });
+      } else if (method === 'payos') {
+        // Tạo thanh toán qua PayOS
+        if (!settings.payosConfig) {
+          return res.status(500).json({ error: "PayOS payment settings not configured" });
+        }
+
+        // Lấy config PayOS
+        const payosConfig = settings.payosConfig as any;
+        
+        // Kiểm tra config
+        if (!payosConfig.clientId || !payosConfig.apiKey || !payosConfig.checksumKey) {
+          return res.status(500).json({ error: "PayOS API credentials are missing" });
+        }
+
+        // Setup PayOS request
+        const baseUrl = payosConfig.baseUrl || "https://api-merchant.payos.vn";
+        const config = {
+          clientId: payosConfig.clientId,
+          apiKey: payosConfig.apiKey,
+          checksumKey: payosConfig.checksumKey,
+          baseUrl
+        };
+
+        // URL trả về sau khi thanh toán
+        const appUrl = process.env.APP_URL || `http://localhost:${process.env.PORT || 5000}`;
+        const returnUrl = `${appUrl}/payment?status=success&id=${newPayment.id}`;
+        const cancelUrl = `${appUrl}/payment?status=cancel&id=${newPayment.id}`;
+
+        try {
+          // Tạo payment link qua PayOS
+          const paymentData = {
+            amount,
+            description: `NAP_${(req.user as any).username}`,
+            orderCode: transactionId,
+            returnUrl,
+            cancelUrl
+          };
+
+          const paymentLinkResponse = await createPayOSPaymentLink(config, paymentData);
+
+          // Trả về thông tin thanh toán và PayOS link
+          res.status(201).json({
+            payment: newPayment,
+            paymentLink: paymentLinkResponse.data?.checkoutUrl || null,
+            qrCode: paymentLinkResponse.data?.qrCode || null,
+            expiresAt: new Date(newPayment.createdAt.getTime() + 15 * 60 * 1000), // 15 minutes expiry
+          });
+        } catch (error) {
+          console.error("Error creating PayOS payment:", error);
+          // Xóa thanh toán vì không tạo được link PayOS
+          await storage.updatePaymentStatus(newPayment.id, "failed");
+          
+          return res.status(500).json({ error: "Failed to create PayOS payment link" });
+        }
       } else {
-        // For payos method, we just return the payment info
-        // Actual payos payment will be created on the client side
+        // Cho các phương thức khác trong tương lai
         res.status(201).json({
           payment: newPayment,
           expiresAt: new Date(newPayment.createdAt.getTime() + 10 * 60 * 1000), // 10 minutes expiry

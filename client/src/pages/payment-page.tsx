@@ -620,48 +620,7 @@ export function PaymentPage() {
                               )}
                             </Button>
                             
-                            {/* Thêm trường chỉnh sửa thời gian hết hạn */}
-                            <div className="mt-4">
-                              <Label htmlFor="expiration-time">Thời gian hết hạn (phút)</Label>
-                              <div className="flex items-center gap-2 mt-1">
-                                <Input
-                                  id="expiration-time"
-                                  type="number"
-                                  defaultValue={10}
-                                  min={1}
-                                  max={60}
-                                  onChange={(e) => {
-                                    // Cập nhật thời gian hết hạn khi người dùng thay đổi
-                                    if (paymentDate) {
-                                      const newExpiryMinutes = parseInt(e.target.value) || 10;
-                                      const newPaymentDate = new Date(
-                                        new Date().getTime() - (10 * 60 * 1000) + (newExpiryMinutes * 60 * 1000)
-                                      );
-                                      setPaymentDate(newPaymentDate);
-                                      
-                                      toast({
-                                        title: "Đã cập nhật thời gian",
-                                        description: `Giao dịch sẽ hết hạn sau ${newExpiryMinutes} phút`,
-                                      });
-                                    }
-                                  }}
-                                />
-                                <Button 
-                                  variant="outline" 
-                                  size="sm"
-                                  onClick={() => {
-                                    // Reset thời gian về thời điểm hiện tại + 10 phút
-                                    setPaymentDate(new Date());
-                                    toast({
-                                      title: "Đã cập nhật thời gian",
-                                      description: "Giao dịch sẽ hết hạn sau 10 phút",
-                                    });
-                                  }}
-                                >
-                                  Reset
-                                </Button>
-                              </div>
-                            </div>
+                            {/* Đã xóa trường chỉnh sửa thời gian hết hạn */}
                           </div>
                         </div>
                       )}

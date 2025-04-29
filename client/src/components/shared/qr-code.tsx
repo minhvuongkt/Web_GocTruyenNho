@@ -1,5 +1,15 @@
 import { useMemo, useEffect, useState } from "react";
 import { AlertTriangle } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface QRCodeProps {
   amount: number;
@@ -12,6 +22,8 @@ interface QRCodeProps {
 
 export function QRCode({ amount, accountNo, accountName, bankId, addInfo, template = 'compact2' }: QRCodeProps) {
   const [warningVisible, setWarningVisible] = useState(false);
+  const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
+  const [leavePath, setLeavePath] = useState<string | null>(null);
 
   // Generate VietQR URL with parameters
   const qrUrl = useMemo(() => {
@@ -28,10 +40,28 @@ export function QRCode({ amount, accountNo, accountName, bankId, addInfo, templa
       return '';
     };
 
+    // Thêm xử lý khi click vào các link trong trang
+    const handleLinkClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      const link = target.closest('a');
+      
+      if (link && !link.hasAttribute('target')) {
+        const href = link.getAttribute('href');
+        
+        if (href && !href.startsWith('#') && !href.startsWith('javascript:')) {
+          e.preventDefault();
+          setLeavePath(href);
+          setShowLeaveConfirm(true);
+        }
+      }
+    };
+
     window.addEventListener('beforeunload', handleBeforeUnload);
+    document.addEventListener('click', handleLinkClick);
     
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload);
+      document.removeEventListener('click', handleLinkClick);
     };
   }, []);
 

@@ -14,6 +14,7 @@ import {
   createPayOSPaymentLink,
   checkPayOSPaymentStatus,
   verifyPayOSWebhook,
+  cancelPayOSPayment,
 } from "./payos-utils";
 import { setupAuth } from "./auth";
 
@@ -2219,6 +2220,105 @@ export async function registerRoutes(app: Express): Promise<Server> {
         code: "99",
         desc: error.message || "Failed to create PayOS payment",
         data: null,
+      });
+    }
+  });
+
+  // Cancel a PayOS payment
+  app.post("/api/payos/cancel/:orderCode", ensureAuthenticated, async (req, res) => {
+    try {
+      const { orderCode } = req.params;
+      if (!orderCode) {
+        return res.status(400).json({
+          code: "01",
+          desc: "Order code is required",
+          data: null,
+        });
+      }
+
+      // Get payment from storage to verify ownership
+      const payment = await storage.getPaymentByTransactionId(orderCode);
+      if (!payment) {
+        return res.status(404).json({
+          code: "04",
+          desc: "Payment not found",
+          data: null,
+        });
+      }
+
+      // Check if the payment belongs to the user
+      const userId = (req.user as any).id;
+      if (payment.userId !== userId && (req.user as any).role !== "admin") {
+        return res.status(403).json({
+          code: "03", 
+          desc: "Forbidden - you don't have permission to cancel this payment",
+          data: null
+        });
+      }
+
+      // Check if payment is already completed or failed
+      if (payment.status !== "pending") {
+        return res.status(400).json({ 
+          code: "05",
+          desc: `Cannot cancel payment - already ${payment.status}`,
+          data: null
+        });
+      }
+
+      // Get PayOS settings
+      const settings = await storage.getPaymentSettings();
+      if (!settings || !settings.payosConfig) {
+        return res.status(500).json({
+          code: "02",
+          desc: "PayOS settings not configured",
+          data: null,
+        });
+      }
+
+      const payosConfig = settings.payosConfig as any;
+
+      // Call PayOS API to cancel the payment
+      try {
+        const cancelResult = await cancelPayOSPayment(
+          {
+            clientId: payosConfig.clientId,
+            apiKey: payosConfig.apiKey,
+            checksumKey: payosConfig.checksumKey,
+            baseUrl: payosConfig.baseUrl || "https://api-merchant.payos.vn",
+          },
+          orderCode
+        );
+
+        // Update payment status in database
+        await storage.updatePaymentStatus(payment.id, "failed");
+
+        return res.json({
+          code: "00",
+          desc: "Payment cancelled successfully",
+          data: cancelResult
+        });
+      } catch (error: any) {
+        console.error("PayOS payment cancellation error:", error);
+        
+        // Even if the PayOS API call fails, we'll still mark it as failed in our database
+        // This ensures the user's UI is updated
+        await storage.updatePaymentStatus(payment.id, "failed");
+        
+        return res.status(200).json({
+          code: "00", 
+          desc: "Payment marked as cancelled in our database",
+          data: {
+            error: error.message,
+            orderCode
+          }
+        });
+      }
+    } catch (error: any) {
+      console.error("Payment cancellation API error:", error);
+      return res.status(500).json({
+        code: "99",
+        desc: error.message || "Server error during payment cancellation",
+        data: null
       });
     }
   });

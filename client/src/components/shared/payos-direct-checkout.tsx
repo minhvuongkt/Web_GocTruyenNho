@@ -6,6 +6,9 @@ import { apiRequest } from '@/lib/queryClient';
 import { extractPayOSPaymentData, isValidPayOSResponse, extractPayOSErrorMessage } from '@/utils/payos-helpers';
 import QRCode from 'qrcode';
 
+// Add a declaration file for QRCode to fix TypeScript error
+declare module 'qrcode';
+
 interface PayOSDirectCheckoutProps {
   amount: number;
   description?: string;
@@ -186,13 +189,58 @@ export function PayOSDirectCheckout({
       });
   };
 
-  // Handle cancel
-  const handleCancel = () => {
-    setQrCode(null);
-    setOrderCode(null);
-    setCheckoutUrl(null);
-    setCountdown(0);
-    if (onCancel) onCancel();
+  // Handle cancel with PayOS API call
+  const handleCancel = async () => {
+    if (!orderCode) {
+      toast({
+        title: "Không thể hủy thanh toán",
+        description: "Không tìm thấy mã giao dịch",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // Hiển thị toast thông báo đang hủy giao dịch
+    toast({
+      title: "Đang hủy giao dịch",
+      description: "Vui lòng đợi trong giây lát..."
+    });
+    
+    try {
+      // Gọi API hủy thanh toán
+      const response = await apiRequest("POST", `/api/payos/cancel/${orderCode}`);
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.desc || 'Không thể hủy thanh toán');
+      }
+      
+      const result = await response.json();
+      console.log("Cancel payment response:", result);
+      
+      // Xóa thông tin thanh toán hiện tại
+      setQrCode(null);
+      setOrderCode(null);
+      setCheckoutUrl(null);
+      setCountdown(0);
+      
+      // Hiển thị thông báo thành công
+      toast({
+        title: "Đã hủy thanh toán",
+        description: "Giao dịch đã được hủy thành công",
+        variant: "default"
+      });
+      
+      // Gọi callback nếu có
+      if (onCancel) onCancel();
+    } catch (error: any) {
+      console.error("Error cancelling payment:", error);
+      toast({
+        title: "Lỗi hủy thanh toán",
+        description: error.message || "Đã xảy ra lỗi khi hủy thanh toán",
+        variant: "destructive"
+      });
+    }
   };
 
   return (
@@ -263,33 +311,101 @@ export function PayOSDirectCheckout({
                           className="w-48 h-48 mx-auto"
                         />
                       ) : qrCode.startsWith('http') ? (
-                        <img 
-                          src={qrCode} 
-                          alt="QR Code thanh toán" 
-                          className="w-48 h-48 mx-auto"
-                        />
-                      ) : (
-                        <img 
-                          src={`data:image/png;base64,${qrCode}`} 
-                          alt="QR Code thanh toán" 
-                          className="w-48 h-48 mx-auto"
-                          onError={(e) => {
-                            console.log("QR code error, trying other format");
-                            e.currentTarget.style.display = 'none';
-                            // Hiển thị dạng text thay thế
-                            const container = e.currentTarget.parentElement;
-                            if (container) {
-                              const msg = document.createElement('div');
-                              msg.innerHTML = `
-                                <div class="w-48 h-48 mx-auto flex flex-col items-center justify-center text-center">
-                                  <p class="text-sm text-gray-700 font-medium mb-2">Mở ứng dụng ngân hàng</p>
-                                  <p class="text-xs text-gray-500">Quét mã VietQR hoặc chuyển khoản theo thông tin bên dưới</p>
-                                </div>
-                              `;
-                              container.appendChild(msg);
+                        <div id="qrcode-container" className="w-48 h-48 mx-auto">
+                          {/* Tự tạo QR code thay vì sử dụng URL từ PayOS */}
+                          {useEffect(() => {
+                            if (qrCode.startsWith('http')) {
+                              const container = document.getElementById('qrcode-container');
+                              if (container) {
+                                container.innerHTML = ''; // Xóa nội dung cũ
+                                
+                                // Tạo QR code sử dụng thư viện QRCode
+                                QRCode.toCanvas(
+                                  container, 
+                                  qrCode,
+                                  { 
+                                    width: 192,
+                                    margin: 2,
+                                    color: {
+                                      dark: '#000',
+                                      light: '#fff'
+                                    }
+                                  }, 
+                                  (error) => {
+                                    if (error) {
+                                      console.error('Error generating QR code:', error);
+                                      // Fallback to image if QR code generation fails
+                                      const img = document.createElement('img');
+                                      img.src = qrCode;
+                                      img.alt = 'QR Code thanh toán';
+                                      img.className = 'w-48 h-48 mx-auto';
+                                      container.appendChild(img);
+                                    }
+                                  }
+                                );
+                              }
                             }
-                          }}
-                        />
+                          }, [qrCode])}
+                        </div>
+                      ) : (
+                        <div id="qrcode-data-container" className="w-48 h-48 mx-auto">
+                          {/* Tự tạo QR code từ dữ liệu */}
+                          {useEffect(() => {
+                            if (qrCode && !qrCode.startsWith('data:') && !qrCode.startsWith('http')) {
+                              const container = document.getElementById('qrcode-data-container');
+                              if (container) {
+                                container.innerHTML = ''; // Xóa nội dung cũ
+                                
+                                try {
+                                  // Thử tạo QR code từ dữ liệu
+                                  QRCode.toCanvas(
+                                    container, 
+                                    qrCode,
+                                    { 
+                                      width: 192,
+                                      margin: 2,
+                                      color: {
+                                        dark: '#000',
+                                        light: '#fff'
+                                      }
+                                    }, 
+                                    (error) => {
+                                      if (error) {
+                                        console.error('Error generating QR code from data:', error);
+                                        
+                                        // Hiển thị thông báo lỗi
+                                        const errorMsg = document.createElement('div');
+                                        errorMsg.className = 'w-48 h-48 mx-auto flex flex-col items-center justify-center text-center';
+                                        errorMsg.innerHTML = `
+                                          <p class="text-sm text-gray-700 font-medium mb-2">Mở ứng dụng ngân hàng</p>
+                                          <p class="text-xs text-gray-500">Quét mã VietQR hoặc chuyển khoản theo thông tin bên dưới</p>
+                                          <div class="mt-2 p-2 bg-gray-100 rounded-md">
+                                            <p class="text-xs text-gray-600">Mã giao dịch: ${orderCode || 'N/A'}</p>
+                                          </div>
+                                        `;
+                                        container.appendChild(errorMsg);
+                                      }
+                                    }
+                                  );
+                                } catch (err) {
+                                  console.error('Failed to generate QR code:', err);
+                                  
+                                  // Hiển thị thông báo lỗi
+                                  const fallbackMsg = document.createElement('div');
+                                  fallbackMsg.className = 'w-48 h-48 mx-auto flex flex-col items-center justify-center text-center';
+                                  fallbackMsg.innerHTML = `
+                                    <p class="text-sm text-gray-700 font-medium mb-2">Mở ứng dụng ngân hàng</p>
+                                    <p class="text-xs text-gray-500">Quét mã VietQR hoặc chuyển khoản theo thông tin bên dưới</p>
+                                    <div class="mt-2 p-2 bg-gray-100 rounded-md">
+                                      <p class="text-xs text-gray-600">Mã giao dịch: ${orderCode || 'N/A'}</p>
+                                    </div>
+                                  `;
+                                  container.appendChild(fallbackMsg);
+                                }
+                              }
+                            }
+                          }, [qrCode, orderCode])}
+                        </div>
                       )}
                     </>
                   ) : (

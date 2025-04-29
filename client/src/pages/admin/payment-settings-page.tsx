@@ -117,6 +117,9 @@ export function PaymentSettingsPage() {
       setBankConfig(data.bankConfig);
       setVietQRConfig(data.vietQRConfig);
       setPriceConfig(data.priceConfig);
+      if (data.payosConfig) {
+        setPayosConfig(data.payosConfig);
+      }
     }
   }, [data]);
 
@@ -164,7 +167,8 @@ export function PaymentSettingsPage() {
     saveSettingsMutation.mutate({
       bankConfig,
       vietQRConfig,
-      priceConfig
+      priceConfig,
+      payosConfig
     });
   };
 
@@ -215,7 +219,7 @@ export function PaymentSettingsPage() {
         </div>
         
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full md:w-auto grid-cols-3 mb-4">
+          <TabsList className="grid w-full md:w-auto grid-cols-4 mb-4">
             <TabsTrigger value="bank" className="flex items-center">
               <Building2 className="mr-2 h-4 w-4" />
               <span className="hidden sm:inline">Ngân hàng</span>
@@ -223,6 +227,10 @@ export function PaymentSettingsPage() {
             <TabsTrigger value="vietqr" className="flex items-center">
               <QrCode className="mr-2 h-4 w-4" />
               <span className="hidden sm:inline">VietQR</span>
+            </TabsTrigger>
+            <TabsTrigger value="payos" className="flex items-center">
+              <PaymentCard className="mr-2 h-4 w-4" />
+              <span className="hidden sm:inline">PayOS</span>
             </TabsTrigger>
             <TabsTrigger value="pricing" className="flex items-center">
               <CircleDollarSign className="mr-2 h-4 w-4" />
@@ -370,6 +378,72 @@ export function PaymentSettingsPage() {
                   />
                   <p className="text-xs text-muted-foreground">
                     Sử dụng <code>{"{username}"}</code> để thay thế tên người dùng và <code>{"{amount}"}</code> để thay thế số tiền
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+          
+          <TabsContent value="payos" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle>Cấu hình PayOS</CardTitle>
+                  <div className="flex items-center space-x-2">
+                    <Switch 
+                      id="payos-enabled" 
+                      checked={payosConfig.enabled}
+                      onCheckedChange={(checked) => setPayosConfig({...payosConfig, enabled: checked})}
+                    />
+                    <Label htmlFor="payos-enabled">Kích hoạt</Label>
+                  </div>
+                </div>
+                <CardDescription>
+                  Thiết lập thông tin API PayOS - Cổng thanh toán trực tuyến
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="client-id">Client ID</Label>
+                  <Input 
+                    id="client-id"
+                    placeholder="Nhập Client ID"
+                    value={payosConfig.clientId}
+                    onChange={(e) => setPayosConfig({...payosConfig, clientId: e.target.value})}
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="api-key">API Key</Label>
+                  <Input 
+                    id="api-key"
+                    placeholder="Nhập API Key"
+                    value={payosConfig.apiKey}
+                    onChange={(e) => setPayosConfig({...payosConfig, apiKey: e.target.value})}
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="checksum-key">Checksum Key</Label>
+                  <Input 
+                    id="checksum-key"
+                    placeholder="Nhập Checksum Key"
+                    value={payosConfig.checksumKey}
+                    onChange={(e) => setPayosConfig({...payosConfig, checksumKey: e.target.value})}
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="base-url">Base URL</Label>
+                  <Input 
+                    id="base-url"
+                    placeholder="Nhập Base URL"
+                    value={payosConfig.baseUrl}
+                    onChange={(e) => setPayosConfig({...payosConfig, baseUrl: e.target.value})}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    URL Sandbox: <code>https://api-sandbox.payos.vn</code><br />
+                    URL Production: <code>https://api-merchant.payos.vn</code>
                   </p>
                 </div>
               </CardContent>

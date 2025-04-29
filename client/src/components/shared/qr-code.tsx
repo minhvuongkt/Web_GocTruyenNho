@@ -25,8 +25,8 @@ export function QRCode({ amount, accountNo, accountName, bankId, addInfo }: QRCo
       <img 
         src={qrUrl} 
         alt="VietQR Payment QR Code" 
-        className="rounded-md max-w-full h-auto"
-        style={{ maxWidth: '250px' }}
+        className="rounded-md max-w-full h-auto shadow-lg"
+        style={{ maxWidth: '300px' }}
       />
       
       <div className="mt-2 text-center">

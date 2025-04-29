@@ -842,34 +842,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         // URL trả về sau khi thanh toán
         const appUrl = process.env.APP_URL || `http://localhost:${process.env.PORT || 5000}`;
-        const returnUrl = `${appUrl}/payment?status=success&id=${newPayment.id}`;
-        const cancelUrl = `${appUrl}/payment?status=cancel&id=${newPayment.id}`;
+        const returnUrl = `${appUrl}/payment?status=success&id=${newPayment.transactionId}`;
+        const cancelUrl = `${appUrl}/payment?status=cancel&id=${newPayment.transactionId}`;
 
         try {
-          // Tạo payment link qua PayOS
-          const paymentData = {
-            amount,
-            description: `NAP_${(req.user as any).username}`,
-            orderCode: transactionId,
-            returnUrl,
-            cancelUrl
-          };
-
-          const paymentLinkResponse = await createPayOSPaymentLink(config, paymentData);
-
-          // Trả về thông tin thanh toán và PayOS link
+          // Sử dụng @payos/node để tạo payment token
+          // Thông tin client token có thể được tạo từ server và gửi cho client để render form
+          // Trong PayOSCheckout component
           res.status(201).json({
             payment: newPayment,
-            paymentLink: paymentLinkResponse.data?.checkoutUrl || null,
-            qrCode: paymentLinkResponse.data?.qrCode || null,
+            clientToken: payosConfig.clientId, // Truyền client ID để client xử lý PayOS Checkout
             expiresAt: new Date(newPayment.createdAt.getTime() + 15 * 60 * 1000), // 15 minutes expiry
           });
         } catch (error) {
           console.error("Error creating PayOS payment:", error);
-          // Xóa thanh toán vì không tạo được link PayOS
+          // Xóa thanh toán vì không tạo được token PayOS
           await storage.updatePaymentStatus(newPayment.id, "failed");
           
-          return res.status(500).json({ error: "Failed to create PayOS payment link" });
+          return res.status(500).json({ error: "Failed to create PayOS payment" });
         }
       } else {
         // Cho các phương thức khác trong tương lai

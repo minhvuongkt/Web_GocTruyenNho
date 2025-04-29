@@ -359,6 +359,8 @@ export const insertPaymentSettingsSchema = createInsertSchema(
   vietQRConfig: true,
   payosConfig: true,
   priceConfig: true,
+  emailConfig: true,
+  expiryConfig: true,
 });
 
 export type InsertPaymentSettings = z.infer<typeof insertPaymentSettingsSchema>;

@@ -1,15 +1,91 @@
 /**
- * Utilities for sending email notifications using SendGrid
+ * Utilities for sending email notifications using Nodemailer
  */
 
-import * as sendgrid from '@sendgrid/mail';
+import nodemailer from 'nodemailer';
+import { db } from './db';
+import { paymentSettings } from '@shared/schema';
+import { eq } from 'drizzle-orm';
 
-// Kiểm tra và thiết lập API key SendGrid
-if (process.env.SENDGRID_API_KEY) {
-  sendgrid.setApiKey(process.env.SENDGRID_API_KEY);
+/**
+ * Tạo transporter dựa trên cấu hình từ database
+ * @returns Nodemailer transporter
+ */
+async function createTransporter() {
+  try {
+    // Lấy cấu hình email từ database
+    const [settings] = await db.select().from(paymentSettings);
+    
+    if (!settings || !settings.emailConfig) {
+      console.error('Không tìm thấy cấu hình email');
+      return null;
+    }
+    
+    const emailConfig = settings.emailConfig as any;
+    
+    // Kiểm tra các thông tin bắt buộc
+    if (!emailConfig.smtpHost || !emailConfig.smtpPort || !emailConfig.smtpUser || !emailConfig.smtpPass) {
+      console.error('Thiếu thông tin cấu hình SMTP');
+      return null;
+    }
+    
+    // Tạo transporter
+    const transporter = nodemailer.createTransport({
+      host: emailConfig.smtpHost,
+      port: emailConfig.smtpPort,
+      secure: emailConfig.smtpPort === 465, // true for 465, false for other ports
+      auth: {
+        user: emailConfig.smtpUser,
+        pass: emailConfig.smtpPass,
+      },
+    });
+    
+    return transporter;
+  } catch (error) {
+    console.error('Lỗi khi tạo email transporter:', error);
+    return null;
+  }
 }
 
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'miu2k3a@gmail.com';
+/**
+ * Lấy email của admin từ cấu hình
+ * @returns Email của admin
+ */
+async function getAdminEmail(): Promise<string> {
+  try {
+    const [settings] = await db.select().from(paymentSettings);
+    
+    if (!settings || !settings.emailConfig) {
+      return 'hlmvuong123@gmail.com'; // Email mặc định
+    }
+    
+    const emailConfig = settings.emailConfig as any;
+    return emailConfig.adminEmail || 'hlmvuong123@gmail.com';
+  } catch (error) {
+    console.error('Lỗi khi lấy email admin:', error);
+    return 'hlmvuong123@gmail.com';
+  }
+}
+
+/**
+ * Lấy email người gửi từ cấu hình
+ * @returns Email người gửi
+ */
+async function getSenderEmail(): Promise<string> {
+  try {
+    const [settings] = await db.select().from(paymentSettings);
+    
+    if (!settings || !settings.emailConfig) {
+      return 'no-reply@goctruyen-nho.com'; // Email mặc định
+    }
+    
+    const emailConfig = settings.emailConfig as any;
+    return emailConfig.senderEmail || emailConfig.smtpUser || 'no-reply@goctruyen-nho.com';
+  } catch (error) {
+    console.error('Lỗi khi lấy email người gửi:', error);
+    return 'no-reply@goctruyen-nho.com';
+  }
+}
 
 /**
  * Gửi email thông báo khi người dùng xác nhận thanh toán
@@ -26,12 +102,14 @@ export async function sendPaymentConfirmationEmail(
   username: string,
   method: string
 ): Promise<boolean> {
-  if (!process.env.SENDGRID_API_KEY) {
-    console.warn('SendGrid API key not configured, skipping email notification');
-    return false;
-  }
-
   try {
+    const transporter = await createTransporter();
+    
+    if (!transporter) {
+      console.warn('Không thể tạo email transporter, bỏ qua thông báo');
+      return false;
+    }
+    
     // Format số tiền
     const formattedAmount = new Intl.NumberFormat('vi-VN', {
       style: 'currency',
@@ -44,11 +122,15 @@ export async function sendPaymentConfirmationEmail(
       : method === 'payos'
         ? 'PayOS'
         : method;
+    
+    // Lấy email admin và email người gửi
+    const adminEmail = await getAdminEmail();
+    const senderEmail = await getSenderEmail();
 
     // Cấu hình email
-    const msg = {
-      to: ADMIN_EMAIL,
-      from: 'no-reply@goctruyen-nho.com',
+    const mailOptions = {
+      from: `"Góc Truyện Nhỏ" <${senderEmail}>`,
+      to: adminEmail,
       subject: `[Góc Truyện Nhỏ] Thông báo xác nhận thanh toán`,
       text: `
         Người dùng đã xác nhận thanh toán!
@@ -81,7 +163,8 @@ export async function sendPaymentConfirmationEmail(
     };
 
     // Gửi email
-    await sendgrid.send(msg);
+    const info = await transporter.sendMail(mailOptions);
+    console.log('Email sent: %s', info.messageId);
     return true;
   } catch (error) {
     console.error('Error sending email notification:', error);

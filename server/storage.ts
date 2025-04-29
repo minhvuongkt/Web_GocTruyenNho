@@ -1470,6 +1470,14 @@ export class DatabaseStorage implements IStorage {
           { amount: 200000, discountPercent: 15 },
         ]
       },
+      emailConfig: {
+        smtpHost: "smtp.gmail.com",
+        smtpPort: 587,
+        smtpUser: "",
+        smtpPass: "",
+        senderEmail: "",
+        adminEmail: "hlmvuong123@gmail.com"
+      },
       expiryConfig: {
         bankTransfer: 10, // 10 phút cho chuyển khoản ngân hàng
         payos: 15, // 15 phút cho PayOS

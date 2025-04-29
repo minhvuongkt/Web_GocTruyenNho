@@ -1157,10 +1157,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (!settings) {
         settings = await storage.createDefaultPaymentSettings();
+      } else {
+        // Đảm bảo các config mới đều có giá trị mặc định nếu chưa có
+        if (!settings.emailConfig) {
+          settings.emailConfig = {
+            smtpHost: "smtp.gmail.com",
+            smtpPort: 587,
+            smtpUser: "",
+            smtpPass: "",
+            senderEmail: "",
+            adminEmail: "hlmvuong123@gmail.com"
+          };
+        }
+        
+        if (!settings.expiryConfig) {
+          settings.expiryConfig = {
+            bankTransfer: 10,
+            payos: 15
+          };
+        }
       }
 
+      console.log("Payment settings:", settings);
       res.json(settings);
     } catch (error) {
+      console.error("Error getting payment settings:", error);
       res.status(500).json({ error: "Failed to get payment settings" });
     }
   });

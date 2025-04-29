@@ -33,7 +33,7 @@ import {
   Users,
   User
 } from "lucide-react";
-import { formatDate, getStatusLabel } from "@/lib/utils";
+import { formatDate, getStatusLabel, getContentStatusLabel } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import {
   Dialog,
@@ -328,7 +328,7 @@ export function MangaManagementPage() {
       item.translationGroupName || "",
       item.releaseYear || "",
       item.genres?.map((g: any) => g.name).join(", ") || "",
-      getStatusLabel(item.status),
+      getContentStatusLabel(item.status),
       item.views,
       item.chapters,
       formatDate(item.createdAt),

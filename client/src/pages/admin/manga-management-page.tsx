@@ -988,7 +988,7 @@ export function MangaManagementPage() {
                             item.status === 'ongoing' ? 'default' : 
                             item.status === 'completed' ? 'success' : 'secondary'
                           }>
-                            {getStatusLabel(item.status)}
+                            {getContentStatusLabel(item.status)}
                           </Badge>
                         </TableCell>
                         <TableCell>
@@ -1080,7 +1080,7 @@ export function MangaManagementPage() {
                     <div className="flex space-x-2">
                       <Button variant="outline" size="sm" onClick={() => {
                         navigator.clipboard.writeText(
-                          `ID: ${detailContent.id}\nTên: ${detailContent.title}\nTác giả: ${detailContent.author?.name || "—"}\nThể loại: ${detailContent.genres?.map((g: any) => g.name).join(", ") || "—"}\nTrạng thái: ${getStatusLabel(detailContent.status)}`
+                          `ID: ${detailContent.id}\nTên: ${detailContent.title}\nTác giả: ${detailContent.author?.name || "—"}\nThể loại: ${detailContent.genres?.map((g: any) => g.name).join(", ") || "—"}\nTrạng thái: ${getContentStatusLabel(detailContent.status)}`
                         );
                         toast({
                           title: "Đã sao chép thông tin",
@@ -1146,7 +1146,7 @@ export function MangaManagementPage() {
                         </div>
                         <div>
                           <h3 className="text-sm font-medium">Trạng thái</h3>
-                          <Badge>{getStatusLabel(detailContent.status)}</Badge>
+                          <Badge>{getContentStatusLabel(detailContent.status)}</Badge>
                         </div>
                         <div>
                           <h3 className="text-sm font-medium">Thể loại</h3>

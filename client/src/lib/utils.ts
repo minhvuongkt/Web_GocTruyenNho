@@ -67,6 +67,19 @@ export function getStatusLabel(status: 'pending' | 'completed' | 'failed'): stri
   }
 }
 
+export function getContentStatusLabel(status: 'ongoing' | 'completed' | 'hiatus'): string {
+  switch (status) {
+    case 'ongoing':
+      return 'Đang tiến hành';
+    case 'completed':
+      return 'Hoàn thành';
+    case 'hiatus':
+      return 'Tạm ngưng';
+    default:
+      return 'Không xác định';
+  }
+}
+
 export function parseQueryString(query: string): Record<string, string> {
   const params = new URLSearchParams(query);
   const result: Record<string, string> = {};

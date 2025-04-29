@@ -51,15 +51,20 @@ export async function createPayOSPaymentLink(
     }
     
     // Create payment link request body following the PayOS API requirements
+    // Mô tả tối đa 25 kí tự theo yêu cầu của PayOS
+    const shortDescription = description.length > 25 
+      ? description.substring(0, 22) + "..." 
+      : description;
+    
     const requestBody = {
       orderCode: numericOrderCode,
       amount,
-      description,
+      description: shortDescription,
       cancelUrl,
       returnUrl,
       items: [
         {
-          name: "Nạp tiền tài khoản",
+          name: "Nạp tiền",
           quantity: 1,
           price: amount
         }

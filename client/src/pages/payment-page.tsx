@@ -7,7 +7,7 @@ import { formatCurrency, formatDate } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { generateVietQR, getBankAcqId } from "@/services/vietqr-api";
 import { QRCode } from "@/components/shared/qr-code";
-import { PayOSCheckout } from "@/components/shared/payos-checkout";
+import { PayOSDirectCheckout } from "@/components/shared/payos-direct-checkout";
 import {
   Card,
   CardContent,
@@ -648,9 +648,9 @@ export function PaymentPage() {
                           </div>
                           
                           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 mb-6">
-                            <PayOSCheckout 
+                            <PayOSDirectCheckout 
                               amount={parseInt(amount)}
-                              username={user.username}
+                              description={`Nạp tiền cho ${user.username}`}
                               onSuccess={(transId) => {
                                 toast({
                                   title: "Thanh toán thành công",

@@ -1924,6 +1924,124 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // PayOS endpoints for embedded checkout
+  app.post("/api/payos/create-payment", async (req, res) => {
+    try {
+      const { amount, orderCode, description, returnUrl, cancelUrl } = req.body;
+      
+      // Validate required fields
+      if (!amount || !orderCode || !description || !returnUrl || !cancelUrl) {
+        return res.status(400).json({ 
+          code: '01',
+          desc: 'Missing required parameters',
+          data: null
+        });
+      }
+
+      // Get PayOS settings
+      const settings = await storage.getPaymentSettings();
+      
+      if (!settings || !settings.payosConfig) {
+        return res.status(500).json({ 
+          code: '02',
+          desc: 'PayOS settings not configured',
+          data: null
+        });
+      }
+
+      const payosConfig = settings.payosConfig as any;
+      
+      // Check for required configurations
+      if (!payosConfig.clientId || !payosConfig.apiKey || !payosConfig.checksumKey || !payosConfig.baseUrl) {
+        return res.status(500).json({ 
+          code: '03',
+          desc: 'Incomplete PayOS configuration',
+          data: null
+        });
+      }
+
+      // Create payment link
+      const result = await createPayOSPaymentLink(payosConfig, {
+        amount,
+        orderCode,
+        description,
+        returnUrl,
+        cancelUrl
+      });
+
+      // Return the result directly
+      res.json(result);
+    } catch (error: any) {
+      console.error("PayOS create payment error:", error);
+      res.status(500).json({ 
+        code: '99',
+        desc: error.message || 'Failed to create PayOS payment',
+        data: null
+      });
+    }
+  });
+
+  app.get("/api/payos/status/:orderCode", async (req, res) => {
+    try {
+      const { orderCode } = req.params;
+
+      if (!orderCode) {
+        return res.status(400).json({ 
+          code: '01',
+          desc: 'Order code is required',
+          data: null
+        });
+      }
+
+      // Get PayOS settings
+      const settings = await storage.getPaymentSettings();
+      
+      if (!settings || !settings.payosConfig) {
+        return res.status(500).json({ 
+          code: '02',
+          desc: 'PayOS settings not configured',
+          data: null
+        });
+      }
+
+      const payosConfig = settings.payosConfig as any;
+
+      // Check payment status
+      const result = await checkPayOSPaymentStatus(payosConfig, orderCode);
+
+      // If payment is completed, update payment and user balance
+      if (result.code === '00' && result.data && result.data.status === 'PAID') {
+        // Find payment with this order code/transaction ID
+        const payment = await storage.getPaymentByTransactionId(orderCode);
+        
+        if (payment && payment.status !== 'completed') {
+          // Update payment status
+          await storage.updatePaymentStatus(payment.id, 'completed');
+          
+          // Update user balance
+          const user = await storage.getUser(payment.userId);
+          
+          if (user) {
+            await storage.updateUserBalance(
+              user.id,
+              user.balance + payment.amount
+            );
+          }
+        }
+      }
+
+      // Return the result
+      res.json(result);
+    } catch (error: any) {
+      console.error("PayOS status check error:", error);
+      res.status(500).json({ 
+        code: '99',
+        desc: error.message || 'Failed to check PayOS payment status',
+        data: null
+      });
+    }
+  });
+
   // PayOS webhook endpoint
   app.post("/api/webhooks/payos", async (req, res) => {
     try {

@@ -1042,18 +1042,44 @@ export class DatabaseStorage implements IStorage {
     return comment;
   }
 
-  async getCommentsByContent(contentId: number): Promise<Comment[]> {
+  async getCommentsByContent(contentId: number): Promise<any[]> {
     return db
-      .select()
+      .select({
+        id: comments.id,
+        userId: comments.userId,
+        contentId: comments.contentId,
+        chapterId: comments.chapterId,
+        text: comments.text,
+        createdAt: comments.createdAt,
+        user: {
+          id: users.id,
+          username: users.username,
+          role: users.role
+        }
+      })
       .from(comments)
+      .leftJoin(users, eq(comments.userId, users.id))
       .where(and(eq(comments.contentId, contentId), isNull(comments.chapterId)))
       .orderBy(desc(comments.createdAt));
   }
 
-  async getCommentsByChapter(chapterId: number): Promise<Comment[]> {
+  async getCommentsByChapter(chapterId: number): Promise<any[]> {
     return db
-      .select()
+      .select({
+        id: comments.id,
+        userId: comments.userId,
+        contentId: comments.contentId,
+        chapterId: comments.chapterId,
+        text: comments.text,
+        createdAt: comments.createdAt,
+        user: {
+          id: users.id,
+          username: users.username,
+          role: users.role
+        }
+      })
       .from(comments)
+      .leftJoin(users, eq(comments.userId, users.id))
       .where(eq(comments.chapterId, chapterId))
       .orderBy(desc(comments.createdAt));
   }

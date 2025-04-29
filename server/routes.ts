@@ -685,11 +685,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = (req.user as any).id;
       const { contentId } = req.body;
+      
+      if (!contentId || isNaN(parseInt(contentId))) {
+        return res.status(400).json({ error: "Content ID is required and must be a valid number" });
+      }
+
+      const result = await storage.toggleFavorite(userId, parseInt(contentId));
+      res.json({ success: true, added: result });
+    } catch (error) {
+      console.error("Error toggling favorite:", error);
+      res.status(500).json({ 
+        error: "Failed to toggle favorite", 
+        message: error instanceof Error ? error.message : "Unknown error" 
+      });
+    }
+  });
+  
+  // Thêm route riêng cho thêm/xóa yêu thích theo ID
+  app.post("/api/favorites/:contentId", ensureAuthenticated, async (req, res) => {
+    try {
+      const userId = (req.user as any).id;
+      const contentId = parseInt(req.params.contentId);
+      
+      if (isNaN(contentId)) {
+        return res.status(400).json({ error: "Invalid content ID" });
+      }
 
       const result = await storage.toggleFavorite(userId, contentId);
       res.json({ success: true, added: result });
     } catch (error) {
-      res.status(500).json({ error: "Failed to toggle favorite" });
+      console.error("Error toggling favorite:", error);
+      res.status(500).json({ 
+        error: "Failed to toggle favorite", 
+        message: error instanceof Error ? error.message : "Unknown error" 
+      });
     }
   });
 
@@ -697,8 +726,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = (req.user as any).id;
       const favorites = await storage.getFavorites(userId);
-      res.json(favorites);
+      res.json(favorites || []);
     } catch (error) {
+      console.error("Error getting favorites:", error);
       res.status(500).json({ error: "Failed to get favorites" });
     }
   });

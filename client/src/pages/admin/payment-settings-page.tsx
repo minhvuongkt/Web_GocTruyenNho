@@ -70,6 +70,12 @@ export function PaymentSettingsPage() {
     checksumKey: "",
     baseUrl: "https://api-sandbox.payos.vn"
   });
+  
+  // Cấu hình thời gian hết hạn
+  const [expiryConfig, setExpiryConfig] = useState({
+    bankTransfer: 10, // mặc định 10 phút
+    payos: 15 // mặc định 15 phút
+  });
 
   // Fetch the current payment configuration
   const { data, isLoading, error } = useQuery({
@@ -120,6 +126,9 @@ export function PaymentSettingsPage() {
       if (data.payosConfig) {
         setPayosConfig(data.payosConfig);
       }
+      if (data.expiryConfig) {
+        setExpiryConfig(data.expiryConfig);
+      }
     }
   }, [data]);
 
@@ -168,7 +177,8 @@ export function PaymentSettingsPage() {
       bankConfig,
       vietQRConfig,
       priceConfig,
-      payosConfig
+      payosConfig,
+      expiryConfig
     });
   };
 
@@ -494,6 +504,42 @@ export function PaymentSettingsPage() {
                     value={priceConfig.chapterUnlockPrice}
                     onChange={(e) => setPriceConfig({...priceConfig, chapterUnlockPrice: parseInt(e.target.value) || 0})}
                   />
+                </div>
+                
+                <Separator />
+                
+                {/* Thêm cấu hình thời gian hết hạn */}
+                <div className="space-y-4">
+                  <Label className="text-base">Thời gian hết hạn thanh toán (phút)</Label>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="bank-expiry">Chuyển khoản ngân hàng/VietQR</Label>
+                      <Input 
+                        id="bank-expiry"
+                        type="number"
+                        placeholder="Ví dụ: 10 phút"
+                        value={expiryConfig.bankTransfer}
+                        onChange={(e) => setExpiryConfig({
+                          ...expiryConfig, 
+                          bankTransfer: parseInt(e.target.value) || 10
+                        })}
+                      />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="payos-expiry">PayOS</Label>
+                      <Input 
+                        id="payos-expiry"
+                        type="number"
+                        placeholder="Ví dụ: 15 phút"
+                        value={expiryConfig.payos}
+                        onChange={(e) => setExpiryConfig({
+                          ...expiryConfig, 
+                          payos: parseInt(e.target.value) || 15
+                        })}
+                      />
+                    </div>
+                  </div>
                 </div>
                 
                 <Separator />

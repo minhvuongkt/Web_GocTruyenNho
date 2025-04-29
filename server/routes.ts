@@ -807,15 +807,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
           bankId: vietQRConfig.bankId,
           accountNumber: vietQRConfig.accountNumber,
           accountName: vietQRConfig.accountName,
-          template: vietQRConfig.template,
+          template: vietQRConfig.template || "compact2",
           amount,
           message: `NAP_${(req.user as any).username}`,
         });
 
+        // Lấy thời gian hết hạn từ cấu hình (mặc định 10 phút)
+        const expiryMinutes = settings.expiryConfig?.bankTransfer || 10;
+        const expiresAt = new Date(newPayment.createdAt.getTime() + expiryMinutes * 60 * 1000);
+        
         res.status(201).json({
           payment: newPayment,
           qrCodeURL,
-          expiresAt: new Date(newPayment.createdAt.getTime() + 10 * 60 * 1000), // 10 minutes expiry
+          expiresAt
         });
       } else if (method === 'payos') {
         // Tạo thanh toán qua PayOS

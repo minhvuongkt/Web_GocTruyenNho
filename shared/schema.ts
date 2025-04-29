@@ -352,6 +352,12 @@ export const insertPaymentSettingsSchema = createInsertSchema(
 export type InsertPaymentSettings = z.infer<typeof insertPaymentSettingsSchema>;
 export type PaymentSettings = typeof paymentSettings.$inferSelect;
 
+// Thêm cấu hình thời gian hết hạn
+export interface PaymentExpiryConfig {
+  bankTransfer: number; // Thời gian hết hạn cho chuyển khoản ngân hàng, tính bằng phút
+  payos: number; // Thời gian hết hạn cho PayOS, tính bằng phút
+}
+
 // Extended schemas for client validations
 export const loginSchema = z.object({
   username: z.string().min(1, "Username is required"),

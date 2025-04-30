@@ -146,36 +146,60 @@ export function PayOSDirectCheckout({
     return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
   };
 
-  // Poll for payment status if we have an orderCode
+  // Poll for payment status if we have an orderCode, thực hiện kiểm tra real-time
   useEffect(() => {
     if (!orderCode || countdown <= 0) return;
 
     const checkStatus = async () => {
       try {
-        // Sử dụng hàm tiện ích để kiểm tra trạng thái thanh toán
+        // Sử dụng hàm tiện ích để kiểm tra trạng thái thanh toán với PayOS
         const statusData = await checkPaymentStatus(orderCode);
         console.log("Payment status check response:", statusData);
 
         // Kiểm tra trạng thái từ phản hồi
-        const isCompleted = statusData.status === "completed";
+        // Xử lý cả 2 dạng response - nếu status trực tiếp hoặc apiStatus từ PayOS API
+        const isCompleted = 
+          statusData.status === "completed" || 
+          statusData.apiStatus === "PAID";
+        
+        const isFailed = 
+          statusData.status === "failed" || 
+          statusData.apiStatus === "CANCELLED" || 
+          statusData.apiStatus === "EXPIRED";
         
         if (isCompleted) {
           setMessage("Thanh toán thành công!");
           onSuccess(orderCode);
-
           // Stop checking after success
-          return;
+          return true; // trả về true để dừng interval
         }
+        
+        if (isFailed) {
+          setMessage("Thanh toán đã bị hủy hoặc hết hạn");
+          onCancel?.();
+          return true; // trả về true để dừng interval
+        }
+        
+        return false; // tiếp tục kiểm tra
       } catch (error) {
         console.error("Error checking payment status:", error);
+        return false; // tiếp tục kiểm tra nếu có lỗi
       }
     };
 
-    // Check every 5 seconds
-    const interval = setInterval(checkStatus, 5000);
+    // Kiểm tra ngay lập tức lần đầu tiên
+    checkStatus();
+    
+    // Tiếp tục kiểm tra mỗi 5 giây
+    const interval = setInterval(async () => {
+      const shouldStop = await checkStatus();
+      if (shouldStop) {
+        clearInterval(interval);
+      }
+    }, 5000);
 
     return () => clearInterval(interval);
-  }, [orderCode, countdown, onSuccess]);
+  }, [orderCode, countdown, onSuccess, onCancel]);
 
   // Handle payment completion manually
   const handleConfirmPayment = async () => {
@@ -187,12 +211,15 @@ export function PayOSDirectCheckout({
     });
 
     try {
-      // Sử dụng hàm tiện ích để kiểm tra trạng thái thanh toán
+      // Sử dụng hàm tiện ích để kiểm tra trạng thái thanh toán với PayOS
       const statusData = await checkPaymentStatus(orderCode);
       console.log("Manual payment check response:", statusData);
 
       // Kiểm tra trạng thái từ phản hồi
-      const isCompleted = statusData.status === "completed";
+      // Xử lý cả 2 dạng response - từ database hoặc từ PayOS API
+      const isCompleted = 
+        statusData.status === "completed" || 
+        statusData.apiStatus === "PAID";
       
       if (isCompleted) {
         setMessage("Thanh toán thành công!");

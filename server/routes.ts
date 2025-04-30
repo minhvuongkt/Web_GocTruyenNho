@@ -187,12 +187,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const offset = (page - 1) * limit;
         
         // Lấy danh sách giao dịch và tổng số từ storage
-        const payments = await storage.getUserPayments(user.id, limit, offset);
-        const total = await storage.countUserPayments(user.id);
+        // Sử dụng getPaymentsByUser vì đây là phương thức có trong interface
+        const payments = await storage.getPaymentsByUser(user.id);
+        
+        // Thực hiện phân trang thủ công để tương thích với interface hiện tại
+        const pagedPayments = payments.slice(offset, offset + limit);
+        const total = payments.length;
         
         // Trả về danh sách và thông tin phân trang
         return res.json({
-          payments,
+          payments: pagedPayments,
           pagination: {
             page,
             limit,

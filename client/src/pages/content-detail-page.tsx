@@ -19,17 +19,33 @@ export function ContentDetailPage({ id }: ContentDetailPageProps) {
   const normalizedId = isTitle ? id : normalizeId(id);
   
   // Fetch content type first to determine which component to render
-  const { data, isLoading, isError } = useQuery({
-    queryKey: [isTitle ? `/api/content/by-title/${normalizedId}` : `/api/content/${normalizedId}/type`],
+  const { data: contentData, isLoading, isError } = useQuery({
+    queryKey: [isTitle ? `/api/content/by-title/${normalizedId}` : `/api/content/${normalizedId}`],
     queryFn: async () => {
       try {
-        const endpoint = isTitle 
-          ? `/api/content/by-title/${normalizedId.replace(/-/g, ' ')}` 
-          : `/api/content/${normalizedId}`;
+        let endpoint;
         
+        if (isTitle) {
+          endpoint = `/api/content/by-title/${normalizedId}`;
+        } else {
+          endpoint = `/api/content/${normalizedId}`;
+        }
+        
+        console.log("Fetching from endpoint:", endpoint);
         const res = await apiRequest("GET", endpoint);
         const data = await res.json();
-        return data?.content?.type || null;
+        console.log("Response data:", data);
+        
+        if (data?.content?.type) {
+          // If the response has content.type format
+          return data.content.type;
+        } else if (data?.type) {
+          // If the response has direct type property
+          return data.type;
+        } else {
+          console.error("Unexpected response format:", data);
+          return null;
+        }
       } catch (error) {
         console.error("Error fetching content type:", error);
         return null;
@@ -48,7 +64,7 @@ export function ContentDetailPage({ id }: ContentDetailPageProps) {
   }
 
   // Error handling
-  if (isError || !data) {
+  if (isError || !contentData) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
@@ -62,9 +78,9 @@ export function ContentDetailPage({ id }: ContentDetailPageProps) {
   }
 
   // Render the appropriate component based on content type
-  if (data === "manga") {
+  if (contentData === "manga") {
     return <MangaDetailPage id={normalizedId} />;
-  } else if (data === "novel") {
+  } else if (contentData === "novel") {
     return <NovelDetailPage id={normalizedId} />;
   } else {
     return (

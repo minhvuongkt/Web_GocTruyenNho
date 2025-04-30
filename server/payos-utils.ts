@@ -38,18 +38,14 @@ export async function createPayOSPaymentLink(
     const { amount, description, orderCode, returnUrl, cancelUrl, expiredAt } =
       paymentData;
 
-    // Initialize PayOS SDK
     const payOS = new PayOS(clientId, apiKey, checksumKey);
     console.log("Initializing PayOS with:", {
       clientId,
       apiKey: apiKey.substring(0, 5) + "...",
     });
 
-    // Create payment link request body - PayOS SDK requires numeric orderCode
-    // Extract only digits from orderCode and convert to number
     const numericOrderCode = Number(orderCode.replace(/\D/g, ""));
 
-    // Make sure we have a valid numeric orderCode
     if (isNaN(numericOrderCode)) {
       throw new Error(
         "Invalid orderCode format - must contain numeric characters",
@@ -64,10 +60,10 @@ export async function createPayOSPaymentLink(
     if (usernameMatch && usernameMatch[1]) {
       const username = usernameMatch[1];
       // Format theo mẫu VietQR: NAP_{username}
-      transferContent = `NAP_${username}`;
+      transferContent = `NAP ${username}`;
     } else {
       // Nếu không có username, dùng mặc định
-      transferContent = "NAP_USER";
+      transferContent = "NAP USER";
     }
 
     // Mô tả tối đa 25 kí tự theo yêu cầu của PayOS
@@ -76,6 +72,29 @@ export async function createPayOSPaymentLink(
         ? transferContent.substring(0, 22) + "..."
         : transferContent;
 
+    // Đảm bảo expiredAt không lớn hơn giá trị tối đa mà PayOS chấp nhận
+    // PayOS yêu cầu expiredAt phải là Unix timestamp (giây) không lớn hơn 2147483647
+    let safeExpiredAt;
+    
+    if (expiredAt) {
+      // Kiểm tra xem đã là Unix timestamp hay chưa
+      if (expiredAt > 100000000000) { // Nếu là milliseconds (13 chữ số)
+        safeExpiredAt = Math.floor(expiredAt / 1000); // Chuyển thành giây
+      } else {
+        safeExpiredAt = Math.floor(expiredAt); // Giữ nguyên nếu đã là giây
+      }
+      
+      // Đảm bảo không vượt quá giới hạn
+      if (safeExpiredAt > 2147483647) {
+        safeExpiredAt = 2147483647;
+      }
+    } else {
+      // Nếu không có, tạo mặc định hết hạn sau 30 phút
+      safeExpiredAt = Math.floor(Date.now() / 1000) + 1800;
+    }
+    
+    console.log(`Original expiredAt: ${expiredAt}, Safe expiredAt: ${safeExpiredAt}`);
+    
     const requestBody = {
       orderCode: numericOrderCode,
       amount,
@@ -89,7 +108,7 @@ export async function createPayOSPaymentLink(
           price: amount,
         },
       ],
-      expiredAt: expiredAt,
+      expiredAt: safeExpiredAt,
     };
 
     console.log("PayOS Request:", requestBody);

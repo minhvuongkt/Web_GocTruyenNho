@@ -974,6 +974,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
             orderCode: newPayment.transactionId,
             returnUrl: returnUrl,
             cancelUrl: cancelUrl,
+            expiredAt: new Date(
+              newPayment.createdAt.getTime() + 15 * 60,
+            ).getTime(),
           };
 
           console.log("PayOS payment request:", paymentData);
@@ -995,10 +998,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
             if (
               payosResponse.code === "00" &&
               payosResponse.data &&
-              payosResponse.data.checkoutUrl
+              payosResponse.data?.checkoutUrl
             ) {
               paymentLink = payosResponse.data.checkoutUrl;
-              qrCode = payosResponse.data.qrCode || null;
+              qrCode = payosResponse.data?.qrCode || null;
             }
             // Hoặc dạng cũ (trả về trực tiếp từ SDK)
             else if (payosResponse.checkoutUrl) {
@@ -1922,96 +1925,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post(
-    "/api/payment/payos/create-payment-link",
-    ensureAuthenticated,
-    async (req, res) => {
-      try {
-        const userId = (req.user as any).id;
-        const username = (req.user as any).username;
-        const { amount } = req.body;
-
-        if (!amount || amount < 5000 || amount % 1000 !== 0) {
-          return res.status(400).json({
-            error:
-              "Số tiền không phù hợp. Số tiền nhập phải lớn hơn 5k và chia hết cho 1000",
-          });
-        }
-
-        // Get PayOS settings
-        const settings = await storage.getPaymentSettings();
-        if (!settings || !settings.payosConfig) {
-          return res
-            .status(500)
-            .json({ error: "PayOS settings not configured" });
-        }
-
-        const payosConfig = settings.payosConfig as any;
-        if (
-          !payosConfig.clientId ||
-          !payosConfig.apiKey ||
-          !payosConfig.checksumKey
-        ) {
-          return res
-            .status(500)
-            .json({ error: "PayOS API credentials are missing" });
-        }
-
-        // Create a new payment record
-        const transactionId = new Date()
-          .toISOString()
-          .split(".")[1]
-          .slice(0, 7);
-        const newPayment = await storage.createPayment({
-          userId,
-          amount,
-          method: "payos",
-          transactionId: transactionId,
-          status: "pending",
-          createdAt: new Date(),
-        });
-        // Create the payment via PayOS
-        const baseUrl = payosConfig.baseUrl || "https://api-merchant.payos.vn";
-        const config = {
-          clientId: payosConfig.clientId,
-          apiKey: payosConfig.apiKey,
-          checksumKey: payosConfig.checksumKey,
-          baseUrl,
-        };
-
-        const appUrl =
-          process.env.APP_URL || `http://localhost:${process.env.PORT || 5000}`;
-        const returnUrl = `${appUrl}/payment/success?id=${newPayment.id}`;
-        const cancelUrl = `${appUrl}/payment/cancel?id=${newPayment.id}`;
-        const expiryMinutes = settings.expiryConfig?.bankTransfer || 15;
-        const expiresAt =
-          newPayment.createdAt.getTime() + expiryMinutes * 60 * 1000;
-        const paymentData = {
-          amount,
-          description: `NAP_${username}`,
-          orderCode: transactionId,
-          returnUrl,
-          cancelUrl,
-          expiredAt: expiresAt,
-        };
-
-        const paymentLinkResponse = await createPayOSPaymentLink(
-          config,
-          paymentData,
-        );
-        res.status(201).json({
-          payment: newPayment,
-          paymentLink: paymentLinkResponse.checkoutUrl || null,
-          qrCode: paymentLinkResponse.qrCode || null,
-          expiresAt: new Date(expiresAt), // 15 minutes expiry
-        });
-      } catch (error) {
-        console.error("Error creating PayOS payment:", error);
-        res.status(500).json({ error: "Failed to create PayOS payment" });
-      }
-    },
-  );
-
   app.get(
     "/api/payment/payos/check-payment-status/:orderCode",
     ensureAuthenticated,
@@ -2099,21 +2012,188 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     },
   );
+  app.post(
+    "/api/payment/payos/create-payment-link",
+    ensureAuthenticated,
+    async (req, res) => {
+      try {
+        const userId = (req.user as any).id;
+        const username = (req.user as any).username;
+        const { amount } = req.body;
+
+        if (!amount || amount < 5000 || amount % 1000 !== 0) {
+          return res.status(400).json({
+            error:
+              "Số tiền không phù hợp. Số tiền nhập phải lớn hơn 5k và chia hết cho 1000",
+          });
+        }
+
+        // Get PayOS settings
+        const settings = await storage.getPaymentSettings();
+        if (!settings || !settings.payosConfig) {
+          return res
+            .status(500)
+            .json({ error: "PayOS settings not configured" });
+        }
+
+        const payosConfig = settings.payosConfig as any;
+        if (
+          !payosConfig.clientId ||
+          !payosConfig.apiKey ||
+          !payosConfig.checksumKey
+        ) {
+          return res
+            .status(500)
+            .json({ error: "PayOS API credentials are missing" });
+        }
+
+        // Create a new payment record
+        const transactionId = `${Date.now().toString().slice(-8)}`;
+        const newPayment = await storage.createPayment({
+          userId,
+          amount,
+          method: "payos",
+          transactionId: transactionId,
+          status: "pending",
+          createdAt: new Date(),
+        });
+        // Create the payment via PayOS
+        const baseUrl = payosConfig.baseUrl || "https://api-merchant.payos.vn";
+        const config = {
+          clientId: payosConfig.clientId,
+          apiKey: payosConfig.apiKey,
+          checksumKey: payosConfig.checksumKey,
+          baseUrl,
+        };
+
+        const appUrl =
+          process.env.APP_URL || `http://localhost:${process.env.PORT || 5000}`;
+        const returnUrl = `${appUrl}/payment/success?id=${newPayment.id}`;
+        const cancelUrl = `${appUrl}/payment/cancel?id=${newPayment.id}`;
+        const expiryMinutes = settings.expiryConfig?.bankTransfer || 15;
+        const expiresAt = newPayment.createdAt.getTime() + expiryMinutes * 60;
+        const paymentData = {
+          amount,
+          description: `NAP_${username}`,
+          orderCode: transactionId,
+          returnUrl,
+          cancelUrl,
+          expiredAt: expiresAt,
+        };
+
+        const paymentLinkResponse = await createPayOSPaymentLink(
+          config,
+          paymentData,
+        );
+        res.status(201).json({
+          payment: newPayment,
+          paymentLink: paymentLinkResponse.checkoutUrl || null,
+          qrCode: paymentLinkResponse.qrCode || null,
+          expiresAt: new Date(expiresAt), // 15 minutes expiry
+        });
+      } catch (error) {
+        console.error("Error creating PayOS payment:", error);
+        res.status(500).json({ error: "Failed to create PayOS payment" });
+      }
+    },
+  );
 
   // PayOS endpoints for embedded checkout
+  // Tạo thanh toán 
+  app.post(
+    "/api/payments",
+    ensureAuthenticated,
+    async (req, res) => {
+      try {
+        // Validate request body
+        const { amount, method, description } = req.body;
+        
+        if (!amount || !method) {
+          return res.status(400).json({
+            error: "Missing required fields: amount and method are required"
+          });
+        }
+        
+        // Đảm bảo số tiền là số nguyên dương
+        const paymentAmount = parseInt(amount, 10);
+        if (isNaN(paymentAmount) || paymentAmount <= 0) {
+          return res.status(400).json({
+            error: "Amount must be a positive number"
+          });
+        }
+        
+        // Lấy thông tin user từ session
+        const user = req.user as any;
+        if (!user || !user.id) {
+          return res.status(401).json({
+            error: "User not authenticated"
+          });
+        }
+        
+        // Tạo mã giao dịch duy nhất
+        function generateOrderCode() {
+          const timestamp = Date.now().toString().slice(-10);
+          const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
+          return timestamp + random;
+        }
+        
+        const transactionId = generateOrderCode();
+        
+        // Lấy cài đặt thanh toán
+        const settings = await storage.getPaymentSettings();
+        if (!settings) {
+          return res.status(500).json({
+            error: "Payment settings not configured"
+          });
+        }
+        
+        // Tính thời gian hết hạn cho giao dịch
+        const expiryMinutes = settings.expiryConfig?.bankTransfer || 15;
+        const expiredAt = Math.floor(Date.now() / 1000) + (expiryMinutes * 60);
+        
+        // Tạo thanh toán trong database
+        const paymentData = {
+          userId: user.id,
+          amount: paymentAmount,
+          method,
+          status: "pending",
+          transactionId,
+          description: description || `Nạp tiền cho tài khoản ${user.username}`,
+          metadata: {
+            expiredAt
+          }
+        };
+        
+        const payment = await storage.createPayment(paymentData as any);
+        
+        // Trả về thông tin thanh toán đã tạo
+        return res.status(201).json({
+          id: payment.id,
+          amount: payment.amount,
+          method: payment.method,
+          status: payment.status,
+          transactionId: payment.transactionId,
+          createdAt: payment.createdAt,
+          expiredAt
+        });
+        
+      } catch (error: any) {
+        console.error("Create payment error:", error);
+        return res.status(500).json({
+          error: error.message || "Failed to create payment"
+        });
+      }
+    }
+  );
+  
+  // Tạo thanh toán PayOS
   app.post(
     "/api/payos/create-payment",
     ensureAuthenticated,
     async (req, res) => {
       try {
-        const {
-          amount,
-          orderCode,
-          description,
-          returnUrl,
-          cancelUrl,
-          expiryTime,
-        } = req.body;
+        const { amount, orderCode, description, returnUrl, cancelUrl } =
+          req.body;
 
         // Validate required fields
         if (!amount || !orderCode || !description || !returnUrl || !cancelUrl) {
@@ -2123,11 +2203,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
             data: null,
           });
         }
-
-        // Get expiry time in seconds (default: 10 minutes)
-        const paymentExpiryTime =
-          expiryTime && Number(expiryTime) > 0 ? Number(expiryTime) : 900;
-
         // Get PayOS settings
         const settings = await storage.getPaymentSettings();
 
@@ -2138,8 +2213,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
             data: null,
           });
         }
-
         const payosConfig = settings.payosConfig as any;
+
+        // Lấy thời gian hết hạn từ cấu hình hoặc mặc định là 15 phút
+        const expiryMinutes = settings.expiryConfig?.bankTransfer || 15;
+        
+        // Tính thời gian hết hạn dưới dạng Unix timestamp (giây)
+        const now = Math.floor(Date.now() / 1000); // Timestamp hiện tại dạng giây
+        const paymentExpiryTime = now + (expiryMinutes * 60); // Thêm số phút cấu hình
 
         // Check for required configurations
         if (
@@ -2162,11 +2243,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           description,
           returnUrl,
           cancelUrl,
-          expiredAt: Date.now() + paymentExpiryTime * 1000,
+          expiredAt: paymentExpiryTime,
         });
 
         // Calculate expiry time - add to response
-        const expiresAt = new Date(Date.now() + paymentExpiryTime * 1000);
+        const expiresAt = new Date(paymentExpiryTime * 1000); // Convert seconds to milliseconds
 
         // Return the result directly with expiry information
         res.json({

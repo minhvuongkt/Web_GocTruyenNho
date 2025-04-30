@@ -37,7 +37,7 @@ interface PaymentModalProps {
 export function PaymentModal({
   isOpen,
   onClose,
-  defaultAmount = 50000
+  defaultAmount = 50000,
 }: PaymentModalProps) {
   const [, navigate] = useLocation();
   const { user } = useAuth();
@@ -56,9 +56,9 @@ export function PaymentModal({
   // Bank account details (in a real app, this would come from the backend)
   const bankDetails = {
     bankName: "MB Bank",
-    accountNumber: "9999123456789",
-    accountName: "GocTruyenNho",
-    bankBin: "970422" // MB Bank BIN
+    accountNumber: "0862713897",
+    accountName: "Mèo Đi Dịch Truyện",
+    bankBin: "970422", // MB Bank BIN
   };
 
   // Create payment mutation
@@ -66,13 +66,13 @@ export function PaymentModal({
     mutationFn: async () => {
       // Validate amount
       const numAmount = parseInt(amount);
-      if (isNaN(numAmount) || numAmount < 10000 || numAmount % 1000 !== 0) {
-        throw new Error("Số tiền phải ít nhất 10,000 VNĐ và chia hết cho 1,000");
+      if (isNaN(numAmount) || numAmount < 5000 || numAmount % 1000 !== 0) {
+        throw new Error("Số tiền phải ít nhất 5,000 VNĐ và chia hết cho 1,000");
       }
 
       const response = await apiRequest("POST", "/api/payments", {
         amount: numAmount,
-        method: paymentMethod
+        method: paymentMethod,
       });
       return response.json();
     },
@@ -83,36 +83,36 @@ export function PaymentModal({
         onClose();
         return;
       }
-      
+
       toast({
         title: "Tạo giao dịch thành công",
-        description: "Vui lòng hoàn tất thanh toán trong vòng 10 phút."
+        description: "Vui lòng hoàn tất thanh toán trong vòng 10 phút.",
       });
-      
+
       // Set the transaction ID
       setTransactionId(data.transactionId);
-      
+
       // Reset timer
       setTimeRemaining(600);
-      
+
       // Generate QR code in two formats
       const paymentMessage = `NAPTIEN ${user?.username || ""} ${data.transactionId}`;
-      
+
       // Standard EMV format for general QR readers
       const qrContent = generateQRCode({
         bankNumber: bankDetails.accountNumber,
         amount: parseInt(amount),
         message: paymentMessage,
-        bankBin: bankDetails.bankBin
+        bankBin: bankDetails.bankBin,
       });
       setQrCodeUrl(qrContent);
-      
+
       // Banking-specific format that works with Vietnamese banking apps
       const bankingQrContent = generateBankingQR({
         bankNumber: bankDetails.accountNumber,
         amount: parseInt(amount),
         message: paymentMessage,
-        bankBin: bankDetails.bankBin
+        bankBin: bankDetails.bankBin,
       });
       setBankingQrUrl(bankingQrContent);
     },
@@ -120,30 +120,30 @@ export function PaymentModal({
       toast({
         title: "Tạo giao dịch thất bại",
         description: error.message || "Đã xảy ra lỗi khi tạo giao dịch.",
-        variant: "destructive"
+        variant: "destructive",
       });
-    }
+    },
   });
 
   // Timer countdown effect
   useEffect(() => {
     if (!transactionId || timeRemaining <= 0) return;
-    
+
     const timer = setInterval(() => {
-      setTimeRemaining(prev => {
+      setTimeRemaining((prev) => {
         if (prev <= 1) {
           clearInterval(timer);
           toast({
             title: "Hết thời gian thanh toán",
             description: "Giao dịch đã hết hạn. Vui lòng tạo giao dịch mới.",
-            variant: "destructive"
+            variant: "destructive",
           });
           return 0;
         }
         return prev - 1;
       });
     }, 1000);
-    
+
     return () => clearInterval(timer);
   }, [transactionId, timeRemaining, toast]);
 
@@ -157,15 +157,15 @@ export function PaymentModal({
     setAmount(value);
   };
 
-  const handleCopyText = (text: string, type: 'account' | 'content') => {
+  const handleCopyText = (text: string, type: "account" | "content") => {
     navigator.clipboard.writeText(text);
-    setCopyStatus(prev => ({ ...prev, [type]: true }));
-    
+    setCopyStatus((prev) => ({ ...prev, [type]: true }));
+
     // Reset copy status after 2 seconds
     setTimeout(() => {
-      setCopyStatus(prev => ({ ...prev, [type]: false }));
+      setCopyStatus((prev) => ({ ...prev, [type]: false }));
     }, 2000);
-    
+
     toast({
       title: "Đã sao chép",
       description: "Thông tin đã được sao chép vào clipboard.",
@@ -176,23 +176,28 @@ export function PaymentModal({
   const formatTimeRemaining = () => {
     const minutes = Math.floor(timeRemaining / 60);
     const seconds = timeRemaining % 60;
-    return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    return `${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
   };
 
   // Confirm payment manually
   const confirmPaymentMutation = useMutation({
     mutationFn: async () => {
       if (!transactionId) throw new Error("Không có mã giao dịch");
-      
-      const response = await apiRequest("POST", `/api/payments/${transactionId}/confirm`, {});
+
+      const response = await apiRequest(
+        "POST",
+        `/api/payments/${transactionId}/confirm`,
+        {},
+      );
       return response.json();
     },
     onSuccess: () => {
       toast({
         title: "Xác nhận thanh toán",
-        description: "Yêu cầu xác nhận đã được gửi tới quản trị viên. Chúng tôi sẽ kiểm tra và cập nhật số dư của bạn sớm nhất.",
+        description:
+          "Yêu cầu xác nhận đã được gửi tới quản trị viên. Chúng tôi sẽ kiểm tra và cập nhật số dư của bạn sớm nhất.",
       });
-      
+
       // Close the modal after confirmation
       handleClose();
     },
@@ -200,9 +205,9 @@ export function PaymentModal({
       toast({
         title: "Không thể xác nhận",
         description: error.message || "Đã xảy ra lỗi khi xác nhận thanh toán.",
-        variant: "destructive"
+        variant: "destructive",
       });
-    }
+    },
   });
 
   // Reset state when modal is closed
@@ -223,7 +228,8 @@ export function PaymentModal({
         <DialogHeader>
           <DialogTitle>Nạp tiền vào tài khoản</DialogTitle>
           <DialogDescription>
-            Nạp tiền để mở khóa các chương truyện và tận hưởng trọn vẹn nội dung.
+            Nạp tiền để mở khóa các chương truyện và tận hưởng trọn vẹn nội
+            dung.
           </DialogDescription>
         </DialogHeader>
 
@@ -249,15 +255,14 @@ export function PaymentModal({
 
             <div className="space-y-2">
               <Label htmlFor="payment-method">Phương thức thanh toán</Label>
-              <Select
-                value={paymentMethod}
-                onValueChange={setPaymentMethod}
-              >
+              <Select value={paymentMethod} onValueChange={setPaymentMethod}>
                 <SelectTrigger id="payment-method">
                   <SelectValue placeholder="Chọn phương thức thanh toán" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="bank_transfer">Chuyển khoản ngân hàng</SelectItem>
+                  <SelectItem value="bank_transfer">
+                    Chuyển khoản ngân hàng
+                  </SelectItem>
                   <SelectItem value="credit_card">Thẻ tín dụng</SelectItem>
                   <SelectItem value="e_wallet">Ví điện tử</SelectItem>
                 </SelectContent>
@@ -271,7 +276,7 @@ export function PaymentModal({
                 createPaymentMutation.isPending ||
                 !amount ||
                 isNaN(parseInt(amount)) ||
-                parseInt(amount) < 10000 ||
+                parseInt(amount) < 5000 ||
                 parseInt(amount) % 1000 !== 0
               }
             >
@@ -284,20 +289,24 @@ export function PaymentModal({
             <div className="flex flex-col items-center space-y-2 mb-2">
               <div className="flex items-center">
                 <Timer className="h-4 w-4 mr-2 text-yellow-500" />
-                <span className="text-sm font-medium">Thời gian còn lại: {formatTimeRemaining()}</span>
+                <span className="text-sm font-medium">
+                  Thời gian còn lại: {formatTimeRemaining()}
+                </span>
               </div>
-              <Progress value={(timeRemaining / 600) * 100} className="h-2 w-full" />
+              <Progress
+                value={(timeRemaining / 600) * 100}
+                className="h-2 w-full"
+              />
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="flex flex-col items-center justify-center border border-border rounded-md p-4">
                 <div className="mb-1 text-xs text-center font-medium text-muted-foreground">
-                  {bankingQrUrl ? "QR dành cho ứng dụng ngân hàng & Momo" : "Mã QR chuẩn"}
+                  {bankingQrUrl
+                    ? "QR dành cho ứng dụng ngân hàng & Momo"
+                    : "Mã QR chuẩn"}
                 </div>
-                <QRCode 
-                  value={bankingQrUrl || qrCodeUrl} 
-                  size={150} 
-                />
+                <QRCode value={bankingQrUrl || qrCodeUrl} size={150} />
                 <p className="text-center text-sm font-medium mt-3">
                   Quét mã QR để thanh toán
                 </p>
@@ -312,14 +321,18 @@ export function PaymentModal({
                       <span>{bankDetails.bankName}</span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-muted-foreground">Số tài khoản:</span>
+                      <span className="text-muted-foreground">
+                        Số tài khoản:
+                      </span>
                       <div className="flex items-center">
                         <span>{bankDetails.accountNumber}</span>
                         <Button
                           variant="ghost"
                           size="icon"
                           className="h-7 w-7 ml-1"
-                          onClick={() => handleCopyText(bankDetails.accountNumber, 'account')}
+                          onClick={() =>
+                            handleCopyText(bankDetails.accountNumber, "account")
+                          }
                         >
                           {copyStatus.account ? (
                             <ClipboardCheck className="h-3.5 w-3.5 text-green-500" />
@@ -330,18 +343,29 @@ export function PaymentModal({
                       </div>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Chủ tài khoản:</span>
+                      <span className="text-muted-foreground">
+                        Chủ tài khoản:
+                      </span>
                       <span>{bankDetails.accountName}</span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-muted-foreground">Nội dung CK:</span>
+                      <span className="text-muted-foreground">
+                        Nội dung CK:
+                      </span>
                       <div className="flex items-center">
-                        <span>NAPTIEN {user?.username} {transactionId}</span>
+                        <span>
+                          NAPTIEN {user?.username} {transactionId}
+                        </span>
                         <Button
                           variant="ghost"
                           size="icon"
                           className="h-7 w-7 ml-1"
-                          onClick={() => handleCopyText(`NAPTIEN ${user?.username} ${transactionId}`, 'content')}
+                          onClick={() =>
+                            handleCopyText(
+                              `NAPTIEN ${user?.username} ${transactionId}`,
+                              "content",
+                            )
+                          }
                         >
                           {copyStatus.content ? (
                             <ClipboardCheck className="h-3.5 w-3.5 text-green-500" />
@@ -353,14 +377,17 @@ export function PaymentModal({
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Số tiền:</span>
-                      <span className="font-medium">{formatCurrency(parseInt(amount))}</span>
+                      <span className="font-medium">
+                        {formatCurrency(parseInt(amount))}
+                      </span>
                     </div>
                   </div>
                 </div>
 
                 <div className="pt-3 border-t border-border">
                   <p className="text-xs text-muted-foreground">
-                    Sau khi chuyển khoản, vui lòng nhấn nút "Tôi đã thanh toán" để xác nhận.
+                    Sau khi chuyển khoản, vui lòng nhấn nút "Tôi đã thanh toán"
+                    để xác nhận.
                   </p>
                 </div>
               </div>
@@ -370,9 +397,13 @@ export function PaymentModal({
               <Button
                 onClick={() => confirmPaymentMutation.mutate()}
                 className="flex-1"
-                disabled={confirmPaymentMutation.isPending || timeRemaining <= 0}
+                disabled={
+                  confirmPaymentMutation.isPending || timeRemaining <= 0
+                }
               >
-                {confirmPaymentMutation.isPending ? "Đang xử lý..." : "Tôi đã thanh toán"}
+                {confirmPaymentMutation.isPending
+                  ? "Đang xử lý..."
+                  : "Tôi đã thanh toán"}
               </Button>
               <Button
                 onClick={() => setQrCodeUrl(null)}

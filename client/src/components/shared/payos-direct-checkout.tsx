@@ -23,10 +23,10 @@ interface PayOSDirectCheckoutProps {
 
 export function PayOSDirectCheckout({
   amount,
-  description = "Nạp tiền",
+  description = "Nạp xu mở chương khoá website goctruyennho.io.vn",
   onSuccess,
   onCancel,
-  expiryTime = 900, // Mặc định 15 phút
+  expiryTime = 15,
 }: PayOSDirectCheckoutProps) {
   const [isCreatingLink, setIsCreatingLink] = useState(false);
   const [qrCode, setQrCode] = useState<string | null>(null);
@@ -58,7 +58,7 @@ export function PayOSDirectCheckout({
           description.length > 25 ? description.substring(0, 25) : description,
         returnUrl,
         cancelUrl,
-        expiryTime, // Truyền thời gian hết hạn đã được cấu hình
+        expiryTime,
       });
 
       if (!response.ok) {
@@ -325,53 +325,17 @@ export function PayOSDirectCheckout({
               <div className="flex flex-col items-center space-y-4">
                 <h3 className="font-semibold text-lg">Quét mã để thanh toán</h3>
 
-                {countdown > 0 ? (
-                  <div
-                    className={`flex items-center space-x-2 px-3 py-2 rounded-md ${
-                      countdown < 60
-                        ? "bg-red-50 text-red-700 border border-red-200"
-                        : countdown < 180
-                          ? "bg-yellow-50 text-yellow-700 border border-yellow-200"
-                          : "bg-blue-50 text-blue-700 border border-blue-100"
-                    }`}
-                  >
-                    <Clock
-                      className={`h-4 w-4 ${
-                        countdown < 60
-                          ? "text-red-600"
-                          : countdown < 180
-                            ? "text-yellow-600"
-                            : "text-blue-600"
-                      }`}
-                    />
-                    <div className="flex flex-col">
-                      <span className="text-sm font-medium">
-                        Thời gian còn lại:
-                      </span>
-                      <span className="font-semibold">
-                        {formatTime(countdown)}
-                      </span>
-                      {countdown < 60 && (
-                        <span className="text-xs">
-                          Thanh toán sẽ hết hạn trong ít phút!
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                ) : (
-                  <div className="bg-red-50 text-red-700 border border-red-200 px-3 py-2 rounded-md flex items-center space-x-2">
-                    <Clock className="h-4 w-4" />
-                    <div>
-                      <span className="text-sm font-medium">
-                        Hết thời gian thanh toán
-                      </span>
-                      <p className="text-xs">Vui lòng tạo mã thanh toán mới</p>
-                    </div>
+                {countdown > 0 && (
+                  <div className="text-center">
+                    <span className="text-sm text-gray-500">
+                      Thời gian còn lại:{" "}
+                    </span>
+                    <span className="font-medium">{formatTime(countdown)}</span>
                   </div>
                 )}
 
                 <div className="bg-white p-2 border border-gray-200 rounded-md">
-                  {qrCode && countdown > 0 ? (
+                  {qrCode ? (
                     <>
                       {/* Thử nhiều cách khác nhau để hiển thị mã QR */}
                       {qrCode.startsWith("000201") ||
@@ -413,144 +377,35 @@ export function PayOSDirectCheckout({
                           className="w-48 h-48 mx-auto"
                         />
                       ) : qrCode.startsWith("http") ? (
-                        <div
-                          id="qrcode-container"
+                        <img
+                          src={qrCode}
+                          alt="QR Code thanh toán"
                           className="w-48 h-48 mx-auto"
-                        >
-                          {/* Tự tạo QR code thay vì sử dụng URL từ PayOS */}
-                          {useEffect(() => {
-                            if (qrCode.startsWith("http")) {
-                              const container =
-                                document.getElementById("qrcode-container");
-                              if (container) {
-                                container.innerHTML = ""; // Xóa nội dung cũ
-
-                                // Tạo QR code sử dụng thư viện QRCode
-                                QRCode.toCanvas(
-                                  container,
-                                  qrCode,
-                                  {
-                                    width: 192,
-                                    margin: 2,
-                                    color: {
-                                      dark: "#000",
-                                      light: "#fff",
-                                    },
-                                  },
-                                  (error) => {
-                                    if (error) {
-                                      console.error(
-                                        "Error generating QR code:",
-                                        error,
-                                      );
-                                      // Fallback to image if QR code generation fails
-                                      const img = document.createElement("img");
-                                      img.src = qrCode;
-                                      img.alt = "QR Code thanh toán";
-                                      img.className = "w-48 h-48 mx-auto";
-                                      container.appendChild(img);
-                                    }
-                                  },
-                                );
-                              }
-                            }
-                          }, [qrCode])}
-                        </div>
+                        />
                       ) : (
-                        <div
-                          id="qrcode-data-container"
+                        <img
+                          src={`data:image/png;base64,${qrCode}`}
+                          alt="QR Code thanh toán"
                           className="w-48 h-48 mx-auto"
-                        >
-                          {/* Hiển thị chuỗi VietQR dưới dạng QR code */}
-                          <div className="w-48 h-48 mx-auto flex flex-col items-center justify-center">
-                            {React.useEffect(() => {
-                              const renderQRCode = async () => {
-                                try {
-                                  // Sử dụng thư viện QRCode để tạo QR code từ chuỗi VietQR
-                                  if (
-                                    qrCode &&
-                                    !qrCode.startsWith("data:") &&
-                                    !qrCode.startsWith("http")
-                                  ) {
-                                    const container = document.getElementById(
-                                      "qrcode-data-container",
-                                    );
-                                    if (container) {
-                                      container.innerHTML = ""; // Xóa nội dung cũ
-
-                                      // Tạo canvas element trước
-                                      const canvas =
-                                        document.createElement("canvas");
-                                      canvas.width = 192;
-                                      canvas.height = 192;
-                                      container.appendChild(canvas);
-
-                                      // Tạo QR code
-                                      await QRCode.toCanvas(canvas, qrCode, {
-                                        width: 192,
-                                        margin: 2,
-                                        color: {
-                                          dark: "#000",
-                                          light: "#fff",
-                                        },
-                                        errorCorrectionLevel: "H",
-                                      });
-                                    }
-                                  }
-                                } catch (err) {
-                                  console.error(
-                                    "Failed to generate VietQR code:",
-                                    err,
-                                  );
-
-                                  // Fall back to showing a text message
-                                  const container = document.getElementById(
-                                    "qrcode-data-container",
-                                  );
-                                  if (container) {
-                                    container.innerHTML = "";
-
-                                    const fallbackMsg =
-                                      document.createElement("div");
-                                    fallbackMsg.className =
-                                      "w-48 h-48 flex flex-col items-center justify-center text-center";
-                                    fallbackMsg.innerHTML = `
-                                      <p class="text-sm text-gray-700 font-medium mb-2">Mở ứng dụng ngân hàng</p>
-                                      <p class="text-xs text-gray-500 mb-2">Quét mã VietQR hoặc chuyển khoản theo thông tin</p>
-                                      <div class="p-2 bg-gray-50 border border-gray-200 rounded-md w-full">
-                                        <p class="text-xs text-gray-800 font-medium">Mã giao dịch:</p>
-                                        <p class="text-xs text-gray-600 break-all">${orderCode || "N/A"}</p>
-                                      </div>
-                                    `;
-                                    container.appendChild(fallbackMsg);
-                                  }
-                                }
-                              };
-
-                              renderQRCode();
-                            }, [qrCode, orderCode])}
-                          </div>
-                        </div>
+                          onError={(e) => {
+                            console.log("QR code error, trying other format");
+                            e.currentTarget.style.display = "none";
+                            // Hiển thị dạng text thay thế
+                            const container = e.currentTarget.parentElement;
+                            if (container) {
+                              const msg = document.createElement("div");
+                              msg.innerHTML = `
+                                  <div class="w-48 h-48 mx-auto flex flex-col items-center justify-center text-center">
+                                    <p class="text-sm text-gray-700 font-medium mb-2">Mở ứng dụng ngân hàng</p>
+                                    <p class="text-xs text-gray-500">Quét mã VietQR hoặc chuyển khoản theo thông tin bên dưới</p>
+                                  </div>
+                                `;
+                              container.appendChild(msg);
+                            }
+                          }}
+                        />
                       )}
                     </>
-                  ) : countdown <= 0 ? (
-                    <div className="w-48 h-48 mx-auto flex flex-col items-center justify-center bg-red-50 border border-red-200 rounded-md p-4">
-                      <Clock className="h-10 w-10 text-red-500 mb-2" />
-                      <p className="text-sm font-medium text-red-700 text-center">
-                        Hết thời gian thanh toán
-                      </p>
-                      <p className="text-xs text-red-600 text-center mt-1">
-                        Vui lòng tạo mới mã QR để tiếp tục thanh toán
-                      </p>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="mt-3"
-                        onClick={handleCreatePayment}
-                      >
-                        Tạo mới mã QR
-                      </Button>
-                    </div>
                   ) : (
                     <div className="w-48 h-48 mx-auto flex items-center justify-center bg-gray-100">
                       <p className="text-sm text-gray-500">
@@ -574,43 +429,31 @@ export function PayOSDirectCheckout({
                 </div>
 
                 <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2 w-full">
-                  {countdown > 0 ? (
-                    <>
-                      {checkoutUrl && (
-                        <Button
-                          variant="outline"
-                          className="flex-1"
-                          onClick={() => window.open(checkoutUrl, "_blank")}
-                        >
-                          Mở cổng thanh toán
-                        </Button>
-                      )}
-
-                      <Button
-                        variant="default"
-                        className="flex-1"
-                        onClick={handleConfirmPayment}
-                      >
-                        Tôi đã thanh toán
-                      </Button>
-
-                      <Button
-                        variant="ghost"
-                        className="flex-1"
-                        onClick={handleCancel}
-                      >
-                        Hủy
-                      </Button>
-                    </>
-                  ) : (
+                  {checkoutUrl && (
                     <Button
-                      variant="default"
-                      className="w-full"
-                      onClick={handleCreatePayment}
+                      variant="outline"
+                      className="flex-1"
+                      onClick={() => window.open(checkoutUrl, "_blank")}
                     >
-                      Tạo mới mã QR
+                      Mở cổng thanh toán
                     </Button>
                   )}
+
+                  <Button
+                    variant="default"
+                    className="flex-1"
+                    onClick={handleConfirmPayment}
+                  >
+                    Tôi đã thanh toán
+                  </Button>
+
+                  <Button
+                    variant="ghost"
+                    className="flex-1"
+                    onClick={handleCancel}
+                  >
+                    Hủy
+                  </Button>
                 </div>
               </div>
             </div>

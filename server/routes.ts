@@ -2234,9 +2234,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
         }
         
-        // Tính thời gian hết hạn cho giao dịch
+        // Tính thời gian hết hạn cho giao dịch (tính bằng mili giây)
         const expiryMinutes = settings.expiryConfig?.bankTransfer || 15;
-        const expiredAt = Math.floor(Date.now() / 1000) + (expiryMinutes * 60);
+        // Thời gian hết hạn tính bằng mili giây (không phải giây) để tương thích với Date.now()
+        const expiredAt = Date.now() + (expiryMinutes * 60 * 1000);
         
         // Tạo thanh toán trong database
         const paymentData = {
@@ -2305,7 +2306,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Lấy thời gian hết hạn từ cấu hình hoặc mặc định là 15 phút
         const expiryMinutes = settings.expiryConfig?.bankTransfer || 15;
         
-        // Tính thời gian hết hạn dưới dạng Unix timestamp (giây)
+        // Tính thời gian hết hạn dưới dạng Unix timestamp (giây) cho PayOS API
         const now = Math.floor(Date.now() / 1000); // Timestamp hiện tại dạng giây
         const paymentExpiryTime = now + (expiryMinutes * 60); // Thêm số phút cấu hình
 
@@ -2627,7 +2628,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (payment.metadata && payment.metadata.expiredAt) {
             expiredAt = payment.metadata.expiredAt;
           } else {
-            const expiryMinutes = settings.expiryConfig?.bankTransfer || 15;
+            // Tính thời gian hết hạn dưới dạng Unix timestamp (giây) cho PayOS API
+            const expiryMinutes = settings.expiryConfig?.payos || 15;
             expiredAt = Math.floor(Date.now() / 1000) + (expiryMinutes * 60);
           }
           
@@ -2921,9 +2923,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Add the amount to the user's balance
         const user = await storage.getUser(payment.userId);
         if (user) {
+          // Đảm bảo user.balance tồn tại, nếu không thì set mặc định là 0
+          const currentBalance = user.balance || 0;
           await storage.updateUserBalance(
             user.id,
-            user.balance + payment.amount,
+            currentBalance + payment.amount,
           );
           console.log(`Updated user ${user.id} balance: +${payment.amount}`);
         }

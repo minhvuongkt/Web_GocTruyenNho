@@ -196,7 +196,7 @@ export async function getPaymentQRCode(transactionId: string): Promise<{
   expiresAt: string;
 }> {
   try {
-    const response = await fetch(`/api/payments/${transactionId}/qr`, {
+    const response = await fetch(`/api/payos/payments/${transactionId}/qr`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',

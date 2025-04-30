@@ -619,10 +619,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           // Thêm nội dung chương vào bảng chapter_content
           if (chapterData.content) {
-            await storage.createChapterContent({
+            console.log('Saving chapter content:', {
+              chapterId: newChapter.id,
+              contentLength: chapterData.content.length
+            });
+            
+            const savedContent = await storage.createChapterContent({
               chapterId: newChapter.id,
               content: chapterData.content
             });
+            
+            console.log('Saved chapter content:', savedContent);
           }
           
           res.status(201).json(newChapter);
@@ -632,10 +639,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           // Thêm nội dung chương vào bảng chapter_content
           if (chapterData.content) {
-            await storage.createChapterContent({
+            console.log('Saving chapter content (default case):', {
+              chapterId: newChapter.id,
+              contentLength: chapterData.content.length
+            });
+            
+            const savedContent = await storage.createChapterContent({
               chapterId: newChapter.id,
               content: chapterData.content
             });
+            
+            console.log('Saved chapter content (default case):', savedContent);
           }
           
           res.status(201).json(newChapter);

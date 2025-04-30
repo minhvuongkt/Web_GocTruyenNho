@@ -20,10 +20,10 @@ import { useToast } from "@/hooks/use-toast";
 
 interface ChapterReaderPageProps {
   contentId: number;
-  chapterId: number;
+  chapterNumber: number;
 }
 
-export function ChapterReaderPage({ contentId, chapterId }: ChapterReaderPageProps) {
+export function ChapterReaderPage({ contentId, chapterNumber }: ChapterReaderPageProps) {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
   
@@ -52,7 +52,30 @@ export function ChapterReaderPage({ contentId, chapterId }: ChapterReaderPagePro
     }
   });
 
-  // Fetch dữ liệu chương
+  // Fetch dữ liệu chương dựa trên chapter number thay vì chapterId
+  const { data: chaptersListData } = useQuery({
+    queryKey: [`/api/chapters/content/${contentId}`],
+    queryFn: async () => {
+      try {
+        const res = await apiRequest("GET", `/api/chapters/content/${contentId}`);
+        const data = await res.json();
+        return data.chapters || [];
+      } catch (error) {
+        console.error("Error fetching chapters list:", error);
+        return [];
+      }
+    },
+    enabled: !!contentId
+  });
+
+  // Tìm chapterId dựa trên chapter number
+  const chapterId = React.useMemo(() => {
+    if (!chaptersListData) return null;
+    const chapter = chaptersListData.find(ch => ch.number === chapterNumber);
+    return chapter?.id || null;
+  }, [chaptersListData, chapterNumber]);
+
+  // Fetch dữ liệu chương dựa trên chapterId đã tìm được
   const { data: chapterData, isLoading: chapterLoading } = useQuery({
     queryKey: [`/api/chapters/${chapterId}`],
     queryFn: async () => {
@@ -67,36 +90,22 @@ export function ChapterReaderPage({ contentId, chapterId }: ChapterReaderPagePro
     enabled: !!contentId && !!chapterId
   });
 
-  // Fetch danh sách tất cả các chương của nội dung này
-  const { data: chaptersData } = useQuery({
-    queryKey: [`/api/chapters/content/${contentId}`],
-    queryFn: async () => {
-      try {
-        const res = await apiRequest("GET", `/api/chapters/content/${contentId}`);
-        const data = await res.json();
-        return data.chapters || [];
-      } catch (error) {
-        console.error("Error fetching chapters list:", error);
-        return [];
-      }
-    },
-    enabled: !!contentId
-  });
+  // Sử dụng chaptersListData đã fetch ở trên
   
   // Tính số chương hiện tại và tổng số chương
   const [currentChapterIndex, totalChapters] = React.useMemo(() => {
-    if (!chaptersData || !chapterData) return [0, 0];
+    if (!chaptersListData || !chapterData) return [0, 0];
     
-    const sortedChapters = [...chaptersData].sort((a, b) => a.number - b.number);
+    const sortedChapters = [...chaptersListData].sort((a, b) => a.number - b.number);
     const index = sortedChapters.findIndex(chapter => chapter.id === chapterData.id);
     return [index, sortedChapters.length];
-  }, [chaptersData, chapterData]);
+  }, [chaptersListData, chapterData]);
 
   // Chuyển đến chương trước hoặc chương tiếp theo
   const navigateToChapter = (direction: 'prev' | 'next') => {
-    if (!chaptersData || chaptersData.length === 0) return;
+    if (!chaptersListData || chaptersListData.length === 0) return;
     
-    const sortedChapters = [...chaptersData].sort((a, b) => a.number - b.number);
+    const sortedChapters = [...chaptersListData].sort((a, b) => a.number - b.number);
     let nextIndex = direction === 'next' ? currentChapterIndex + 1 : currentChapterIndex - 1;
     
     if (nextIndex < 0) {
@@ -271,7 +280,7 @@ export function ChapterReaderPage({ contentId, chapterId }: ChapterReaderPagePro
                     </SheetHeader>
                     <ScrollArea className="h-[calc(100vh-8rem)] mt-6">
                       <div className="space-y-1 py-2">
-                        {chaptersData && [...chaptersData]
+                        {chaptersListData && [...chaptersListData]
                           .sort((a, b) => a.number - b.number)
                           .map((chapterItem) => (
                             <Link 

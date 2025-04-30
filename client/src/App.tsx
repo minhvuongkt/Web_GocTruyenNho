@@ -62,27 +62,32 @@ function Router() {
         {(params) => <Redirect to={`/truyen/${params.id}`} />}
       </Route>
 
-      <Route path="/truyen/:contentId/chapter/:chapterId">
-        {(params) => (
-          <ChapterReaderPage
-            contentId={normalizeId(params.contentId)}
-            chapterId={normalizeId(params.chapterId)}
-          />
-        )}
+      <Route path="/truyen/:contentId/chapter-:number">
+        {(params) => {
+          // Tìm chapterId dựa trên số chương
+          const contentId = normalizeId(params.contentId);
+          const chapterNumber = parseInt(params.number);
+          return (
+            <ChapterReaderPage
+              contentId={contentId}
+              chapterNumber={chapterNumber}
+            />
+          );
+        }}
       </Route>
 
       {/* Legacy reader routes for compatibility */}
       <Route path="/manga/:contentId/chapter/:chapterId">
         {(params) => (
           <Redirect
-            to={`/truyen/${params.contentId}/chapter/${params.chapterId}`}
+            to={`/truyen/${params.contentId}/chapter-${params.chapterId}`}
           />
         )}
       </Route>
       <Route path="/novel/:contentId/chapter/:chapterId">
         {(params) => (
           <Redirect
-            to={`/truyen/${params.contentId}/chapter/${params.chapterId}`}
+            to={`/truyen/${params.contentId}/chapter-${params.chapterId}`}
           />
         )}
       </Route>

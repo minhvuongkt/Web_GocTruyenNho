@@ -190,7 +190,7 @@ export function MangaReaderPage({ contentId, chapterId }: MangaReaderPageProps) 
                 {getSortedChapters().map(ch => (
                   <div key={ch.id} className="py-2 border-b border-border">
                     <Link
-                      href={`/truyen/${contentId}/chapter/${ch.id}`}
+                      href={`/truyen/${contentId}/chapter-${ch.number}`}
                       className={`block py-1 px-2 rounded hover:bg-muted ${ch.id === chapterId ? 'bg-primary/10 text-primary font-medium' : ''}`}
                       onClick={() => setShowChapterList(false)}
                     >
@@ -254,7 +254,7 @@ export function MangaReaderPage({ contentId, chapterId }: MangaReaderPageProps) 
               {getSortedChapters().map(ch => (
                 <div key={ch.id} className="py-2 border-b border-border">
                   <Link
-                    href={`/truyen/${contentId}/chapter/${ch.id}`}
+                    href={`/truyen/${contentId}/chapter-${ch.number}`}
                     className={`block py-1 px-2 rounded hover:bg-muted ${ch.id === chapterId ? 'bg-primary/10 text-primary font-medium' : ''}`}
                     onClick={() => setShowChapterList(false)}
                   >

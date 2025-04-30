@@ -154,7 +154,7 @@ export function ReaderLayout({
             asChild={!!prevChapterId}
           >
             {prevChapterId ? (
-              <Link href={`/truyen/${contentId}/chapter-${chapterNumber-1}`}>
+              <Link href={`/truyen/${contentId}/chapter/${prevChapterId}`}>
                 <ChevronLeft className="mr-1 h-4 w-4" />
                 Chương trước
               </Link>
@@ -185,7 +185,7 @@ export function ReaderLayout({
             asChild={!!nextChapterId}
           >
             {nextChapterId ? (
-              <Link href={`/truyen/${contentId}/chapter-${chapterNumber+1}`}>
+              <Link href={`/truyen/${contentId}/chapter/${nextChapterId}`}>
                 Chương tiếp
                 <ChevronRight className="ml-1 h-4 w-4" />
               </Link>

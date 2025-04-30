@@ -419,29 +419,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: "Failed to get content type" });
     }
   });
-  
-  // Endpoint to get content by title/slug (được thay thế bởi endpoint ở cuối file)
-  
-  // Endpoint to find chapter by content ID and chapter number
-  app.get("/api/content/:contentId/chapter-by-number/:chapterNumber", async (req, res) => {
-    try {
-      const contentId = parseInt(req.params.contentId);
-      const chapterNumber = parseInt(req.params.chapterNumber);
-      
-      const chapters = await storage.getChaptersByContent(contentId);
-      const chapter = chapters.find(ch => ch.number === chapterNumber);
-      
-      if (!chapter) {
-        return res.status(404).json({ error: "Chapter not found" });
-      }
-      
-      res.json({ chapter });
-    } catch (error) {
-      res.status(500).json({ error: "Failed to get chapter by number" });
-    }
-  });
-  
-  
 
   app.post("/api/content", ensureAdmin, async (req, res) => {
     try {
@@ -3254,5 +3231,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Create HTTP server without starting it
   return new Server(app);
 }

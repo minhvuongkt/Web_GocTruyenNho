@@ -53,18 +53,26 @@ export function NovelDetailPage({ id, titleUrl }: NovelDetailPageProps) {
   const { data, isLoading, isError } = useQuery<ContentDetails>({
     queryKey: [`/api/content/${contentId}`],
     queryFn: async () => {
-      const res = await apiRequest("GET", `/api/content/${id}`);
+      const res = await apiRequest("GET", `/api/content/${contentId}`);
       return res.json();
     }
   });
   
+  // Khi lấy được dữ liệu content, cập nhật contentId nếu cần
+  useEffect(() => {
+    if (data?.content?.id) {
+      setContentId(data.content.id);
+    }
+  }, [data]);
+  
   // Fetch comments
   const { data: comments, isLoading: isLoadingComments } = useQuery({
-    queryKey: [`/api/content/${id}/comments`],
+    queryKey: [`/api/content/${contentId}/comments`],
     queryFn: async () => {
-      const res = await apiRequest("GET", `/api/content/${id}/comments`);
+      const res = await apiRequest("GET", `/api/content/${contentId}/comments`);
       return res.json();
-    }
+    },
+    enabled: !!contentId
   });
   
   // Check if novel is in user's favorites
@@ -80,7 +88,7 @@ export function NovelDetailPage({ id, titleUrl }: NovelDetailPageProps) {
   // Toggle favorite mutation
   const toggleFavoriteMutation = useMutation({
     mutationFn: async () => {
-      const res = await apiRequest("POST", `/api/favorites/${id}`);
+      const res = await apiRequest("POST", `/api/favorites/${contentId}`);
       return res.json();
     },
     onSuccess: () => {
@@ -90,31 +98,31 @@ export function NovelDetailPage({ id, titleUrl }: NovelDetailPageProps) {
   
   // Get user unlocked chapters
   const { data: unlockedChapters } = useQuery({
-    queryKey: [`/api/user/unlocked-chapters/${id}`],
+    queryKey: [`/api/user/unlocked-chapters/${contentId}`],
     queryFn: async () => {
-      const res = await apiRequest("GET", `/api/user/unlocked-chapters/${id}`);
+      const res = await apiRequest("GET", `/api/user/unlocked-chapters/${contentId}`);
       return res.json();
     },
-    enabled: !!user
+    enabled: !!user && !!contentId
   });
   
   // Submit comment mutation
   const commentMutation = useMutation({
     mutationFn: async () => {
       const res = await apiRequest("POST", "/api/comments", {
-        contentId: id,
+        contentId: contentId,
         text: comment
       });
       return res.json();
     },
     onSuccess: () => {
       setComment("");
-      queryClient.invalidateQueries({ queryKey: [`/api/content/${id}/comments`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/content/${contentId}/comments`] });
     }
   });
   
   // Check if content is in favorites
-  const isFavorite = favorites?.some((fav: Content) => fav.id === id);
+  const isFavorite = favorites?.some((fav: Content) => fav.id === contentId);
   
   // Handle favorite toggle
   const handleToggleFavorite = () => {
@@ -332,7 +340,7 @@ export function NovelDetailPage({ id, titleUrl }: NovelDetailPageProps) {
                 {chapters && chapters.length > 0 ? (
                   <ChapterList 
                     chapters={chapters} 
-                    contentId={id} 
+                    contentId={contentId} 
                     contentType="novel"
                     contentTitle={content?.title || ""}
                     userUnlockedChapters={unlockedChapters}

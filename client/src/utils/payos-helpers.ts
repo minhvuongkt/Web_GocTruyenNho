@@ -123,27 +123,29 @@ export function generateVietQRImageUrl(qrCodeData: string, options: {
   format?: 'svg' | 'png'; 
   color?: string; 
   bgcolor?: string;
-} = {}): string | null {
-  if (!qrCodeData) return null;
+} = {}): string {
+  if (!qrCodeData) return '';
   
   const { 
-    size = 300, 
+    size = 200, 
     format = 'png', 
     color = '000000', 
     bgcolor = 'ffffff' 
   } = options;
   
   try {
-    // Encode QR code data for URL
-    const encodedData = encodeURIComponent(qrCodeData);
+    // Nếu là chuỗi QR từ PayOS, sử dụng QR code generator API
+    if (qrCodeData.startsWith("00020101")) {
+      // Gọi API của VietQR để tạo ảnh QR code
+      return `https://api.vietqr.io/image/${qrCodeData}?size=${size}`;
+    }
     
-    // Construct API URL based on VietQR specification
-    const vietQrUrl = `https://img.vietqr.io/image/${encodedData}?amount=0&addInfo=Payment&accountName=Merchant&size=${size}&format=${format}&color=${color}&bgcolor=${bgcolor}`;
-    
-    return vietQrUrl;
+    // Fallback sử dụng QR code generator thông thường nếu không phải VietQR
+    return `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodeURIComponent(qrCodeData)}`;
   } catch (error) {
     console.error('Failed to generate VietQR image URL:', error);
-    return null;
+    // Fallback sử dụng QR code generator thông thường
+    return `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodeURIComponent(qrCodeData)}`;
   }
 }
 

@@ -313,12 +313,14 @@ export function PayOSDirectCheckout({
                           <img
                             src={generateVietQRImageUrl(qrCode, { size: 200 })}
                             alt="QR Code VietQR thanh toán"
-                            className="w-48 h-48 mx-auto mb-2"
+                            className="w-48 h-48 mx-auto mb-2 border border-gray-200 p-1 rounded-md"
                             onError={(e) => {
                               console.log("VietQR image error, showing fallback");
-                              e.currentTarget.style.display = "none";
+                              const imgElement = e.currentTarget as HTMLImageElement;
+                              imgElement.style.display = "none";
+                              
                               // Hiển thị text thông tin thanh toán
-                              const container = e.currentTarget.nextElementSibling;
+                              const container = imgElement.nextElementSibling as HTMLElement;
                               if (container) {
                                 container.style.display = "flex";
                               }

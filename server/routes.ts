@@ -522,7 +522,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Increment view count
       await storage.incrementChapterViews(id);
 
-      const chapterContent = await storage.getChapterContentByChapter(id);
+      const chapterContentList = await storage.getChapterContentByChapter(id);
+      
+      // Extract content from the result for display
+      let contentHtml = "";
+      if (chapterContentList && chapterContentList.length > 0) {
+        // If there's content in the chapter_content table, use it
+        contentHtml = chapterContentList[0].content || "";
+      } else if (chapter.content) {
+        // Fallback to content stored in chapters table (legacy support)
+        contentHtml = chapter.content;
+      }
 
       // Check if chapter is locked and if the user has unlocked it
       let isUnlocked = !chapter.isLocked;
@@ -534,7 +544,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json({
         chapter,
-        content: isUnlocked ? chapterContent : [],
+        content: isUnlocked ? contentHtml : "",
+        chapterContent: isUnlocked ? chapterContentList : [],
         isUnlocked,
       });
     } catch (error) {

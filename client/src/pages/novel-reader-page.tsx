@@ -123,7 +123,7 @@ export function NovelReaderPage({ contentId, chapterId }: NovelReaderPageProps) 
     );
   }
   
-  const { chapter, content: chapterContent, isUnlocked } = data;
+  const { chapter, content: chapterContent, chapterContent: chapterContentList, isUnlocked } = data;
   const novelTitle = novelDetails?.content?.title || "Đang tải...";
   
   // Chapter locked state
@@ -157,10 +157,10 @@ export function NovelReaderPage({ contentId, chapterId }: NovelReaderPageProps) 
     );
   }
   
-  // Extract novel content (for novels, we expect a single content entry with text)
-  const novelContent = chapterContent && chapterContent.length > 0 
-    ? chapterContent[0]?.content 
-    : null;
+  // Extract novel content (trước tiên dùng chapterContent string từ API đã nâng cấp)
+  const novelContent = chapterContent || (chapterContentList && chapterContentList.length > 0 
+    ? chapterContentList[0]?.content 
+    : null);
   
   // No content state
   if (!novelContent) {

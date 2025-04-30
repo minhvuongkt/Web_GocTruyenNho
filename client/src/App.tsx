@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "./components/ui/theme-provider";
 import { AuthProvider } from "./hooks/use-auth";
 import { ProtectedRoute } from "./lib/protected-route";
+import { normalizeId } from "@/lib/hashUtils";
 
 // Pages
 import HomePage from "@/pages/home-page";
@@ -47,7 +48,7 @@ function Router() {
       {/* Content detail pages */}
       <Route path="/truyen/:id">
         {(params) => {
-          const id = parseInt(params.id);
+          const id = normalizeId(params.id);
           // We'll fetch the content type and render the appropriate component
           return <ContentDetailPage id={id} />;
         }}
@@ -65,8 +66,8 @@ function Router() {
       <Route path="/truyen/:contentId/chapter/:chapterId">
         {(params) => (
           <ChapterReaderPage 
-            contentId={parseInt(params.contentId)} 
-            chapterId={parseInt(params.chapterId)} 
+            contentId={normalizeId(params.contentId)} 
+            chapterId={normalizeId(params.chapterId)} 
           />
         )}
       </Route>
@@ -92,7 +93,7 @@ function Router() {
       <ProtectedRoute path="/admin/manga" component={MangaManagementPage} requireAdmin={true} />
       <ProtectedRoute path="/admin/users" component={UsersManagementPage} requireAdmin={true} />
       <ProtectedRoute path="/admin/chapters/:contentId" requireAdmin={true}>
-        {(params) => <ChapterManagementPage contentId={parseInt(params.contentId)} />}
+        {(params) => <ChapterManagementPage contentId={normalizeId(params.contentId)} />}
       </ProtectedRoute>
       <ProtectedRoute path="/admin/payments" component={PaymentManagementPage} requireAdmin={true} />
       <ProtectedRoute path="/admin/payment-settings" component={PaymentSettingsPage} requireAdmin={true} />

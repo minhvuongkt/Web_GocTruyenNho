@@ -5,11 +5,14 @@
  * for better security and aesthetics in user-facing URLs.
  */
 
-// Simple hashing (base64 encoding with a prefix) for demo purposes
+// Simple hashing for demo purposes using browser-compatible APIs
 // In a production environment, consider using more complex hashing or encryption
 export function hashId(id: number): string {
-  // Convert number to string and encode in base64
-  const encoded = Buffer.from(id.toString()).toString('base64');
+  // Convert number to string and encode it
+  // Using a simpler algorithm that works in browsers without Buffer
+  const str = id.toString();
+  const encoded = btoa(str); // Base64 encoding in browser
+  
   // Add a prefix to make it look less like a simple encoding
   return `t-${encoded}`;
 }
@@ -19,7 +22,7 @@ export function unhashId(hash: string): number {
     // Remove the prefix
     const encoded = hash.startsWith('t-') ? hash.substring(2) : hash;
     // Decode back to string and convert to number
-    const decoded = Buffer.from(encoded, 'base64').toString('utf-8');
+    const decoded = atob(encoded); // Base64 decoding in browser
     return parseInt(decoded, 10);
   } catch (error) {
     console.error('Failed to unhash ID:', error);

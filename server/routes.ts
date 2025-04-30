@@ -1042,15 +1042,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         try {
           // Sử dụng PayOS API để tạo payment link
+          // Thời gian hết hạn: Hiện tại + 15 phút (đơn vị milliseconds)
+          const expiryMinutes = 15; // 15 phút
+          const expiryMilliseconds = expiryMinutes * 60 * 1000;
+          const expiredAt = Date.now() + expiryMilliseconds;
+          
           const paymentData = {
             amount: amount,
             description: `Nạp tiền tài khoản cho ${(req.user as any).username}`,
             orderCode: newPayment.transactionId,
             returnUrl: returnUrl,
             cancelUrl: cancelUrl,
-            expiredAt: new Date(
-              newPayment.createdAt.getTime() + 15 * 60,
-            ).getTime(),
+            expiredAt: expiredAt,
           };
 
           console.log("PayOS payment request:", paymentData);
@@ -1096,10 +1099,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
             return res.status(500).json({ error: "Empty PayOS response" });
           }
 
-          // Lấy thời gian hết hạn từ cấu hình (mặc định 15 phút)
-          const expiryMinutes = settings.expiryConfig?.payos || 15;
+          // Lấy thời gian hết hạn từ cấu hình cho response
+          // (Chúng ta đã đặt expiredAt cho PayOS ở trên rồi)
+          const responseExpiryMinutes = settings.expiryConfig?.payos || 15;
           const expiresAt = new Date(
-            newPayment.createdAt.getTime() + expiryMinutes * 60 * 1000,
+            newPayment.createdAt.getTime() + responseExpiryMinutes * 60 * 1000,
           );
 
           res.status(201).json({

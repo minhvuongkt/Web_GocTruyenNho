@@ -339,10 +339,9 @@ export default function ChapterListPage({ contentId }: { contentId: number }) {
                       <TableRow key={chapter.id}>
                         <TableCell className="font-medium">{chapter.number}</TableCell>
                         <TableCell>
-                          <Link href={`/truyen/${content.id}/chapter/${chapter.id}`}>
-                            <a className="text-blue-600 hover:underline">
+                          <Link href={`/truyen/${content.id}/chapter/${chapter.id}`}
+                            className="text-blue-600 hover:underline">
                               {chapter.title || `Chương ${chapter.number}`}
-                            </a>
                           </Link>
                         </TableCell>
                         <TableCell>

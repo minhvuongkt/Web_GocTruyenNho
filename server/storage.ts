@@ -1351,13 +1351,25 @@ export class DatabaseStorage implements IStorage {
   async updatePaymentStatus(
     id: number,
     status: "pending" | "completed" | "failed",
+  ): Promise<boolean> {
+    const result = await db
+      .update(payments)
+      .set({ status })
+      .where(eq(payments.id, id));
+    
+    return result.rowCount !== null && result.rowCount > 0;
+  }
+  
+  async updatePayment(
+    id: number,
+    paymentData: Partial<InsertPayment>,
   ): Promise<Payment | undefined> {
     const [updatedPayment] = await db
       .update(payments)
-      .set({ status })
+      .set(paymentData)
       .where(eq(payments.id, id))
       .returning();
-
+      
     return updatedPayment;
   }
 

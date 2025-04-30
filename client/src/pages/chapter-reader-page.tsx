@@ -7,14 +7,13 @@ import NovelReaderPage from "./novel-reader-page";
 import { normalizeId } from "@/lib/hashUtils";
 
 interface ChapterReaderPageProps {
-  contentId: string | number;
-  chapterId: string | number;
+  contentId: number;
+  chapterNumber: number;
 }
 
-export function ChapterReaderPage({ contentId, chapterId }: ChapterReaderPageProps) {
-  // Normalize IDs (convert from hashes if needed)
-  const normalizedContentId = normalizeId(contentId);
-  const normalizedChapterId = normalizeId(chapterId);
+export function ChapterReaderPage({ contentId, chapterNumber }: ChapterReaderPageProps) {
+  // Use the IDs directly (not using hash anymore)
+  const normalizedContentId = contentId;
   
   // Fetch content type first to determine which component to render
   const { data, isLoading, isError } = useQuery({
@@ -57,9 +56,9 @@ export function ChapterReaderPage({ contentId, chapterId }: ChapterReaderPagePro
 
   // Render the appropriate component based on content type
   if (data === "manga") {
-    return <MangaReaderPage contentId={normalizedContentId} chapterId={normalizedChapterId} />;
+    return <MangaReaderPage contentId={normalizedContentId} chapterNumber={chapterNumber} />;
   } else if (data === "novel") {
-    return <NovelReaderPage contentId={normalizedContentId} chapterId={normalizedChapterId} />;
+    return <NovelReaderPage contentId={normalizedContentId} chapterNumber={chapterNumber} />;
   } else {
     return (
       <div className="flex items-center justify-center min-h-screen">

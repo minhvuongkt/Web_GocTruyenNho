@@ -67,11 +67,11 @@ function Router() {
       </Route>
       
       {/* Reader pages */}
-      <Route path="/truyen/:contentId/chapter/:chapterId">
+      <Route path="/truyen/:contentId/chapter/:chapterNumber">
         {(params) => (
           <ChapterReaderPage 
-            contentId={normalizeId(params.contentId)} 
-            chapterId={normalizeId(params.chapterId)} 
+            contentId={parseInt(params.contentId)} 
+            chapterNumber={parseInt(params.chapterNumber)} 
           />
         )}
       </Route>

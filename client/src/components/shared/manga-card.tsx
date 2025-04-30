@@ -14,7 +14,7 @@ export function MangaCard({ manga, genres, featured = false }: MangaCardProps) {
   const coverImage = manga.coverImage || getRandomCoverImage('manga');
   
   return (
-    <Link href={`/manga/${manga.id}`}>
+    <Link href={`/truyen/${manga.id}`}>
       <Card className={`bg-white dark:bg-slate-900 overflow-hidden hover:shadow-lg transition-all ${featured ? 'hover:scale-105' : 'hover:scale-102'}`}>
         <div className="relative">
           <img 

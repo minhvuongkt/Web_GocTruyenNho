@@ -15,11 +15,14 @@ import MangaDetailPage from "@/pages/manga-detail-page";
 import NovelDetailPage from "@/pages/novel-detail-page";
 import MangaReaderPage from "@/pages/manga-reader-page";
 import NovelReaderPage from "@/pages/novel-reader-page";
+import ContentDetailPage from "@/pages/content-detail-page";
+import ChapterReaderPage from "@/pages/chapter-reader-page";
 import ProfilePage from "@/pages/profile-page";
 import PaymentPage from "@/pages/payment-page";
 import SearchPage from "@/pages/search-page";
 import { PaymentTestPage } from "@/pages/payment-test-page";
 import PaymentCallbackPage from "@/pages/payment-callback";
+import Redirect from "@/components/shared/redirect";
 
 // Admin Pages
 import DashboardPage from "@/pages/admin/dashboard-page";

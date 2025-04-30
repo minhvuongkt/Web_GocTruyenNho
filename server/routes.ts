@@ -2149,7 +2149,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const returnUrl = `${appUrl}/payment/success?id=${newPayment.id}`;
         const cancelUrl = `${appUrl}/payment/cancel?id=${newPayment.id}`;
         const expiryMinutes = settings.expiryConfig?.bankTransfer || 15;
-        const expiresAt = newPayment.createdAt.getTime() + expiryMinutes * 60;
+        // Tính toán thời gian hết hạn trong miliseconds (thời gian hiện tại + 15 phút)
+        const expiresAt = Math.floor(Date.now() / 1000) + (expiryMinutes * 60);
         const paymentData = {
           amount,
           description: `NAP_${username}`,
@@ -2167,7 +2168,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           payment: newPayment,
           paymentLink: paymentLinkResponse.checkoutUrl || null,
           qrCode: paymentLinkResponse.qrCode || null,
-          expiresAt: new Date(expiresAt), // 15 minutes expiry
+          expiresAt: new Date(expiresAt * 1000), // 15 minutes expiry
         });
       } catch (error) {
         console.error("Error creating PayOS payment:", error);

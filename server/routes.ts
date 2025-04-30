@@ -1286,9 +1286,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (newStatus === "completed") {
         const user = await storage.getUser(payment.userId);
         if (user) {
+          // Đảm bảo user.balance tồn tại, nếu không thì set mặc định là 0
+          const currentBalance = user.balance || 0;
           await storage.updateUserBalance(
             user.id,
-            user.balance + payment.amount,
+            currentBalance + payment.amount,
           );
         }
       }
@@ -1376,9 +1378,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (newStatus === "completed") {
           const user = await storage.getUser(payment.userId);
           if (user) {
+            // Đảm bảo user.balance tồn tại, nếu không thì set mặc định là 0
+            const currentBalance = user.balance || 0;
             await storage.updateUserBalance(
               user.id,
-              user.balance + payment.amount,
+              currentBalance + payment.amount,
             );
           }
         }
@@ -1560,9 +1564,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const user = await storage.getUser(payment.userId);
 
             if (user) {
+              // Đảm bảo user.balance tồn tại, nếu không thì set mặc định là 0
+              const currentBalance = user.balance || 0;
               await storage.updateUserBalance(
                 user.id,
-                user.balance + payment.amount,
+                currentBalance + payment.amount,
               );
             }
           }
@@ -1627,9 +1633,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const user = await storage.getUser(payment.userId);
 
             if (user) {
+              // Đảm bảo user.balance tồn tại, nếu không thì set mặc định là 0
+              const currentBalance = user.balance || 0;
               await storage.updateUserBalance(
                 user.id,
-                user.balance + payment.amount,
+                currentBalance + payment.amount,
               );
             }
           } else if (status === "CANCELED" && payment.status !== "failed") {

@@ -174,6 +174,80 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Common handler for user updates
+  // Thêm endpoint GET để trả về danh sách giao dịch cho user
+  app.get(
+    "/api/payments",
+    ensureAuthenticated,
+    async (req: Request, res: Response) => {
+      try {
+        const user = req.user as any;
+        // Lấy tham số phân trang từ query string
+        const page = parseInt(req.query.page as string) || 1;
+        const limit = parseInt(req.query.limit as string) || 10;
+        const offset = (page - 1) * limit;
+        
+        // Lấy danh sách giao dịch và tổng số từ storage
+        const payments = await storage.getUserPayments(user.id, limit, offset);
+        const total = await storage.countUserPayments(user.id);
+        
+        // Trả về danh sách và thông tin phân trang
+        return res.json({
+          payments,
+          pagination: {
+            page,
+            limit,
+            total,
+            totalPages: Math.ceil(total / limit)
+          }
+        });
+      } catch (error: any) {
+        console.error("Error getting user payments:", error);
+        return res.status(500).json({
+          error: error.message || "Failed to get payment history"
+        });
+      }
+    }
+  );
+  
+  // Endpoint GET để lấy chi tiết một giao dịch
+  app.get(
+    "/api/payments/:id",
+    ensureAuthenticated,
+    async (req: Request, res: Response) => {
+      try {
+        const { id } = req.params;
+        const paymentId = parseInt(id);
+        
+        if (isNaN(paymentId)) {
+          return res.status(400).json({ error: "Invalid payment ID" });
+        }
+        
+        // Lấy thông tin giao dịch từ storage
+        const payment = await storage.getPayment(paymentId);
+        
+        if (!payment) {
+          return res.status(404).json({ error: "Payment not found" });
+        }
+        
+        // Kiểm tra quyền truy cập
+        const user = req.user as any;
+        if (payment.userId !== user.id && user.role !== "admin") {
+          return res.status(403).json({ 
+            error: "You don't have permission to access this payment" 
+          });
+        }
+        
+        // Trả về thông tin giao dịch
+        return res.json(payment);
+      } catch (error: any) {
+        console.error("Error getting payment details:", error);
+        return res.status(500).json({
+          error: error.message || "Failed to get payment details"
+        });
+      }
+    }
+  );
+  
   const updateUserHandler = async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);

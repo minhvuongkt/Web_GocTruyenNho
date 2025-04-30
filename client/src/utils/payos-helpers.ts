@@ -163,7 +163,7 @@ export async function checkPaymentStatus(transactionId: string): Promise<{
   error?: string;
 }> {
   try {
-    const response = await fetch(`/api/payments/${transactionId}/status`, {
+    const response = await fetch(`/api/payment/payos/check-payment-status/${transactionId}`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',

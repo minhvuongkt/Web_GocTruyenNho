@@ -46,12 +46,10 @@ export function PayOSDirectCheckout({
 
     try {
       // Tạo giao dịch mới trực tiếp qua PayOS API
-      const response = await apiRequest("POST", "/api/payos/create-payment-link", {
+      const response = await apiRequest("POST", "/api/payment/payos/create-payment-link", {
         amount: amount,
         description: description.length > 25 ? description.substring(0, 25) : description,
-        orderCode: `PAY${Date.now()}`, // Tạo mã giao dịch duy nhất
-        returnUrl: window.location.origin + "/payment-callback?success=true",
-        cancelUrl: window.location.origin + "/payment-callback?success=false",
+        // orderCode được tạo tự động bên phía server
       });
 
       if (!response.ok) {
@@ -64,8 +62,12 @@ export function PayOSDirectCheckout({
       console.log("Payment created:", paymentData);
       
       // Lưu mã giao dịch để sử dụng sau này
-      const newTransactionId = paymentData.transactionId;
-      setOrderCode(newTransactionId);
+      const newTransactionId = paymentData.payment?.transactionId;
+      if (newTransactionId) {
+        setOrderCode(newTransactionId);
+      } else {
+        throw new Error("Không nhận được mã giao dịch từ server");
+      }
       
       // Lấy mã QR và URL thanh toán trực tiếp từ response
       if (paymentData.qrCode) {
@@ -225,7 +227,7 @@ export function PayOSDirectCheckout({
       console.log("Sending cancel request for:", orderCode);
       const response = await apiRequest(
         "POST",
-        `/api/payos/cancel/${orderCode}`,
+        `/api/payment/payos/cancel/${orderCode}`,
       );
 
       if (!response.ok) {

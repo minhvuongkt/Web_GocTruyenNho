@@ -595,7 +595,41 @@ export function PaymentPage() {
                       </div>
 
                       <Button
-                        onClick={() => createPaymentMutation.mutate()}
+                        onClick={() => {
+                          if (paymentMethod === "payos") {
+                            // Đối với thanh toán PayOS chỉ tạo giao dịch thông qua PayOSDirectCheckout
+                            // trực tiếp thay vì qua /api/payments trước
+                            const amountValue = parseInt(amount);
+                            
+                            if (amountValue < minimumDeposit) {
+                              toast({
+                                title: "Số tiền không hợp lệ",
+                                description: `Số tiền tối thiểu là ${formatCurrency(minimumDeposit)} VNĐ`,
+                                variant: "destructive"
+                              });
+                              return;
+                            }
+                            
+                            if (amountValue % 1000 !== 0) {
+                              toast({
+                                title: "Số tiền không hợp lệ",
+                                description: "Số tiền phải là bội số của 1,000 VNĐ",
+                                variant: "destructive"
+                              });
+                              return;
+                            }
+                            
+                            // Đặt trạng thái để hiển thị PayOSDirectCheckout
+                            setPaymentStatus({
+                              processing: true,
+                              // transactionId sẽ được tạo tự động bởi PayOSDirectCheckout
+                            });
+                            setPaymentDate(new Date());
+                          } else {
+                            // Các phương thức thanh toán khác (bank_transfer) vẫn sử dụng flow cũ
+                            createPaymentMutation.mutate();
+                          }
+                        }}
                         disabled={!amount || createPaymentMutation.isPending}
                         className="w-full"
                       >

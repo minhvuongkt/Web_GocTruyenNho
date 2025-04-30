@@ -45,11 +45,13 @@ export function PayOSDirectCheckout({
     setMessage("");
 
     try {
-      // Tạo giao dịch mới
-      const response = await apiRequest("POST", "/api/payments", {
+      // Tạo giao dịch mới trực tiếp qua PayOS API
+      const response = await apiRequest("POST", "/api/payos/create-payment-link", {
         amount: amount,
-        method: "payos",
         description: description.length > 25 ? description.substring(0, 25) : description,
+        orderCode: `PAY${Date.now()}`, // Tạo mã giao dịch duy nhất
+        returnUrl: window.location.origin + "/payment-callback?success=true",
+        cancelUrl: window.location.origin + "/payment-callback?success=false",
       });
 
       if (!response.ok) {
@@ -65,17 +67,18 @@ export function PayOSDirectCheckout({
       const newTransactionId = paymentData.transactionId;
       setOrderCode(newTransactionId);
       
-      // Lấy mã QR từ API
-      const qrResponse = await getPaymentQRCode(newTransactionId);
-      console.log("QR code data:", qrResponse);
+      // Lấy mã QR và URL thanh toán trực tiếp từ response
+      if (paymentData.qrCode) {
+        setQrCode(paymentData.qrCode);
+      }
       
-      // Lưu giá trị QR code và URL thanh toán
-      setQrCode(qrResponse.qrCode);
-      setCheckoutUrl(qrResponse.checkoutUrl);
+      if (paymentData.paymentLink) {
+        setCheckoutUrl(paymentData.paymentLink);
+      }
       
       // Tính thời gian còn lại dựa trên expiresAt từ server
-      if (qrResponse.expiresAt) {
-        const expiryDate = new Date(qrResponse.expiresAt);
+      if (paymentData.expiresAt) {
+        const expiryDate = new Date(paymentData.expiresAt);
         const now = new Date();
         const secondsRemaining = Math.floor(
           (expiryDate.getTime() - now.getTime()) / 1000

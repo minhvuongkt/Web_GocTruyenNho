@@ -95,7 +95,7 @@ export function ReaderLayout({
         <div className="container mx-auto">
           <div className="flex justify-between items-center py-3 px-4">
             <div className="flex items-center space-x-4">
-              <Link href={contentType === 'manga' ? `/manga/${contentId}` : `/novel/${contentId}`}>
+              <Link href={`/truyen/${contentId}`}>
                 <Button variant="ghost" size="icon">
                   <ChevronLeft className="h-5 w-5" />
                 </Button>
@@ -135,8 +135,8 @@ export function ReaderLayout({
         <div 
           className={cn(
             "container mx-auto px-4 py-6",
-            contentType === 'novel' && "novel-reader",
-            contentType === 'manga' && "manga-reader"
+            contentType === 'novel' ? "novel-reader" : "",
+            contentType === 'manga' ? "manga-reader" : ""
           )}
           style={{ fontSize: `${fontSize}px` }}
         >
@@ -154,7 +154,7 @@ export function ReaderLayout({
             asChild={!!prevChapterId}
           >
             {prevChapterId ? (
-              <Link href={`/${contentType}/${contentId}/chapter/${prevChapterId}`}>
+              <Link href={`/truyen/${contentId}/chapter/${prevChapterId}`}>
                 <ChevronLeft className="mr-1 h-4 w-4" />
                 Chương trước
               </Link>
@@ -167,7 +167,7 @@ export function ReaderLayout({
           </Button>
           
           <Button variant="outline" size="icon" asChild>
-            <Link href={contentType === 'manga' ? `/manga/${contentId}` : `/novel/${contentId}`}>
+            <Link href={`/truyen/${contentId}`}>
               <Home className="h-4 w-4" />
             </Link>
           </Button>
@@ -185,7 +185,7 @@ export function ReaderLayout({
             asChild={!!nextChapterId}
           >
             {nextChapterId ? (
-              <Link href={`/${contentType}/${contentId}/chapter/${nextChapterId}`}>
+              <Link href={`/truyen/${contentId}/chapter/${nextChapterId}`}>
                 Chương tiếp
                 <ChevronRight className="ml-1 h-4 w-4" />
               </Link>

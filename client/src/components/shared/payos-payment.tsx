@@ -29,14 +29,14 @@ export function PayOSPayment({ amount, username, onSuccess, onCancel }: PayOSPay
     const paymentData = new URLSearchParams(window.location.search);
     const status = paymentData.get('status');
     const paymentId = paymentData.get('id');
-    
+
     // Xử lý callback từ PayOS
     if (status === 'success' && paymentId) {
       toast({
         title: "Đang xác nhận thanh toán",
         description: "Vui lòng đợi trong giây lát..."
       });
-      
+
       // Thông báo thành công và chuyển về tab lịch sử
       onSuccess(paymentId);
       return;
@@ -45,38 +45,38 @@ export function PayOSPayment({ amount, username, onSuccess, onCancel }: PayOSPay
       return;
     }
   }, [onSuccess, onCancel, toast]);
-  
+
   // Lấy thông tin thanh toán từ API
   useEffect(() => {
     const createPayment = async () => {
       try {
         setLoading(true);
-        
+
         // Tạo thanh toán qua API
         const response = await apiRequest('POST', '/api/payments', {
           amount: amount,
           method: 'payos'
         });
-        
+
         if (!response.ok) {
           throw new Error('Không thể tạo thanh toán. Vui lòng thử lại sau.');
         }
-        
+
         const data = await response.json();
-        
+
         // Lưu thông tin thanh toán
         if (data.paymentLink) {
           setCheckoutUrl(data.paymentLink);
         }
-        
+
         if (data.qrCode) {
           setQrCode(data.qrCode);
         }
-        
+
         if (data.payment && data.payment.transactionId) {
           setOrderCode(data.payment.transactionId);
         }
-        
+
         setStatusText('Đang chờ thanh toán');
         setStatusColor('text-amber-500');
       } catch (err: any) {
@@ -86,27 +86,27 @@ export function PayOSPayment({ amount, username, onSuccess, onCancel }: PayOSPay
         setLoading(false);
       }
     };
-    
+
     createPayment();
   }, [amount, username, onCancel]);
 
   // Function to check payment status
   const checkPaymentStatus = async () => {
     if (!orderCode) return;
-    
+
     try {
       setChecking(true);
       setStatusText('Đang kiểm tra trạng thái...');
-      
+
       const response = await checkPayOSPaymentStatus(orderCode);
-      
+
       if (response.code !== '00') {
         throw new Error(response.desc || 'Không thể kiểm tra trạng thái thanh toán');
       }
-      
+
       if (response.data) {
         const status = response.data.status.toLowerCase();
-        
+
         if (status === 'paid' || status === 'completed' || status === 'success') {
           setStatusText('Thanh toán thành công');
           setStatusColor('text-green-500');
@@ -163,10 +163,24 @@ export function PayOSPayment({ amount, username, onSuccess, onCancel }: PayOSPay
       {qrCode && (
         <div className="flex flex-col items-center mb-4">
           <p className="text-sm text-muted-foreground mb-2">Quét mã QR để thanh toán</p>
-          <img src={qrCode} alt="PayOS QR Code" className="max-w-[250px] rounded" />
+          <div className="bg-white p-4 rounded-lg shadow-sm">
+            {qrCode.startsWith('data:image') ? (
+              <img src={qrCode} alt="QR Code" className="w-[200px] h-[200px]" />
+            ) : (
+              <img 
+                src={`data:image/png;base64,${qrCode}`} 
+                alt="QR Code" 
+                className="w-[200px] h-[200px]"
+                onError={(e) => {
+                  const img = e.target as HTMLImageElement;
+                  img.style.display = 'none';
+                }}
+              />
+            )}
+          </div>
         </div>
       )}
-      
+
       <div className="text-center">
         <p className="text-sm font-medium">Trạng thái: <span className={statusColor}>{statusText || 'Đang chờ thanh toán'}</span></p>
       </div>
@@ -180,7 +194,7 @@ export function PayOSPayment({ amount, username, onSuccess, onCancel }: PayOSPay
             </a>
           </Button>
         )}
-        
+
         <Button 
           onClick={checkPaymentStatus} 
           disabled={checking}
@@ -200,7 +214,7 @@ export function PayOSPayment({ amount, username, onSuccess, onCancel }: PayOSPay
           )}
         </Button>
       </div>
-      
+
       <p className="text-xs text-muted-foreground text-center mt-2">
         Thanh toán sẽ hết hạn sau 10 phút. Nếu bạn đã thanh toán nhưng chưa được cập nhật, 
         vui lòng kiểm tra trạng thái hoặc liên hệ admin.

@@ -635,27 +635,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = (req.user as any).id;
       const { contentId, chapterId } = req.body;
-      
+
       // Validate input parameters
       if (!contentId || !chapterId) {
-        return res.status(400).json({ error: "Content ID and Chapter ID are required" });
+        return res
+          .status(400)
+          .json({ error: "Content ID and Chapter ID are required" });
       }
-      
+
       // Ensure they're valid numbers
       const contentIdNum = parseInt(contentId);
       const chapterIdNum = parseInt(chapterId);
-      
+
       if (isNaN(contentIdNum) || isNaN(chapterIdNum)) {
-        return res.status(400).json({ error: "Invalid Content ID or Chapter ID" });
+        return res
+          .status(400)
+          .json({ error: "Invalid Content ID or Chapter ID" });
       }
-      
+
       await storage.addReadingHistory(userId, contentIdNum, chapterIdNum);
       res.status(201).json({ success: true });
     } catch (error) {
       console.error("Error adding reading history:", error);
-      res.status(500).json({ 
-        error: "Failed to add reading history", 
-        message: error instanceof Error ? error.message : "Unknown error"
+      res.status(500).json({
+        error: "Failed to add reading history",
+        message: error instanceof Error ? error.message : "Unknown error",
       });
     }
   });
@@ -663,20 +667,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/reading-history", ensureAuthenticated, async (req, res) => {
     try {
       const userId = (req.user as any).id;
-      
+
       if (!userId) {
         return res.status(400).json({ error: "User ID is required" });
       }
-      
+
       const history = await storage.getReadingHistory(userId);
-      
+
       // Always return an array, even if empty
       res.json(history || []);
     } catch (error) {
       console.error("Error fetching reading history:", error);
-      res.status(500).json({ 
-        error: "Failed to get reading history", 
-        message: error instanceof Error ? error.message : "Unknown error"
+      res.status(500).json({
+        error: "Failed to get reading history",
+        message: error instanceof Error ? error.message : "Unknown error",
       });
     }
   });
@@ -686,42 +690,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = (req.user as any).id;
       const { contentId } = req.body;
-      
+
       if (!contentId || isNaN(parseInt(contentId))) {
-        return res.status(400).json({ error: "Content ID is required and must be a valid number" });
+        return res
+          .status(400)
+          .json({ error: "Content ID is required and must be a valid number" });
       }
 
       const result = await storage.toggleFavorite(userId, parseInt(contentId));
       res.json({ success: true, added: result });
     } catch (error) {
       console.error("Error toggling favorite:", error);
-      res.status(500).json({ 
-        error: "Failed to toggle favorite", 
-        message: error instanceof Error ? error.message : "Unknown error" 
+      res.status(500).json({
+        error: "Failed to toggle favorite",
+        message: error instanceof Error ? error.message : "Unknown error",
       });
     }
   });
-  
-  // Thêm route riêng cho thêm/xóa yêu thích theo ID
-  app.post("/api/favorites/:contentId", ensureAuthenticated, async (req, res) => {
-    try {
-      const userId = (req.user as any).id;
-      const contentId = parseInt(req.params.contentId);
-      
-      if (isNaN(contentId)) {
-        return res.status(400).json({ error: "Invalid content ID" });
-      }
 
-      const result = await storage.toggleFavorite(userId, contentId);
-      res.json({ success: true, added: result });
-    } catch (error) {
-      console.error("Error toggling favorite:", error);
-      res.status(500).json({ 
-        error: "Failed to toggle favorite", 
-        message: error instanceof Error ? error.message : "Unknown error" 
-      });
-    }
-  });
+  // Thêm route riêng cho thêm/xóa yêu thích theo ID
+  app.post(
+    "/api/favorites/:contentId",
+    ensureAuthenticated,
+    async (req, res) => {
+      try {
+        const userId = (req.user as any).id;
+        const contentId = parseInt(req.params.contentId);
+
+        if (isNaN(contentId)) {
+          return res.status(400).json({ error: "Invalid content ID" });
+        }
+
+        const result = await storage.toggleFavorite(userId, contentId);
+        res.json({ success: true, added: result });
+      } catch (error) {
+        console.error("Error toggling favorite:", error);
+        res.status(500).json({
+          error: "Failed to toggle favorite",
+          message: error instanceof Error ? error.message : "Unknown error",
+        });
+      }
+    },
+  );
 
   app.get("/api/favorites", ensureAuthenticated, async (req, res) => {
     try {
@@ -757,14 +767,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/content/:contentId/comments", async (req, res) => {
     try {
       const contentId = parseInt(req.params.contentId);
-      
+
       // Verify contentId is a valid number
       if (isNaN(contentId)) {
         return res.status(400).json({ error: "Invalid content ID" });
       }
-      
+
       const comments = await storage.getCommentsByContent(contentId);
-      
+
       // Always return an array, even if empty
       res.json(comments || []);
     } catch (error) {
@@ -776,14 +786,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/chapters/:chapterId/comments", async (req, res) => {
     try {
       const chapterId = parseInt(req.params.chapterId);
-      
+
       // Verify chapterId is a valid number
       if (isNaN(chapterId)) {
         return res.status(400).json({ error: "Invalid chapter ID" });
       }
-      
+
       const comments = await storage.getCommentsByChapter(chapterId);
-      
+
       // Always return an array, even if empty
       res.json(comments || []);
     } catch (error) {
@@ -1414,7 +1424,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Also include VietQR bank info for the payment form
         bankBin: settings.vietQRConfig?.bankId || "MBBANK",
         accountNumber: settings.vietQRConfig?.accountNumber || "0862713897",
-        accountName: settings.vietQRConfig?.accountName || "góc truyện nhỏ",
+        accountName: settings.vietQRConfig?.accountName || "Mèo Đi Dịch Truyện",
       });
     } catch (error) {
       res.status(500).json({ error: "Failed to get pricing settings" });
@@ -1478,6 +1488,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           description,
           returnUrl,
           cancelUrl,
+          expiredAt,
         });
 
         // Return the result directly
@@ -1993,10 +2004,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const username = (req.user as any).username;
         const { amount } = req.body;
 
-        if (!amount || amount < 10000 || amount % 1000 !== 0) {
+        if (!amount || amount < 5000 || amount % 1000 !== 0) {
           return res.status(400).json({
             error:
-              "Invalid amount. Amount must be at least 10,000 VND and must be divisible by 1,000.",
+              "Số tiền không phù hợp. Số tiền nhập phải lớn hơn 5k và chia hết cho 1000",
           });
         }
 
@@ -2020,20 +2031,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
 
         // Create a new payment record
-        const transactionId = createHash("sha256")
-          .update(`${userId}-${Date.now()}-payos`)
-          .digest("hex")
-          .substring(0, 12);
-
+        const transactionId = new Date()
+          .toISOString()
+          .split(".")[1]
+          .slice(0, 7);
         const newPayment = await storage.createPayment({
           userId,
           amount,
           method: "payos",
-          transactionId,
+          transactionId: transactionId,
           status: "pending",
           createdAt: new Date(),
         });
-
         // Create the payment via PayOS
         const baseUrl = payosConfig.baseUrl || "https://api-merchant.payos.vn";
         const config = {
@@ -2047,25 +2056,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
           process.env.APP_URL || `http://localhost:${process.env.PORT || 5000}`;
         const returnUrl = `${appUrl}/payment/success?id=${newPayment.id}`;
         const cancelUrl = `${appUrl}/payment/cancel?id=${newPayment.id}`;
-
+        const expiryMinutes = settings.expiryConfig?.bankTransfer || 15;
+        const expiresAt =
+          newPayment.createdAt.getTime() + expiryMinutes * 60 * 1000;
         const paymentData = {
           amount,
           description: `NAP_${username}`,
           orderCode: transactionId,
           returnUrl,
           cancelUrl,
+          expiredAt: expiresAt,
         };
 
         const paymentLinkResponse = await createPayOSPaymentLink(
           config,
           paymentData,
         );
-
         res.status(201).json({
           payment: newPayment,
-          paymentLink: paymentLinkResponse.data?.checkoutUrl || null,
-          qrCode: paymentLinkResponse.data?.qrCode || null,
-          expiresAt: new Date(Date.now() + 15 * 60 * 1000), // 15 minutes expiry
+          paymentLink: paymentLinkResponse.checkoutUrl || null,
+          qrCode: paymentLinkResponse.qrCode || null,
+          expiresAt: new Date(expiresAt), // 15 minutes expiry
         });
       } catch (error) {
         console.error("Error creating PayOS payment:", error);
@@ -2163,268 +2174,288 @@ export async function registerRoutes(app: Express): Promise<Server> {
   );
 
   // PayOS endpoints for embedded checkout
-  app.post("/api/payos/create-payment", ensureAuthenticated, async (req, res) => {
-    try {
-      const { amount, orderCode, description, returnUrl, cancelUrl, expiryTime } = req.body;
-
-      // Validate required fields
-      if (!amount || !orderCode || !description || !returnUrl || !cancelUrl) {
-        return res.status(400).json({
-          code: "01",
-          desc: "Missing required parameters",
-          data: null,
-        });
-      }
-      
-      // Get expiry time in seconds (default: 10 minutes)
-      const paymentExpiryTime = expiryTime && Number(expiryTime) > 0 ? 
-        Number(expiryTime) : 600;
-
-      // Get PayOS settings
-      const settings = await storage.getPaymentSettings();
-
-      if (!settings || !settings.payosConfig) {
-        return res.status(500).json({
-          code: "02",
-          desc: "PayOS settings not configured",
-          data: null,
-        });
-      }
-
-      const payosConfig = settings.payosConfig as any;
-
-      // Check for required configurations
-      if (
-        !payosConfig.clientId ||
-        !payosConfig.apiKey ||
-        !payosConfig.checksumKey ||
-        !payosConfig.baseUrl
-      ) {
-        return res.status(500).json({
-          code: "03",
-          desc: "Incomplete PayOS configuration",
-          data: null,
-        });
-      }
-
-      // Create payment link
-      const result = await createPayOSPaymentLink(payosConfig, {
-        amount,
-        orderCode,
-        description,
-        returnUrl,
-        cancelUrl,
-      });
-
-      // Calculate expiry time - add to response
-      const expiresAt = new Date(Date.now() + (paymentExpiryTime * 1000));
-      
-      // Return the result directly with expiry information
-      res.json({
-        ...result,
-        expiresAt: expiresAt.toISOString()
-      });
-    } catch (error: any) {
-      console.error("PayOS create payment error:", error);
-      res.status(500).json({
-        code: "99",
-        desc: error.message || "Failed to create PayOS payment",
-        data: null,
-      });
-    }
-  });
-
-  // Cancel a PayOS payment
-  app.post("/api/payos/cancel/:orderCode", ensureAuthenticated, async (req, res) => {
-    try {
-      const { orderCode } = req.params;
-      if (!orderCode) {
-        return res.status(400).json({
-          code: "01",
-          desc: "Order code is required",
-          data: null,
-        });
-      }
-
-      // Get payment from storage to verify ownership
-      const payment = await storage.getPaymentByTransactionId(orderCode);
-      if (!payment) {
-        return res.status(404).json({
-          code: "04",
-          desc: "Payment not found",
-          data: null,
-        });
-      }
-
-      // Check if the payment belongs to the user
-      const userId = (req.user as any).id;
-      if (payment.userId !== userId && (req.user as any).role !== "admin") {
-        return res.status(403).json({
-          code: "03", 
-          desc: "Forbidden - you don't have permission to cancel this payment",
-          data: null
-        });
-      }
-
-      // Check if payment is already completed or failed
-      if (payment.status !== "pending") {
-        return res.status(400).json({ 
-          code: "05",
-          desc: `Cannot cancel payment - already ${payment.status}`,
-          data: null
-        });
-      }
-
-      // Get PayOS settings
-      const settings = await storage.getPaymentSettings();
-      if (!settings || !settings.payosConfig) {
-        return res.status(500).json({
-          code: "02",
-          desc: "PayOS settings not configured",
-          data: null,
-        });
-      }
-
-      const payosConfig = settings.payosConfig as any;
-
-      // Call PayOS API to cancel the payment
+  app.post(
+    "/api/payos/create-payment",
+    ensureAuthenticated,
+    async (req, res) => {
       try {
-        const cancelResult = await cancelPayOSPayment(
-          {
-            clientId: payosConfig.clientId,
-            apiKey: payosConfig.apiKey,
-            checksumKey: payosConfig.checksumKey,
-            baseUrl: payosConfig.baseUrl || "https://api-merchant.payos.vn",
-          },
-          orderCode
-        );
+        const {
+          amount,
+          orderCode,
+          description,
+          returnUrl,
+          cancelUrl,
+          expiryTime,
+        } = req.body;
 
-        // Update payment status in database
-        await storage.updatePaymentStatus(payment.id, "failed");
+        // Validate required fields
+        if (!amount || !orderCode || !description || !returnUrl || !cancelUrl) {
+          return res.status(400).json({
+            code: "01",
+            desc: "Missing required parameters",
+            data: null,
+          });
+        }
 
-        return res.json({
-          code: "00",
-          desc: "Payment cancelled successfully",
-          data: cancelResult
+        // Get expiry time in seconds (default: 10 minutes)
+        const paymentExpiryTime =
+          expiryTime && Number(expiryTime) > 0 ? Number(expiryTime) : 600;
+
+        // Get PayOS settings
+        const settings = await storage.getPaymentSettings();
+
+        if (!settings || !settings.payosConfig) {
+          return res.status(500).json({
+            code: "02",
+            desc: "PayOS settings not configured",
+            data: null,
+          });
+        }
+
+        const payosConfig = settings.payosConfig as any;
+
+        // Check for required configurations
+        if (
+          !payosConfig.clientId ||
+          !payosConfig.apiKey ||
+          !payosConfig.checksumKey ||
+          !payosConfig.baseUrl
+        ) {
+          return res.status(500).json({
+            code: "03",
+            desc: "Incomplete PayOS configuration",
+            data: null,
+          });
+        }
+
+        // Create payment link
+        const result = await createPayOSPaymentLink(payosConfig, {
+          amount,
+          orderCode,
+          description,
+          returnUrl,
+          cancelUrl,
+          expiredAt,
+        });
+
+        // Calculate expiry time - add to response
+        const expiresAt = new Date(Date.now() + paymentExpiryTime * 1000);
+
+        // Return the result directly with expiry information
+        res.json({
+          ...result,
+          expiresAt: expiresAt.toISOString(),
         });
       } catch (error: any) {
-        console.error("PayOS payment cancellation error:", error);
-        
-        // Even if the PayOS API call fails, we'll still mark it as failed in our database
-        // This ensures the user's UI is updated
-        await storage.updatePaymentStatus(payment.id, "failed");
-        
-        return res.status(200).json({
-          code: "00", 
-          desc: "Payment marked as cancelled in our database",
-          data: {
-            error: error.message,
-            orderCode
-          }
-        });
-      }
-    } catch (error: any) {
-      console.error("Payment cancellation API error:", error);
-      return res.status(500).json({
-        code: "99",
-        desc: error.message || "Server error during payment cancellation",
-        data: null
-      });
-    }
-  });
-
-  app.get("/api/payos/status/:orderCode", ensureAuthenticated, async (req, res) => {
-    try {
-      const { orderCode } = req.params;
-
-      if (!orderCode) {
-        return res.status(400).json({
-          code: "01",
-          desc: "Order code is required",
+        console.error("PayOS create payment error:", error);
+        res.status(500).json({
+          code: "99",
+          desc: error.message || "Failed to create PayOS payment",
           data: null,
         });
       }
+    },
+  );
 
-      // Get PayOS settings
-      const settings = await storage.getPaymentSettings();
-
-      if (!settings || !settings.payosConfig) {
-        return res.status(500).json({
-          code: "02",
-          desc: "PayOS settings not configured",
-          data: null,
-        });
-      }
-
-      const payosConfig = settings.payosConfig as any;
-
-      // Check payment status
-      const result = await checkPayOSPaymentStatus(payosConfig, orderCode);
-      console.log(
-        "PayOS status check result:",
-        JSON.stringify(result, null, 2),
-      );
-
-      // Biến để theo dõi trạng thái thanh toán
-      let paymentStatus = null;
-
-      // Xử lý cả hai dạng response có thể nhận được từ PayOS
-      if (result) {
-        // Kiểm tra dạng response mới (có code, data)
-        if (result.code === "00" && result.data && result.data.status) {
-          paymentStatus = result.data.status;
+  // Cancel a PayOS payment
+  app.post(
+    "/api/payos/cancel/:orderCode",
+    ensureAuthenticated,
+    async (req, res) => {
+      try {
+        const { orderCode } = req.params;
+        if (!orderCode) {
+          return res.status(400).json({
+            code: "01",
+            desc: "Order code is required",
+            data: null,
+          });
         }
-        // Kiểm tra dạng response trực tiếp từ SDK
-        else if (result.status) {
-          paymentStatus = result.status;
-        }
-      }
 
-      console.log("PayOS payment status:", paymentStatus);
-
-      // Nếu tìm thấy trạng thái và đã thanh toán
-      if (paymentStatus === "PAID") {
-        // Tìm payment với order code/transaction ID này
+        // Get payment from storage to verify ownership
         const payment = await storage.getPaymentByTransactionId(orderCode);
+        if (!payment) {
+          return res.status(404).json({
+            code: "04",
+            desc: "Payment not found",
+            data: null,
+          });
+        }
 
-        if (payment && payment.status !== "completed") {
-          // Cập nhật trạng thái payment
-          await storage.updatePaymentStatus(payment.id, "completed");
+        // Check if the payment belongs to the user
+        const userId = (req.user as any).id;
+        if (payment.userId !== userId && (req.user as any).role !== "admin") {
+          return res.status(403).json({
+            code: "03",
+            desc: "Forbidden - you don't have permission to cancel this payment",
+            data: null,
+          });
+        }
 
-          // Cập nhật số dư người dùng
-          const user = await storage.getUser(payment.userId);
+        // Check if payment is already completed or failed
+        if (payment.status !== "pending") {
+          return res.status(400).json({
+            code: "05",
+            desc: `Cannot cancel payment - already ${payment.status}`,
+            data: null,
+          });
+        }
 
-          if (user) {
-            await storage.updateUserBalance(
-              user.id,
-              user.balance + payment.amount,
-            );
+        // Get PayOS settings
+        const settings = await storage.getPaymentSettings();
+        if (!settings || !settings.payosConfig) {
+          return res.status(500).json({
+            code: "02",
+            desc: "PayOS settings not configured",
+            data: null,
+          });
+        }
+
+        const payosConfig = settings.payosConfig as any;
+
+        // Call PayOS API to cancel the payment
+        try {
+          const cancelResult = await cancelPayOSPayment(
+            {
+              clientId: payosConfig.clientId,
+              apiKey: payosConfig.apiKey,
+              checksumKey: payosConfig.checksumKey,
+              baseUrl: payosConfig.baseUrl || "https://api-merchant.payos.vn",
+            },
+            orderCode,
+          );
+
+          // Update payment status in database
+          await storage.updatePaymentStatus(payment.id, "failed");
+
+          return res.json({
+            code: "00",
+            desc: "Payment cancelled successfully",
+            data: cancelResult,
+          });
+        } catch (error: any) {
+          console.error("PayOS payment cancellation error:", error);
+
+          // Even if the PayOS API call fails, we'll still mark it as failed in our database
+          // This ensures the user's UI is updated
+          await storage.updatePaymentStatus(payment.id, "failed");
+
+          return res.status(200).json({
+            code: "00",
+            desc: "Payment marked as cancelled in our database",
+            data: {
+              error: error.message,
+              orderCode,
+            },
+          });
+        }
+      } catch (error: any) {
+        console.error("Payment cancellation API error:", error);
+        return res.status(500).json({
+          code: "99",
+          desc: error.message || "Server error during payment cancellation",
+          data: null,
+        });
+      }
+    },
+  );
+
+  app.get(
+    "/api/payos/status/:orderCode",
+    ensureAuthenticated,
+    async (req, res) => {
+      try {
+        const { orderCode } = req.params;
+
+        if (!orderCode) {
+          return res.status(400).json({
+            code: "01",
+            desc: "Order code is required",
+            data: null,
+          });
+        }
+
+        // Get PayOS settings
+        const settings = await storage.getPaymentSettings();
+
+        if (!settings || !settings.payosConfig) {
+          return res.status(500).json({
+            code: "02",
+            desc: "PayOS settings not configured",
+            data: null,
+          });
+        }
+
+        const payosConfig = settings.payosConfig as any;
+
+        // Check payment status
+        const result = await checkPayOSPaymentStatus(payosConfig, orderCode);
+        console.log(
+          "PayOS status check result:",
+          JSON.stringify(result, null, 2),
+        );
+
+        // Biến để theo dõi trạng thái thanh toán
+        let paymentStatus = null;
+
+        // Xử lý cả hai dạng response có thể nhận được từ PayOS
+        if (result) {
+          // Kiểm tra dạng response mới (có code, data)
+          if (result.code === "00" && result.data && result.data.status) {
+            paymentStatus = result.data.status;
+          }
+          // Kiểm tra dạng response trực tiếp từ SDK
+          else if (result.status) {
+            paymentStatus = result.status;
           }
         }
-      }
 
-      // Trả về kết quả
-      // Chuyển đổi dữ liệu theo định dạng thống nhất
-      // để client xử lý dễ dàng
-      res.json({
-        code: "00",
-        desc: "Success",
-        data: {
-          status: paymentStatus,
-          orderCode: orderCode,
-          // Thêm các trường khác từ result nếu có
-          ...(result.data || result),
-        },
-      });
-    } catch (error: any) {
-      console.error("PayOS status check error:", error);
-      res.status(500).json({
-        code: "99",
-        desc: error.message || "Failed to check PayOS payment status",
-        data: null,
-      });
-    }
-  });
+        console.log("PayOS payment status:", paymentStatus);
+
+        // Nếu tìm thấy trạng thái và đã thanh toán
+        if (paymentStatus === "PAID") {
+          // Tìm payment với order code/transaction ID này
+          const payment = await storage.getPaymentByTransactionId(orderCode);
+
+          if (payment && payment.status !== "completed") {
+            // Cập nhật trạng thái payment
+            await storage.updatePaymentStatus(payment.id, "completed");
+
+            // Cập nhật số dư người dùng
+            const user = await storage.getUser(payment.userId);
+
+            if (user) {
+              await storage.updateUserBalance(
+                user.id,
+                user.balance + payment.amount,
+              );
+            }
+          }
+        }
+
+        // Trả về kết quả
+        // Chuyển đổi dữ liệu theo định dạng thống nhất
+        // để client xử lý dễ dàng
+        res.json({
+          code: "00",
+          desc: "Success",
+          data: {
+            status: paymentStatus,
+            orderCode: orderCode,
+            // Thêm các trường khác từ result nếu có
+            ...(result.data || result),
+          },
+        });
+      } catch (error: any) {
+        console.error("PayOS status check error:", error);
+        res.status(500).json({
+          code: "99",
+          desc: error.message || "Failed to check PayOS payment status",
+          data: null,
+        });
+      }
+    },
+  );
 
   // PayOS webhook endpoint
   app.post("/api/webhooks/payos", async (req, res) => {

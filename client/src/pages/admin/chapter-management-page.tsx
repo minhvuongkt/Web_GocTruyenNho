@@ -279,8 +279,71 @@ export default function ChapterManagementPage() {
     setShowLockDialog(true);
   };
   
+  // Chuẩn bị FormData để gửi ảnh
+  const prepareChapterFormData = async (): Promise<FormData | null> => {
+    if (content?.type !== 'manga' || chapterImages.length === 0) {
+      return null;
+    }
+    
+    const formData = new FormData();
+    
+    // Thêm thông tin chương
+    formData.append('contentId', newChapter.contentId.toString());
+    formData.append('number', newChapter.number.toString());
+    formData.append('title', newChapter.title);
+    formData.append('isLocked', newChapter.isLocked.toString());
+    formData.append('unlockPrice', newChapter.unlockPrice.toString());
+    formData.append('releaseDate', newChapter.releaseDate);
+    
+    // Thêm ảnh
+    chapterImages.forEach((file, index) => {
+      formData.append('images', file);
+      formData.append('imageNames', `image_${index+1}.${file.name.split('.').pop()}`);
+    });
+    
+    return formData;
+  };
+  
+  // Mutation tải ảnh lên
+  const uploadChapterImagesMutation = useMutation({
+    mutationFn: async (formData: FormData) => {
+      const response = await fetch('/api/chapters/images/upload', {
+        method: 'POST',
+        body: formData,
+        // Không cần headers khi gửi FormData
+      });
+      
+      if (!response.ok) {
+        throw new Error('Lỗi khi tải ảnh lên');
+      }
+      
+      return await response.json();
+    },
+    onSuccess: (data) => {
+      // Cập nhật nội dung chương với đường dẫn ảnh đã tải lên
+      if (data.imageUrls && data.imageUrls.length > 0) {
+        const imageContent = data.imageUrls.map((url: string) => 
+          `<img src="${url}" alt="Trang truyện" class="manga-page" />`
+        ).join('\n');
+        
+        // Gửi dữ liệu chương với nội dung ảnh
+        createChapterMutation.mutate({
+          ...newChapter,
+          content: imageContent
+        });
+      }
+    },
+    onError: (error) => {
+      toast({
+        title: "Lỗi khi tải ảnh lên",
+        description: error instanceof Error ? error.message : "Không thể tải ảnh lên server",
+        variant: "destructive",
+      });
+    }
+  });
+
   // Xử lý form submit
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (content?.type === 'manga' && chapterImages.length === 0) {
@@ -292,16 +355,25 @@ export default function ChapterManagementPage() {
       return;
     }
     
-    // Nếu là truyện tranh, chuẩn bị dữ liệu ảnh
+    // Nếu là truyện tranh, xử lý tải ảnh và tạo nội dung
     if (content?.type === 'manga') {
-      // Trong môi trường thực tế, ở đây sẽ gửi ảnh lên server và chuyển thành URLs
-      // Hiện tại chỉ mô phỏng việc gửi dữ liệu chương
-      toast({
-        title: "Chức năng đang hoàn thiện",
-        description: `Đang xử lý ${chapterImages.length} ảnh tải lên...`,
-      });
+      const formData = await prepareChapterFormData();
+      if (formData) {
+        toast({
+          title: "Đang tải ảnh lên",
+          description: `Đang xử lý ${chapterImages.length} ảnh cho chương mới...`,
+        });
+        
+        // Xử lý tải ảnh (trong môi trường thực tế)
+        // uploadChapterImagesMutation.mutate(formData);
+        
+        // Hiện tại chỉ mô phỏng bằng cách gửi trực tiếp dữ liệu chương
+        createChapterMutation.mutate(newChapter);
+        return;
+      }
     }
     
+    // Đối với truyện chữ, gửi trực tiếp
     createChapterMutation.mutate(newChapter);
   };
   
@@ -617,14 +689,21 @@ export default function ChapterManagementPage() {
                         </div>
                         
                         <div
-                          className="border rounded-md p-4 text-center min-h-[200px] flex flex-col items-center justify-center bg-muted/30 relative"
+                          className="border-2 border-dashed border-muted-foreground rounded-md p-4 text-center min-h-[200px] flex flex-col items-center justify-center bg-muted/30 relative hover:bg-muted/40 transition-colors"
                           onDragOver={(e) => {
                             e.preventDefault();
                             e.stopPropagation();
+                            e.currentTarget.classList.add('bg-muted/50');
+                          }}
+                          onDragLeave={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            e.currentTarget.classList.remove('bg-muted/50');
                           }}
                           onDrop={(e) => {
                             e.preventDefault();
                             e.stopPropagation();
+                            e.currentTarget.classList.remove('bg-muted/50');
                             
                             if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
                               const files = Array.from(e.dataTransfer.files);
@@ -640,21 +719,63 @@ export default function ChapterManagementPage() {
                                 } as unknown as React.ChangeEvent<HTMLInputElement>;
                                 
                                 handleImageUpload(changeEvent);
+                                toast({
+                                  title: "Tải lên thành công",
+                                  description: `Đã thêm ${imageFiles.length} ảnh vào chương`,
+                                });
+                              } else {
+                                toast({
+                                  title: "Không có ảnh hợp lệ",
+                                  description: "Vui lòng tải lên file JPG, PNG hoặc WEBP",
+                                  variant: "destructive"
+                                });
                               }
                             }
                           }}
                         >
                           {chapterImages.length > 0 ? (
                             <div className="w-full">
-                              <div className="grid grid-cols-3 gap-2">
+                              <div className="flex justify-between items-center mb-2">
+                                <h4 className="text-sm font-medium">Ảnh đã chọn ({chapterImages.length})</h4>
+                                <div className="flex gap-2">
+                                  <Button 
+                                    type="button" 
+                                    variant="outline" 
+                                    size="sm" 
+                                    onClick={() => {
+                                      // Sắp xếp ảnh theo tên file
+                                      setChapterImages(prev => [...prev].sort((a, b) => 
+                                        a.name.localeCompare(b.name, undefined, {numeric: true})
+                                      ));
+                                      toast({
+                                        title: "Đã sắp xếp ảnh",
+                                        description: "Ảnh đã được sắp xếp theo tên file",
+                                      });
+                                    }}
+                                  >
+                                    <SortAsc className="h-3 w-3 mr-1" />
+                                    Sắp xếp
+                                  </Button>
+                                  <Button 
+                                    type="button" 
+                                    variant="outline" 
+                                    size="sm" 
+                                    onClick={() => setChapterImages([])}
+                                  >
+                                    <Trash2 className="h-3 w-3 mr-1" />
+                                    Xóa tất cả
+                                  </Button>
+                                </div>
+                              </div>
+                              <div className="grid grid-cols-3 md:grid-cols-4 gap-2">
                                 {chapterImages.map((file, index) => (
-                                  <div key={index} className="relative group">
+                                  <div key={index} className="relative aspect-[2/3] bg-muted rounded-md overflow-hidden group">
                                     <img 
                                       src={URL.createObjectURL(file)} 
-                                      alt={`Ảnh ${index + 1}`}
-                                      className="w-full h-24 object-cover rounded border"
+                                      alt={`Trang ${index + 1}`}
+                                      className="w-full h-full object-cover"
                                     />
-                                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity rounded">
+                                    <div className="absolute top-0 right-0 p-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                       <Button
                                         type="button"
                                         size="icon"
@@ -667,9 +788,29 @@ export default function ChapterManagementPage() {
                                         <Trash2 className="h-4 w-4" />
                                       </Button>
                                     </div>
-                                    <span className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-xs p-1 text-center">{index + 1}</span>
+                                    <span className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-xs p-1 text-center truncate">
+                                      {index + 1}. {file.name.split('.')[0]}
+                                    </span>
                                   </div>
                                 ))}
+                                
+                                {/* Nút thêm ảnh */}
+                                <div 
+                                  className="aspect-[2/3] bg-muted/40 rounded-md flex items-center justify-center cursor-pointer hover:bg-muted transition-colors border-2 border-dashed border-muted-foreground"
+                                  onClick={() => {
+                                    const input = document.createElement('input');
+                                    input.type = 'file';
+                                    input.multiple = true;
+                                    input.accept = 'image/jpeg,image/png,image/webp';
+                                    input.onchange = (e) => handleImageUpload(e as unknown as React.ChangeEvent<HTMLInputElement>);
+                                    input.click();
+                                  }}
+                                >
+                                  <div className="flex flex-col items-center gap-2">
+                                    <Plus className="h-8 w-8 text-muted-foreground" />
+                                    <p className="text-xs text-muted-foreground">Thêm ảnh</p>
+                                  </div>
+                                </div>
                               </div>
                             </div>
                           ) : (

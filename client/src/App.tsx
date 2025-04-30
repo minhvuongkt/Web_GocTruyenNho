@@ -29,13 +29,17 @@ import Redirect from "@/components/shared/redirect";
 import DashboardPage from "@/pages/admin/dashboard-page";
 import MangaManagementPage from "@/pages/admin/manga-management-page";
 import UsersManagementPage from "@/pages/admin/users-management-page";
-import ChapterManagementPage from "@/pages/admin/chapter-management-page";
 import PaymentManagementPage from "@/pages/admin/payment-management-page";
 import PaymentSettingsPage from "@/pages/admin/payment-settings-page";
 import AdManagementPage from "@/pages/admin/ad-management-page";
 import GenreManagementPage from "@/pages/admin/genre-management-page";
 import AuthorManagementPage from "@/pages/admin/author-management-page";
 import TranslationGroupManagementPage from "@/pages/admin/translation-group-management-page";
+
+// Admin Chapter Pages
+import ChapterListPage from "@/pages/admin/chapters/chapter-list-page";
+import ChapterNewPage from "@/pages/admin/chapters/chapter-new-page";
+import ChapterEditPage from "@/pages/admin/chapters/chapter-edit-page";
 
 function Router() {
   return (
@@ -92,8 +96,20 @@ function Router() {
       <ProtectedRoute path="/admin" component={DashboardPage} requireAdmin={true} />
       <ProtectedRoute path="/admin/manga" component={MangaManagementPage} requireAdmin={true} />
       <ProtectedRoute path="/admin/users" component={UsersManagementPage} requireAdmin={true} />
+      {/* Admin Chapter Routes */}
       <ProtectedRoute path="/admin/chapters/:contentId" requireAdmin={true}>
-        {(params) => <ChapterManagementPage contentId={normalizeId(params.contentId)} />}
+        {(params) => <ChapterListPage contentId={normalizeId(params.contentId)} />}
+      </ProtectedRoute>
+      <ProtectedRoute path="/admin/chapters/:contentId/new" requireAdmin={true}>
+        {(params) => <ChapterNewPage contentId={normalizeId(params.contentId)} />}
+      </ProtectedRoute>
+      <ProtectedRoute path="/admin/chapters/:contentId/chapter/:chapterId" requireAdmin={true}>
+        {(params) => (
+          <ChapterEditPage 
+            contentId={normalizeId(params.contentId)} 
+            chapterId={normalizeId(params.chapterId)} 
+          />
+        )}
       </ProtectedRoute>
       <ProtectedRoute path="/admin/payments" component={PaymentManagementPage} requireAdmin={true} />
       <ProtectedRoute path="/admin/payment-settings" component={PaymentSettingsPage} requireAdmin={true} />

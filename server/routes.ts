@@ -548,15 +548,76 @@ export async function registerRoutes(app: Express): Promise<Server> {
     async (req, res) => {
       try {
         const contentId = parseInt(req.params.contentId);
+        const { positionInfo, ...otherData } = req.body;
+        
         const chapterData = {
-          ...req.body,
+          ...otherData,
           contentId,
         };
-
-        const newChapter = await storage.createChapter(chapterData);
-        res.status(201).json(newChapter);
+        
+        // Handle insertion at specific position
+        if (positionInfo && positionInfo.insertPosition === 'specific' && positionInfo.referenceChapterId) {
+          // Get reference chapter
+          const referenceChapterId = parseInt(positionInfo.referenceChapterId);
+          const referenceChapter = await storage.getChapter(referenceChapterId);
+          
+          if (!referenceChapter) {
+            return res.status(404).json({ error: "Reference chapter not found" });
+          }
+          
+          // Get all chapters for this content
+          const contentChapters = await storage.getChaptersByContent(contentId);
+          const sortedChapters = contentChapters.sort((a, b) => a.number - b.number);
+          
+          // Determine new chapter number based on insertion position
+          let newChapterNumber;
+          
+          if (positionInfo.insertRelative === 'before') {
+            // Insert before reference chapter
+            newChapterNumber = referenceChapter.number;
+            
+            // Shift existing chapters up by 1
+            for (const chapter of sortedChapters) {
+              if (chapter.number >= newChapterNumber) {
+                await storage.updateChapter(chapter.id, { 
+                  ...chapter,
+                  number: chapter.number + 1 
+                });
+              }
+            }
+          } else {
+            // Insert after reference chapter
+            newChapterNumber = referenceChapter.number + 1;
+            
+            // Shift existing chapters up by 1
+            for (const chapter of sortedChapters) {
+              if (chapter.number >= newChapterNumber) {
+                await storage.updateChapter(chapter.id, { 
+                  ...chapter,
+                  number: chapter.number + 1 
+                });
+              }
+            }
+          }
+          
+          // Create new chapter with calculated position
+          const newChapter = await storage.createChapter({
+            ...chapterData,
+            number: newChapterNumber
+          });
+          
+          res.status(201).json(newChapter);
+        } else {
+          // Default behavior - add to end
+          const newChapter = await storage.createChapter(chapterData);
+          res.status(201).json(newChapter);
+        }
       } catch (error) {
-        res.status(500).json({ error: "Failed to create chapter" });
+        console.error("Error creating chapter:", error);
+        res.status(500).json({ 
+          error: "Failed to create chapter",
+          message: error instanceof Error ? error.message : "Unknown error"
+        });
       }
     },
   );

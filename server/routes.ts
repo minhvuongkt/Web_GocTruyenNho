@@ -419,6 +419,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: "Failed to get content type" });
     }
   });
+  
+  // Endpoint to get content by title/slug
+  app.get("/api/content/by-title/:title", async (req, res) => {
+    try {
+      const title = req.params.title.replace(/-/g, ' ');
+      const content = await storage.getContentByTitle(title);
+
+      if (!content) {
+        return res.status(404).json({ error: "Content not found" });
+      }
+
+      const responseData = {
+        content,
+        // Additional data if needed
+      };
+
+      res.json(responseData);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to get content by title" });
+    }
+  });
 
   app.post("/api/content", ensureAdmin, async (req, res) => {
     try {

@@ -806,8 +806,7 @@ export function PaymentPage() {
                         )}
 
                       {/* Nếu là thanh toán qua PayOS */}
-                      {paymentStatus.transactionId &&
-                        paymentMethod === "payos" && (
+                      {paymentMethod === "payos" && paymentStatus.processing && (
                           <div className="max-w-2xl mx-auto">
                             <div className="text-center mb-6">
                               <h2 className="text-xl font-semibold mb-2">

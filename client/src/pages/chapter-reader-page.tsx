@@ -7,27 +7,49 @@ import NovelReaderPage from "./novel-reader-page";
 import { normalizeId } from "@/lib/hashUtils";
 
 interface ChapterReaderPageProps {
-  contentId: string | number;
+  contentId?: string | number;
+  contentTitle?: string;
   chapterId?: string | number;
   chapterNumber?: number;
   usingChapterNumber?: boolean;
+  usingTitle?: boolean;
 }
 
 export function ChapterReaderPage({ 
   contentId, 
+  contentTitle,
   chapterId, 
   chapterNumber, 
-  usingChapterNumber = false 
+  usingChapterNumber = false,
+  usingTitle = false
 }: ChapterReaderPageProps) {
-  // Normalize content ID (convert from hashes if needed)
-  const normalizedContentId = normalizeId(contentId);
+  // Content ID state - will be loaded from API if using title
+  const [normalizedContentId, setNormalizedContentId] = useState<number | null>(
+    contentId ? normalizeId(contentId) : null
+  );
   
   // State for the actual chapter ID (will be resolved if using chapter number)
   const [resolvedChapterId, setResolvedChapterId] = useState<number | null>(
-    usingChapterNumber ? null : normalizeId(chapterId!)
+    usingChapterNumber || usingTitle ? null : (chapterId ? normalizeId(chapterId) : null)
   );
   
-  // Fetch content type first to determine which component to render
+  // Fetch content by title if needed
+  const { data: contentByTitleData, isLoading: isLoadingContentByTitle, isError: isErrorContentByTitle } = useQuery({
+    queryKey: [`/api/content/by-title/${contentTitle}`],
+    queryFn: async () => {
+      try {
+        const res = await apiRequest("GET", `/api/content/by-title/${contentTitle}`);
+        const data = await res.json();
+        return data;
+      } catch (error) {
+        console.error("Error fetching content by title:", error);
+        return null;
+      }
+    },
+    enabled: usingTitle && !!contentTitle
+  });
+  
+  // Fetch content type to determine which component to render
   const { data: contentData, isLoading: isLoadingContent, isError: isErrorContent } = useQuery({
     queryKey: [`/api/content/${normalizedContentId}/type`],
     queryFn: async () => {
@@ -39,7 +61,30 @@ export function ChapterReaderPage({
         console.error("Error fetching content:", error);
         return null;
       }
+    },
+    enabled: !!normalizedContentId && !usingTitle
+  });
+  
+  // Effect to set normalizedContentId from title lookup
+  useEffect(() => {
+    if (usingTitle && contentByTitleData && contentByTitleData.content) {
+      setNormalizedContentId(contentByTitleData.content.id);
     }
+  }, [usingTitle, contentByTitleData]);
+
+  // Fetch chapter by title and number using the dedicated API
+  const { data: chapterByTitleData, isLoading: isLoadingChapterByTitle } = useQuery({
+    queryKey: [`/api/content/by-title/${contentTitle}/chapter/${chapterNumber}`],
+    queryFn: async () => {
+      try {
+        const res = await apiRequest("GET", `/api/content/by-title/${contentTitle}/chapter/${chapterNumber}`);
+        return res.json();
+      } catch (error) {
+        console.error("Error fetching chapter by title and number:", error);
+        return null;
+      }
+    },
+    enabled: usingTitle && !!contentTitle && !!chapterNumber,
   });
   
   // If using chapter number, fetch the chapter ID based on number
@@ -54,10 +99,10 @@ export function ChapterReaderPage({
         return [];
       }
     },
-    enabled: usingChapterNumber && !!normalizedContentId,
+    enabled: usingChapterNumber && !!normalizedContentId && !usingTitle,
   });
 
-  // Fetch chapter by number using the new API
+  // Fetch chapter by number using the API
   const { data: chapterByNumberData, isLoading: isLoadingChapterByNumber } = useQuery({
     queryKey: [`/api/content/${normalizedContentId}/chapter-by-number/${chapterNumber}`],
     queryFn: async () => {
@@ -69,12 +114,18 @@ export function ChapterReaderPage({
         return null;
       }
     },
-    enabled: usingChapterNumber && !!normalizedContentId && !!chapterNumber,
+    enabled: usingChapterNumber && !!normalizedContentId && !!chapterNumber && !usingTitle,
   });
 
-  // Effect to find the chapter ID based on chapter number
+  // Effect to find the chapter ID based on chapter number or title
   useEffect(() => {
-    if (usingChapterNumber) {
+    if (usingTitle && chapterByTitleData) {
+      // For title-based lookup, we get both content and chapter info
+      if (chapterByTitleData.content && chapterByTitleData.chapter) {
+        setNormalizedContentId(chapterByTitleData.content.id);
+        setResolvedChapterId(chapterByTitleData.chapter.id);
+      }
+    } else if (usingChapterNumber) {
       if (chapterByNumberData && chapterByNumberData.chapter) {
         // Use the chapter found directly from the API
         setResolvedChapterId(chapterByNumberData.chapter.id);
@@ -86,7 +137,7 @@ export function ChapterReaderPage({
         }
       }
     }
-  }, [usingChapterNumber, chaptersData, chapterNumber, chapterByNumberData]);
+  }, [usingChapterNumber, usingTitle, chaptersData, chapterNumber, chapterByNumberData, chapterByTitleData]);
 
   // Loading state
   if (isLoadingContent || (usingChapterNumber && (isLoadingChapters || isLoadingChapterByNumber))) {

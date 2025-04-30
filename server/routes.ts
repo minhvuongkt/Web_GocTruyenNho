@@ -3231,7 +3231,118 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // New endpoint to get chapter by content ID and chapter number (for the new URL format)
+  // Get content by title
+  app.get("/api/content/by-title/:title", async (req, res) => {
+    try {
+      const title = req.params.title;
+      
+      // Replace hyphens with spaces for comparison
+      const normalizedTitle = title.replace(/-/g, ' ');
+      
+      // Get all content and filter by title
+      const allContentResult = await storage.getAllContent();
+      const allContent = allContentResult.content;
+      
+      // Find content with matching title (case insensitive)
+      const content = allContent.find(item => 
+        item.title.toLowerCase() === normalizedTitle.toLowerCase() ||
+        (item.alternativeTitle && 
+         item.alternativeTitle.toLowerCase() === normalizedTitle.toLowerCase())
+      );
+      
+      if (!content) {
+        return res.status(404).json({ error: "Content not found" });
+      }
+      
+      const contentWithDetails = await storage.getContentWithDetails(content.id);
+      res.json(contentWithDetails);
+    } catch (error) {
+      console.error("Error fetching content by title:", error);
+      res.status(500).json({ 
+        error: "Failed to fetch content by title",
+        message: error instanceof Error ? error.message : "Unknown error" 
+      });
+    }
+  });
+  
+  // Get chapter by content title and chapter number
+  app.get("/api/content/by-title/:title/chapter/:number", async (req, res) => {
+    try {
+      const title = req.params.title;
+      const chapterNumber = parseInt(req.params.number);
+      
+      // Replace hyphens with spaces for comparison
+      const normalizedTitle = title.replace(/-/g, ' ');
+      
+      // Get all content and filter by title
+      const allContentResult = await storage.getAllContent();
+      const allContent = allContentResult.content;
+      
+      // Find content with matching title (case insensitive)
+      const content = allContent.find(item => 
+        item.title.toLowerCase() === normalizedTitle.toLowerCase() ||
+        (item.alternativeTitle && 
+         item.alternativeTitle.toLowerCase() === normalizedTitle.toLowerCase())
+      );
+      
+      if (!content) {
+        return res.status(404).json({ error: "Content not found" });
+      }
+      
+      // Get all chapters for this content
+      const chapters = await storage.getChaptersByContent(content.id);
+      
+      // Find the chapter with matching number
+      const chapter = chapters.find(ch => ch.number === chapterNumber);
+      
+      if (!chapter) {
+        return res.status(404).json({ 
+          error: "Chapter not found",
+          message: `No chapter with number ${chapterNumber} found for this content`
+        });
+      }
+      
+      // Increment view count
+      await storage.incrementChapterViews(chapter.id);
+      
+      const chapterContentList = await storage.getChapterContentByChapter(chapter.id);
+      
+      // Extract content from the result for display
+      let contentHtml = "";
+      if (chapterContentList && chapterContentList.length > 0) {
+        // If there's content in the chapter_content table, use it
+        contentHtml = chapterContentList[0].content || "";
+      } else if (chapter.content) {
+        // Fallback to content stored in chapters table (legacy support)
+        contentHtml = chapter.content;
+      }
+      
+      // Check if chapter is locked and if the user has unlocked it
+      let isUnlocked = !chapter.isLocked;
+      
+      if (chapter.isLocked && req.isAuthenticated()) {
+        const userId = (req.user as any).id;
+        isUnlocked = await storage.isChapterUnlocked(userId, chapter.id);
+      }
+      
+      // Return complete information
+      res.json({
+        content,
+        chapter,
+        content_html: isUnlocked ? contentHtml : "",
+        chapterContent: isUnlocked ? chapterContentList : [],
+        isUnlocked,
+      });
+    } catch (error) {
+      console.error("Error fetching chapter by title and number:", error);
+      res.status(500).json({ 
+        error: "Failed to fetch chapter by title and number",
+        message: error instanceof Error ? error.message : "Unknown error" 
+      });
+    }
+  });
+  
+  // New endpoint to get chapter by content ID and chapter number
   app.get("/api/content/:contentId/chapter-by-number/:number", async (req, res) => {
     try {
       const contentId = parseInt(req.params.contentId);

@@ -2504,7 +2504,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Tìm payment với order code/transaction ID này
           const payment = await storage.getPaymentByTransactionId(orderCode);
 
-          if (payment && payment.status !== "completed") {
+          if (payment && payment.status === "pending") {
             // Cập nhật trạng thái payment
             await storage.updatePaymentStatus(payment.id, "completed");
 
@@ -2512,11 +2512,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const user = await storage.getUser(payment.userId);
 
             if (user) {
+              // Đảm bảo user.balance tồn tại, nếu không thì set mặc định là 0
+              const currentBalance = user.balance || 0;
               await storage.updateUserBalance(
                 user.id,
-                user.balance + payment.amount,
+                currentBalance + payment.amount,
               );
             }
+          }
+        } else if (paymentStatus === "CANCELLED" || paymentStatus === "EXPIRED") {
+          // Xử lý trạng thái hủy hoặc hết hạn
+          const payment = await storage.getPaymentByTransactionId(orderCode);
+          
+          if (payment && payment.status === "pending") {
+            // Cập nhật trạng thái payment sang failed
+            await storage.updatePaymentStatus(payment.id, "failed");
           }
         }
 

@@ -37,9 +37,9 @@ import AuthorManagementPage from "@/pages/admin/author-management-page";
 import TranslationGroupManagementPage from "@/pages/admin/translation-group-management-page";
 
 // Admin Chapter Pages
-import ChapterListPage from "@/pages/admin/chapters/chapter-list-page";
-import ChapterNewPage from "@/pages/admin/chapters/chapter-new-page";
-import ChapterEditPage from "@/pages/admin/chapters/chapter-edit-page";
+import ChapterListPage from "./pages/admin/chapters/chapter-list-page";
+import ChapterNewPage from "./pages/admin/chapters/chapter-new-page";
+import ChapterEditPage from "./pages/admin/chapters/chapter-edit-page";
 
 function Router() {
   return (

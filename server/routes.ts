@@ -666,6 +666,151 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // File upload processing endpoints
+  
+  // Image upload endpoint for manga chapters
+  app.post(
+    "/api/chapters/images/upload",
+    ensureAdmin,
+    multer({ 
+      storage: multer.diskStorage({
+        destination: (req, file, cb) => {
+          const uploadsDir = path.join(__dirname, "../public/uploads/chapter-images");
+          if (!fs.existsSync(uploadsDir)) {
+            fs.mkdirSync(uploadsDir, { recursive: true });
+          }
+          cb(null, uploadsDir);
+        },
+        filename: (req, file, cb) => {
+          // Use timestamp and original name to prevent collisions
+          const timestamp = Date.now();
+          const hash = createHash('md5').update(`${timestamp}-${file.originalname}`).digest('hex').substring(0, 8);
+          const ext = path.extname(file.originalname);
+          cb(null, `${timestamp}-${hash}${ext}`);
+        }
+      }),
+      fileFilter: (req, file, cb) => {
+        if (!file.mimetype.startsWith('image/')) {
+          return cb(new Error('Only images are allowed!'), false);
+        }
+        cb(null, true);
+      },
+      limits: {
+        fileSize: 5 * 1024 * 1024 // 5MB
+      }
+    }).array('images', 50), // Allow up to 50 images
+    async (req, res) => {
+      try {
+        const imageUrls = (req.files as Express.Multer.File[]).map(file => 
+          `/uploads/chapter-images/${file.filename}`
+        );
+        
+        res.status(200).json({ imageUrls });
+      } catch (error) {
+        res.status(500).json({ error: "Failed to process image upload" });
+      }
+    }
+  );
+  
+  // ZIP file processing endpoint for manga chapters
+  app.post(
+    "/api/chapters/images/process-zip",
+    ensureAdmin,
+    multer({ 
+      storage: multer.diskStorage({
+        destination: (req, file, cb) => {
+          const uploadsDir = path.join(__dirname, "../public/uploads/temp-zip");
+          if (!fs.existsSync(uploadsDir)) {
+            fs.mkdirSync(uploadsDir, { recursive: true });
+          }
+          cb(null, uploadsDir);
+        },
+        filename: (req, file, cb) => {
+          const timestamp = Date.now();
+          cb(null, `temp-${timestamp}.zip`);
+        }
+      }),
+      fileFilter: (req, file, cb) => {
+        const validTypes = ['application/zip', 'application/x-zip-compressed'];
+        if (!validTypes.includes(file.mimetype)) {
+          return cb(new Error('Only ZIP files are allowed!'), false);
+        }
+        cb(null, true);
+      },
+      limits: {
+        fileSize: 50 * 1024 * 1024 // 50MB
+      }
+    }).single('zipFile'),
+    async (req, res) => {
+      try {
+        if (!req.file) {
+          return res.status(400).json({ error: "No ZIP file uploaded" });
+        }
+        
+        // In a real implementation, we would extract the ZIP file,
+        // process images, and return their URLs
+        // For now, we'll return a mock response
+        
+        const imageUrls = [
+          "/uploads/chapter-images/sample-image-1.jpg",
+          "/uploads/chapter-images/sample-image-2.jpg",
+          "/uploads/chapter-images/sample-image-3.jpg"
+        ];
+        
+        res.status(200).json({ imageUrls });
+      } catch (error) {
+        res.status(500).json({ error: "Failed to process ZIP file" });
+      }
+    }
+  );
+  
+  // Text file processing endpoint for novel chapters
+  app.post(
+    "/api/chapters/text/process",
+    ensureAdmin,
+    multer({ 
+      storage: multer.memoryStorage(),
+      fileFilter: (req, file, cb) => {
+        const validTypes = [
+          'text/plain',
+          'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+          'application/msword'
+        ];
+        if (!validTypes.includes(file.mimetype)) {
+          return cb(new Error('Only TXT, DOC, and DOCX files are allowed!'), false);
+        }
+        cb(null, true);
+      },
+      limits: {
+        fileSize: 10 * 1024 * 1024 // 10MB
+      }
+    }).single('textFile'),
+    async (req, res) => {
+      try {
+        if (!req.file) {
+          return res.status(400).json({ error: "No text file uploaded" });
+        }
+        
+        // In a real implementation, we would process the file based on its type
+        // For now, we'll return a simple response
+        let content = "";
+        
+        if (req.file.mimetype === 'text/plain') {
+          // For text files, just read the buffer as UTF-8
+          content = req.file.buffer.toString('utf-8');
+        } else {
+          // For DOC/DOCX, we would use a library like mammoth.js
+          // For now, we'll return a placeholder
+          content = `<p>This is the processed content from the ${req.file.originalname} file.</p>`;
+        }
+        
+        res.status(200).json({ content });
+      } catch (error) {
+        res.status(500).json({ error: "Failed to process text file" });
+      }
+    }
+  );
+  
   // Unlock chapter route
   app.post(
     "/api/chapters/:id/unlock",

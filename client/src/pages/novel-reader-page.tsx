@@ -45,6 +45,19 @@ export function NovelReaderPage({ contentId, chapterId }: NovelReaderPageProps) 
     setShowChapterList(!showChapterList);
   };
   
+  // Thiết lập style cho nội dung truyện
+  useEffect(() => {
+    const articleElement = document.querySelector('.novel-content');
+    if (articleElement) {
+      // Xác định kiểu chữ mặc định và kích thước font
+      articleElement.setAttribute('style', `
+        font-family: TimesNewRoman, Times, serif;
+        font-size: 14px;
+        line-height: 1.6;
+      `);
+    }
+  }, [data]);
+  
   // Get sorted chapters for navigation
   const getSortedChapters = () => {
     if (!novelDetails?.chapters) return [];
@@ -239,7 +252,11 @@ export function NovelReaderPage({ contentId, chapterId }: NovelReaderPageProps) 
             onChange={(e) => {
               const articleElement = document.querySelector('.novel-content');
               if (articleElement) {
-                articleElement.style.fontFamily = e.target.value;
+                articleElement.setAttribute('style', `
+                  font-family: ${e.target.value};
+                  font-size: ${articleElement.style.fontSize || '14px'};
+                  line-height: 1.6;
+                `);
               }
             }}
             defaultValue="TimesNewRoman"
@@ -256,7 +273,11 @@ export function NovelReaderPage({ contentId, chapterId }: NovelReaderPageProps) 
             onChange={(e) => {
               const articleElement = document.querySelector('.novel-content');
               if (articleElement) {
-                articleElement.style.fontSize = e.target.value;
+                articleElement.setAttribute('style', `
+                  font-family: ${articleElement.style.fontFamily || 'TimesNewRoman, Times, serif'};
+                  font-size: ${e.target.value};
+                  line-height: 1.6;
+                `);
               }
             }}
             defaultValue="14px"
@@ -270,7 +291,7 @@ export function NovelReaderPage({ contentId, chapterId }: NovelReaderPageProps) 
         </div>
         
         <article 
-          className="novel-content whitespace-pre-line" 
+          className="novel-content prose max-w-none dark:prose-invert" 
           style={{ 
             fontFamily: 'TimesNewRoman, Times, serif',
             fontSize: '14px',

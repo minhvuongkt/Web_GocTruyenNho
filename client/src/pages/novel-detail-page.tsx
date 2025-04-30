@@ -202,7 +202,7 @@ export function NovelDetailPage({ id }: NovelDetailPageProps) {
               {chapters && chapters.length > 0 && (
                 <>
                   <Button asChild>
-                    <Link href={`/truyen/${id}/chapter/${chapters[0].id}`}>
+                    <Link href={`/truyen/${content?.title.replace(/ /g, '-')}/chapter/${chapters[0].number}`}>
                       <BookOpen className="mr-2 h-4 w-4" />
                       Đọc từ đầu
                     </Link>
@@ -210,7 +210,7 @@ export function NovelDetailPage({ id }: NovelDetailPageProps) {
                   
                   {chapters.length > 1 && (
                     <Button variant="outline" asChild>
-                      <Link href={`/truyen/${id}/chapter/${chapters[chapters.length - 1].id}`}>
+                      <Link href={`/truyen/${content?.title.replace(/ /g, '-')}/chapter/${chapters[chapters.length - 1].number}`}>
                         <Clock className="mr-2 h-4 w-4" />
                         Đọc chương mới nhất
                       </Link>

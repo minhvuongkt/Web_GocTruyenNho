@@ -13,19 +13,19 @@ import { Loader2, LockIcon, AlertTriangle } from "lucide-react";
 
 interface NovelReaderPageProps {
   contentId: number;
-  chapterId: number;
+  chapterNumber: number;
 }
 
-export function NovelReaderPage({ contentId, chapterId }: NovelReaderPageProps) {
+export function NovelReaderPage({ contentId, chapterNumber }: NovelReaderPageProps) {
   const { user } = useAuth();
   const [showUnlockModal, setShowUnlockModal] = useState(false);
   const [showChapterList, setShowChapterList] = useState(false);
   
-  // Fetch chapter details
+  // Fetch chapter details using the new endpoint with contentId and chapterNumber
   const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: [`/api/chapters/${chapterId}`],
+    queryKey: [`/api/content/${contentId}/chapter/${chapterNumber}`],
     queryFn: async () => {
-      const res = await apiRequest("GET", `/api/chapters/${chapterId}`);
+      const res = await apiRequest("GET", `/api/content/${contentId}/chapter/${chapterNumber}`);
       return res.json();
     }
   });
@@ -51,19 +51,22 @@ export function NovelReaderPage({ contentId, chapterId }: NovelReaderPageProps) 
     return [...novelDetails.chapters].sort((a, b) => a.number - b.number);
   };
   
-  // Find previous and next chapter IDs
-  const getAdjacentChapterIds = () => {
-    const sortedChapters = getSortedChapters();
-    const currentIndex = sortedChapters.findIndex(chapter => chapter.id === chapterId);
-    
-    const prevChapterId = currentIndex > 0 ? sortedChapters[currentIndex - 1].id : undefined;
-    const nextChapterId = currentIndex < sortedChapters.length - 1 ? sortedChapters[currentIndex + 1].id : undefined;
-    
-    return { prevChapterId, nextChapterId };
-  };
+  // Find previous and next chapter numbers for navigation
+  // We'll use the navigation info from the API response if available
+  let prevChapterNumber, nextChapterNumber;
   
-  // Get chapter information for navigation
-  const { prevChapterId, nextChapterId } = getAdjacentChapterIds();
+  if (data && data.navigation) {
+    // Use the navigation data from the API
+    prevChapterNumber = data.navigation.prevChapter?.number;
+    nextChapterNumber = data.navigation.nextChapter?.number;
+  } else {
+    // Fallback to manually calculating
+    const sortedChapters = getSortedChapters();
+    const currentIndex = sortedChapters.findIndex(chapter => chapter.number === chapterNumber);
+    
+    prevChapterNumber = currentIndex > 0 ? sortedChapters[currentIndex - 1].number : undefined;
+    nextChapterNumber = currentIndex < sortedChapters.length - 1 ? sortedChapters[currentIndex + 1].number : undefined;
+  }
   
   // Handle unlock success
   const handleUnlockSuccess = () => {
@@ -167,13 +170,13 @@ export function NovelReaderPage({ contentId, chapterId }: NovelReaderPageProps) 
     return (
       <ReaderLayout
         contentId={contentId}
-        chapterId={chapterId}
+        chapterId={chapter.id}
         contentType="novel"
         title={novelTitle}
         chapterTitle={chapter.title || `Chương ${chapter.number}`}
         chapterNumber={chapter.number}
-        prevChapterId={prevChapterId}
-        nextChapterId={nextChapterId}
+        prevChapterId={data.navigation?.prevChapter?.id}
+        nextChapterId={data.navigation?.nextChapter?.id}
         onChapterListToggle={handleChapterListToggle}
       >
         <div className="flex flex-col items-center justify-center py-16">
@@ -194,8 +197,8 @@ export function NovelReaderPage({ contentId, chapterId }: NovelReaderPageProps) 
                 {getSortedChapters().map(ch => (
                   <div key={ch.id} className="py-2 border-b border-border">
                     <Link
-                      href={`/truyen/${contentId}/chapter/${ch.id}`}
-                      className={`block py-1 px-2 rounded hover:bg-muted ${ch.id === chapterId ? 'bg-primary/10 text-primary font-medium' : ''}`}
+                      href={`/truyen/${contentId}/chapter/${ch.number}`}
+                      className={`block py-1 px-2 rounded hover:bg-muted ${ch.id === chapter.id ? 'bg-primary/10 text-primary font-medium' : ''}`}
                       onClick={() => setShowChapterList(false)}
                     >
                       <div className="flex items-center justify-between">
@@ -217,13 +220,13 @@ export function NovelReaderPage({ contentId, chapterId }: NovelReaderPageProps) 
   return (
     <ReaderLayout
       contentId={contentId}
-      chapterId={chapterId}
+      chapterId={chapter.id}
       contentType="novel"
       title={novelTitle}
       chapterTitle={chapter.title || `Chương ${chapter.number}`}
       chapterNumber={chapter.number}
-      prevChapterId={prevChapterId}
-      nextChapterId={nextChapterId}
+      prevChapterId={data.navigation?.prevChapter?.id}
+      nextChapterId={data.navigation?.nextChapter?.id}
       onChapterListToggle={handleChapterListToggle}
     >
       <div className="novel-reader">
@@ -245,8 +248,8 @@ export function NovelReaderPage({ contentId, chapterId }: NovelReaderPageProps) 
               {getSortedChapters().map(ch => (
                 <div key={ch.id} className="py-2 border-b border-border">
                   <Link
-                    href={`/truyen/${contentId}/chapter/${ch.id}`}
-                    className={`block py-1 px-2 rounded hover:bg-muted ${ch.id === chapterId ? 'bg-primary/10 text-primary font-medium' : ''}`}
+                    href={`/truyen/${contentId}/chapter/${ch.number}`}
+                    className={`block py-1 px-2 rounded hover:bg-muted ${ch.id === chapter.id ? 'bg-primary/10 text-primary font-medium' : ''}`}
                     onClick={() => setShowChapterList(false)}
                   >
                     <div className="flex items-center justify-between">

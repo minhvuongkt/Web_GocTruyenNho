@@ -521,8 +521,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Chapter not found" });
       }
 
-      // Increment view count
-      await storage.incrementChapterViews(id);
+      // Check if chapter is locked and if the user has unlocked it
+      let isUnlocked = !chapter.isLocked;
+
+      if (chapter.isLocked && req.isAuthenticated()) {
+        const userId = (req.user as any).id;
+        isUnlocked = await storage.isChapterUnlocked(userId, id);
+      }
+      
+      // Only increment view count if user can view the content
+      if (isUnlocked) {
+        await storage.incrementChapterViews(id);
+      }
 
       const chapterContentList = await storage.getChapterContentByChapter(id);
       
@@ -534,14 +544,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } else if (chapter.content) {
         // Fallback to content stored in chapters table (legacy support)
         contentHtml = chapter.content;
-      }
-
-      // Check if chapter is locked and if the user has unlocked it
-      let isUnlocked = !chapter.isLocked;
-
-      if (chapter.isLocked && req.isAuthenticated()) {
-        const userId = (req.user as any).id;
-        isUnlocked = await storage.isChapterUnlocked(userId, id);
       }
 
       res.json({
@@ -714,6 +716,100 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(204).send();
     } catch (error) {
       res.status(500).json({ error: "Failed to delete chapter" });
+    }
+  });
+  
+  // Get chapter by contentId and chapterNumber
+  app.get("/api/content/:contentId/chapter/:chapterNumber", async (req, res) => {
+    try {
+      const contentId = parseInt(req.params.contentId);
+      const chapterNumber = parseInt(req.params.chapterNumber);
+      
+      if (isNaN(contentId) || isNaN(chapterNumber)) {
+        return res.status(400).json({ 
+          error: "Invalid content ID or chapter number",
+          details: `ContentId: ${req.params.contentId}, ChapterNumber: ${req.params.chapterNumber}`
+        });
+      }
+      
+      // Find the chapter based on contentId and number
+      const chapters = await db
+        .select()
+        .from(schema.chapters)
+        .where(and(
+          eq(schema.chapters.contentId, contentId),
+          eq(schema.chapters.number, chapterNumber)
+        ));
+      
+      if (!chapters || chapters.length === 0) {
+        return res.status(404).json({ 
+          error: "Chapter not found",
+          details: `No chapter found with contentId: ${contentId} and number: ${chapterNumber}`
+        });
+      }
+      
+      const chapter = chapters[0];
+      
+      // Check if chapter is locked and if the user has unlocked it
+      let isUnlocked = !chapter.isLocked;
+
+      if (chapter.isLocked && req.isAuthenticated()) {
+        const userId = (req.user as any).id;
+        isUnlocked = await storage.isChapterUnlocked(userId, chapter.id);
+      }
+      
+      // Only increment view count if not locked or user has unlocked it
+      if (isUnlocked) {
+        await storage.incrementChapterViews(chapter.id);
+      }
+      
+      // Get chapter content
+      const chapterContentList = await storage.getChapterContentByChapter(chapter.id);
+      
+      // Extract content from the result for display
+      let contentHtml = "";
+      if (chapterContentList && chapterContentList.length > 0) {
+        // If there's content in the chapter_content table, use it
+        contentHtml = chapterContentList[0].content || "";
+      } else if (chapter.content) {
+        // Fallback to content stored in chapters table (legacy support)
+        contentHtml = chapter.content;
+      }
+      
+      // Get previous and next chapters for navigation
+      const allChapters = await db
+        .select()
+        .from(schema.chapters)
+        .where(eq(schema.chapters.contentId, contentId))
+        .orderBy(schema.chapters.number);
+      
+      const sortedChapters = allChapters.sort((a, b) => a.number - b.number);
+      const currentIndex = sortedChapters.findIndex(ch => ch.id === chapter.id);
+      
+      const prevChapter = currentIndex > 0 ? sortedChapters[currentIndex - 1] : null;
+      const nextChapter = currentIndex < sortedChapters.length - 1 ? sortedChapters[currentIndex + 1] : null;
+      
+      res.json({ 
+        chapter, 
+        content: isUnlocked ? contentHtml : "", 
+        chapterContent: isUnlocked ? chapterContentList : [],
+        isUnlocked,
+        navigation: {
+          prevChapter: prevChapter ? {
+            id: prevChapter.id,
+            number: prevChapter.number,
+            title: prevChapter.title
+          } : null,
+          nextChapter: nextChapter ? {
+            id: nextChapter.id,
+            number: nextChapter.number,
+            title: nextChapter.title
+          } : null
+        }
+      });
+    } catch (error) {
+      console.error("Error fetching chapter by number:", error);
+      res.status(500).json({ error: "Failed to fetch chapter" });
     }
   });
 

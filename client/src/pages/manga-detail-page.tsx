@@ -54,6 +54,16 @@ export function MangaDetailPage({ id }: MangaDetailPageProps) {
     }
   });
   
+  // Fetch chapters
+  const { data: chaptersData } = useQuery<Chapter[]>({
+    queryKey: [`/api/content/${id}/chapters`],
+    queryFn: async () => {
+      const res = await apiRequest("GET", `/api/content/${id}/chapters`);
+      return res.json();
+    },
+    enabled: !!id
+  });
+  
   // Fetch comments
   const { data: comments, isLoading: isLoadingComments } = useQuery({
     queryKey: [`/api/content/${id}/comments`],
@@ -174,7 +184,8 @@ export function MangaDetailPage({ id }: MangaDetailPageProps) {
   }
   
   // Extract data
-  const { content, genres, author, translationGroup, chapters } = data || {};
+  const { content, genres, author, translationGroup } = data || {};
+  const chapters = chaptersData || [];
   const coverImage = content?.coverImage || getRandomCoverImage('manga');
   
   return (

@@ -185,15 +185,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const page = parseInt(req.query.page as string) || 1;
         const limit = parseInt(req.query.limit as string) || 10;
         const offset = (page - 1) * limit;
-        
+
         // Lấy danh sách giao dịch và tổng số từ storage
         // Sử dụng getPaymentsByUser vì đây là phương thức có trong interface
         const payments = await storage.getPaymentsByUser(user.id);
-        
+
         // Thực hiện phân trang thủ công để tương thích với interface hiện tại
         const pagedPayments = payments.slice(offset, offset + limit);
         const total = payments.length;
-        
+
         // Trả về danh sách và thông tin phân trang
         return res.json({
           payments: pagedPayments,
@@ -201,18 +201,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
             page,
             limit,
             total,
-            totalPages: Math.ceil(total / limit)
-          }
+            totalPages: Math.ceil(total / limit),
+          },
         });
       } catch (error: any) {
         console.error("Error getting user payments:", error);
         return res.status(500).json({
-          error: error.message || "Failed to get payment history"
+          error: error.message || "Failed to get payment history",
         });
       }
-    }
+    },
   );
-  
+
   // Endpoint GET để lấy chi tiết một giao dịch
   app.get(
     "/api/payments/:id",
@@ -221,37 +221,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
       try {
         const { id } = req.params;
         const paymentId = parseInt(id);
-        
+
         if (isNaN(paymentId)) {
           return res.status(400).json({ error: "Invalid payment ID" });
         }
-        
+
         // Lấy thông tin giao dịch từ storage
         const payment = await storage.getPayment(paymentId);
-        
+
         if (!payment) {
           return res.status(404).json({ error: "Payment not found" });
         }
-        
+
         // Kiểm tra quyền truy cập
         const user = req.user as any;
         if (payment.userId !== user.id && user.role !== "admin") {
-          return res.status(403).json({ 
-            error: "You don't have permission to access this payment" 
+          return res.status(403).json({
+            error: "You don't have permission to access this payment",
           });
         }
-        
+
         // Trả về thông tin giao dịch
         return res.json(payment);
       } catch (error: any) {
         console.error("Error getting payment details:", error);
         return res.status(500).json({
-          error: error.message || "Failed to get payment details"
+          error: error.message || "Failed to get payment details",
         });
       }
-    }
+    },
   );
-  
+
   const updateUserHandler = async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
@@ -1050,7 +1050,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const expiryMinutes = 15; // 15 phút
           const expiryMilliseconds = expiryMinutes * 60 * 1000;
           const expiredAt = Date.now() + expiryMilliseconds;
-          
+
           const paymentData = {
             amount: amount,
             description: `Nạp tiền tài khoản cho ${(req.user as any).username}`,
@@ -2162,7 +2162,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const cancelUrl = `${appUrl}/payment/cancel?id=${newPayment.id}`;
         const expiryMinutes = settings.expiryConfig?.bankTransfer || 15;
         // Tính toán thời gian hết hạn trong miliseconds (thời gian hiện tại + 15 phút)
-        const expiresAt = Math.floor(Date.now() / 1000) + (expiryMinutes * 60);
+        const expiresAt = Math.floor(Date.now() / 1000) + expiryMinutes * 60;
         const paymentData = {
           amount,
           description: `NAP_${username}`,
@@ -2190,94 +2190,89 @@ export async function registerRoutes(app: Express): Promise<Server> {
   );
 
   // PayOS endpoints for embedded checkout
-  // Tạo thanh toán 
-  app.post(
-    "/api/payments",
-    ensureAuthenticated,
-    async (req, res) => {
-      try {
-        // Validate request body
-        const { amount, method, description } = req.body;
-        
-        if (!amount || !method) {
-          return res.status(400).json({
-            error: "Missing required fields: amount and method are required"
-          });
-        }
-        
-        // Đảm bảo số tiền là số nguyên dương
-        const paymentAmount = parseInt(amount, 10);
-        if (isNaN(paymentAmount) || paymentAmount <= 0) {
-          return res.status(400).json({
-            error: "Amount must be a positive number"
-          });
-        }
-        
-        // Lấy thông tin user từ session
-        const user = req.user as any;
-        if (!user || !user.id) {
-          return res.status(401).json({
-            error: "User not authenticated"
-          });
-        }
-        
-        // Tạo mã giao dịch duy nhất
-        function generateOrderCode() {
-          const timestamp = Date.now().toString().slice(-10);
-          const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
-          return timestamp + random;
-        }
-        
-        const transactionId = generateOrderCode();
-        
-        // Lấy cài đặt thanh toán
-        const settings = await storage.getPaymentSettings();
-        if (!settings) {
-          return res.status(500).json({
-            error: "Payment settings not configured"
-          });
-        }
-        
-        // Tính thời gian hết hạn cho giao dịch (tính bằng mili giây)
-        const expiryMinutes = settings.expiryConfig?.bankTransfer || 15;
-        // Thời gian hết hạn tính bằng mili giây (không phải giây) để tương thích với Date.now()
-        const expiredAt = Date.now() + (expiryMinutes * 60 * 1000);
-        
-        // Tạo thanh toán trong database
-        const paymentData = {
-          userId: user.id,
-          amount: paymentAmount,
-          method,
-          status: "pending",
-          transactionId,
-          description: description || `Nạp tiền cho tài khoản ${user.username}`,
-          metadata: {
-            expiredAt
-          }
-        };
-        
-        const payment = await storage.createPayment(paymentData as any);
-        
-        // Trả về thông tin thanh toán đã tạo
-        return res.status(201).json({
-          id: payment.id,
-          amount: payment.amount,
-          method: payment.method,
-          status: payment.status,
-          transactionId: payment.transactionId,
-          createdAt: payment.createdAt,
-          expiredAt
-        });
-        
-      } catch (error: any) {
-        console.error("Create payment error:", error);
-        return res.status(500).json({
-          error: error.message || "Failed to create payment"
+  // Tạo thanh toán
+  app.post("/api/payments", ensureAuthenticated, async (req, res) => {
+    try {
+      // Validate request body
+      const { amount, method, description } = req.body;
+
+      if (!amount || !method) {
+        return res.status(400).json({
+          error: "Missing required fields: amount and method are required",
         });
       }
+
+      // Đảm bảo số tiền là số nguyên dương
+      const paymentAmount = parseInt(amount, 10);
+      if (isNaN(paymentAmount) || paymentAmount <= 0) {
+        return res.status(400).json({
+          error: "Amount must be a positive number",
+        });
+      }
+
+      // Lấy thông tin user từ session
+      const user = req.user as any;
+      if (!user || !user.id) {
+        return res.status(401).json({
+          error: "User not authenticated",
+        });
+      }
+
+      // Tạo mã giao dịch duy nhất
+      function generateOrderCode() {
+        const timestamp = Date.now().toString().slice(-10);
+        const random = Math.floor(Math.random() * 10000)
+          .toString()
+          .padStart(4, "0");
+        return timestamp + random;
+      }
+
+      const transactionId = generateOrderCode();
+
+      // Lấy cài đặt thanh toán
+      const settings = await storage.getPaymentSettings();
+      if (!settings) {
+        return res.status(500).json({
+          error: "Payment settings not configured",
+        });
+      }
+
+      const expiryMinutes = settings.expiryConfig?.bankTransfer || 15;
+      const expiredAt = Date.now() + expiryMinutes * 60 * 1000;
+
+      // Tạo thanh toán trong database
+      const paymentData = {
+        userId: user.id,
+        amount: paymentAmount,
+        method,
+        status: "pending",
+        transactionId,
+        description: description || `Nạp tiền cho tài khoản ${user.username}`,
+        metadata: {
+          expiredAt,
+        },
+      };
+
+      const payment = await storage.createPayment(paymentData as any);
+
+      // Trả về thông tin thanh toán đã tạo
+      return res.status(201).json({
+        id: payment.id,
+        amount: payment.amount,
+        method: payment.method,
+        status: payment.status,
+        transactionId: payment.transactionId,
+        createdAt: payment.createdAt,
+        expiredAt,
+      });
+    } catch (error: any) {
+      console.error("Create payment error:", error);
+      return res.status(500).json({
+        error: error.message || "Failed to create payment",
+      });
     }
-  );
-  
+  });
+
   // Tạo thanh toán PayOS
   app.post(
     "/api/payos/create-payment",
@@ -2309,10 +2304,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         // Lấy thời gian hết hạn từ cấu hình hoặc mặc định là 15 phút
         const expiryMinutes = settings.expiryConfig?.bankTransfer || 15;
-        
+
         // Tính thời gian hết hạn dưới dạng Unix timestamp (giây) cho PayOS API
         const now = Math.floor(Date.now() / 1000); // Timestamp hiện tại dạng giây
-        const paymentExpiryTime = now + (expiryMinutes * 60); // Thêm số phút cấu hình
+        const paymentExpiryTime = now + expiryMinutes * 60; // Thêm số phút cấu hình
 
         // Check for required configurations
         if (
@@ -2499,7 +2494,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         let paymentStatus = null;
 
         // Xử lý cả hai dạng response có thể nhận được từ PayOS
-        if (result && typeof result === 'object') {
+        if (result && typeof result === "object") {
           // Kiểm tra dạng response mới (có code, data)
           if (result.code === "00" && result.data && result.data.status) {
             paymentStatus = result.data.status;
@@ -2533,10 +2528,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
               );
             }
           }
-        } else if (paymentStatus === "CANCELLED" || paymentStatus === "EXPIRED") {
+        } else if (
+          paymentStatus === "CANCELLED" ||
+          paymentStatus === "EXPIRED"
+        ) {
           // Xử lý trạng thái hủy hoặc hết hạn
           const payment = await storage.getPaymentByTransactionId(orderCode);
-          
+
           if (payment && payment.status === "pending") {
             // Cập nhật trạng thái payment sang failed
             await storage.updatePaymentStatus(payment.id, "failed");
@@ -2574,58 +2572,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
     async (req, res) => {
       try {
         const { transactionId } = req.params;
-        
+
         if (!transactionId) {
           return res.status(400).json({
-            error: "Transaction ID is required"
+            error: "Transaction ID is required",
           });
         }
-        
+
         // Lấy thông tin thanh toán từ database
         const payment = await storage.getPaymentByTransactionId(transactionId);
-        
+
         if (!payment) {
           return res.status(404).json({
-            error: "Payment not found"
+            error: "Payment not found",
           });
         }
-        
+
         // Chỉ cho phép người dùng sở hữu giao dịch hoặc admin truy cập
         const userId = (req.user as any).id;
         if (payment.userId !== userId && (req.user as any).role !== "admin") {
           return res.status(403).json({
-            error: "You don't have permission to access this payment"
+            error: "You don't have permission to access this payment",
           });
         }
-        
+
         // Nếu thanh toán không phải là PayOS thì trả về lỗi
         if (payment.method !== "payos") {
           return res.status(400).json({
-            error: "This payment method does not support QR codes"
+            error: "This payment method does not support QR codes",
           });
         }
-        
+
         // Lấy cài đặt thanh toán
         const settings = await storage.getPaymentSettings();
         if (!settings || !settings.payosConfig) {
           return res.status(500).json({
-            error: "PayOS settings not configured"
+            error: "PayOS settings not configured",
           });
         }
-        
+
         const payosConfig = settings.payosConfig as any;
-        
+
         // Tạo URL callback
-        const baseUrl = process.env.BASE_URL || `http://localhost:${process.env.PORT || 5000}`;
+        const baseUrl =
+          process.env.BASE_URL ||
+          `http://localhost:${process.env.PORT || 5000}`;
         const returnUrl = `${baseUrl}/payment-callback?code=00&status=PAID&orderCode=${transactionId}`;
         const cancelUrl = `${baseUrl}/payment-callback?cancel=true&orderCode=${transactionId}`;
-        
+
         // Tạo mô tả thanh toán
         const description = payment.description || `Thanh toán #${payment.id}`;
-        
+
         // Tạo link thanh toán PayOS nếu chưa có
         let payosData;
-        
+
         try {
           // Tính thời gian hết hạn từ metadata hoặc dựa vào cài đặt
           let expiredAt;
@@ -2634,16 +2634,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
           } else {
             // Tính thời gian hết hạn dưới dạng Unix timestamp (giây) cho PayOS API
             const expiryMinutes = settings.expiryConfig?.payos || 15;
-            expiredAt = Math.floor(Date.now() / 1000) + (expiryMinutes * 60);
+            expiredAt = Math.floor(Date.now() / 1000) + expiryMinutes * 60;
           }
-          
+
           // Tạo payment link thông qua PayOS API
           payosData = await createPayOSPaymentLink(
             {
               clientId: payosConfig.clientId,
               apiKey: payosConfig.apiKey,
               checksumKey: payosConfig.checksumKey,
-              baseUrl: payosConfig.baseUrl || "https://api-merchant.payos.vn"
+              baseUrl: payosConfig.baseUrl || "https://api-merchant.payos.vn",
             },
             {
               amount: payment.amount,
@@ -2651,29 +2651,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
               description: description,
               returnUrl: returnUrl,
               cancelUrl: cancelUrl,
-              expiredAt: expiredAt
-            }
+              expiredAt: expiredAt,
+            },
           );
-          
+
           if (!payosData || (!payosData.qrCode && !payosData.data?.qrCode)) {
             throw new Error("PayOS API did not return QR code");
           }
-          
+
           // Lấy QR code từ response
           const qrCodeContent = payosData.qrCode || payosData.data?.qrCode;
-          
+
           // Lưu thông tin QR code vào metadata của payment (nếu cần)
           const updatedMetadata = {
             ...payment.metadata,
             payosQrCode: qrCodeContent,
             checkoutUrl: payosData.checkoutUrl || payosData.data?.checkoutUrl,
-            expiredAt: expiredAt
+            expiredAt: expiredAt,
           };
-          
+
           await storage.updatePayment(payment.id, {
-            metadata: updatedMetadata
+            metadata: updatedMetadata,
           } as any);
-          
+
           // Trả về QR code và thông tin thanh toán
           return res.json({
             qrCode: qrCodeContent,
@@ -2681,24 +2681,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
             amount: payment.amount,
             description: description,
             transactionId: transactionId,
-            expiresAt: new Date(expiredAt * 1000).toISOString()
+            expiresAt: new Date(expiredAt * 1000).toISOString(),
           });
-          
         } catch (error: any) {
           console.error("Error generating PayOS QR code:", error);
           return res.status(500).json({
-            error: error.message || "Failed to generate QR code"
+            error: error.message || "Failed to generate QR code",
           });
         }
       } catch (error: any) {
         console.error("Payment QR code API error:", error);
         return res.status(500).json({
-          error: error.message || "Server error"
+          error: error.message || "Server error",
         });
       }
-    }
+    },
   );
-  
+
   // Kiểm tra trạng thái thanh toán (sử dụng cho client polling)
   app.get(
     "/api/payments/:transactionId/status",
@@ -2706,51 +2705,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
     async (req, res) => {
       try {
         const { transactionId } = req.params;
-        
+
         if (!transactionId) {
           return res.status(400).json({
-            error: "Transaction ID is required"
+            error: "Transaction ID is required",
           });
         }
-        
+
         // Lấy thông tin thanh toán từ database
         const payment = await storage.getPaymentByTransactionId(transactionId);
-        
+
         if (!payment) {
           return res.status(404).json({
-            error: "Payment not found"
+            error: "Payment not found",
           });
         }
-        
+
         // Chỉ cho phép người dùng sở hữu giao dịch hoặc admin truy cập
         const userId = (req.user as any).id;
         if (payment.userId !== userId && (req.user as any).role !== "admin") {
           return res.status(403).json({
-            error: "You don't have permission to access this payment"
+            error: "You don't have permission to access this payment",
           });
         }
-        
+
         // Nếu thanh toán đã hoàn thành hoặc thất bại, trả về trạng thái từ database
         if (payment.status !== "pending") {
           return res.json({
             status: payment.status,
             transactionId: payment.transactionId,
-            updatedAt: payment.updatedAt
+            updatedAt: payment.updatedAt,
           });
         }
-        
+
         // Nếu là PayOS và đang trong trạng thái pending, kiểm tra với PayOS API
         if (payment.method === "payos") {
           // Lấy cài đặt thanh toán
           const settings = await storage.getPaymentSettings();
           if (!settings || !settings.payosConfig) {
             return res.status(500).json({
-              error: "PayOS settings not configured"
+              error: "PayOS settings not configured",
             });
           }
-          
+
           const payosConfig = settings.payosConfig as any;
-          
+
           try {
             // Kiểm tra trạng thái từ PayOS API
             const statusResult = await checkPayOSPaymentStatus(
@@ -2758,81 +2757,88 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 clientId: payosConfig.clientId,
                 apiKey: payosConfig.apiKey,
                 checksumKey: payosConfig.checksumKey,
-                baseUrl: payosConfig.baseUrl || "https://api-merchant.payos.vn"
+                baseUrl: payosConfig.baseUrl || "https://api-merchant.payos.vn",
               },
-              transactionId
+              transactionId,
             );
-            
+
             // Xử lý kết quả từ PayOS API
             let paymentStatus = payment.status; // Mặc định giữ nguyên trạng thái
             let apiStatus = null;
-            
+
             // Trích xuất trạng thái từ response (xử lý cả 2 dạng response)
-            if (statusResult && typeof statusResult === 'object') {
+            if (statusResult && typeof statusResult === "object") {
               // Kiểm tra dạng response mới (có code, data)
-              if (statusResult.code === "00" && statusResult.data && statusResult.data.status) {
+              if (
+                statusResult.code === "00" &&
+                statusResult.data &&
+                statusResult.data.status
+              ) {
                 apiStatus = statusResult.data.status;
-              } 
+              }
               // Kiểm tra dạng response trực tiếp từ SDK
               else if (statusResult.status) {
                 apiStatus = statusResult.status;
               }
             }
-            
+
             // Cập nhật trạng thái nếu có thay đổi
             if (apiStatus === "PAID" && payment.status === "pending") {
               // Cập nhật trạng thái trong database
               await storage.updatePaymentStatus(payment.id, "completed");
-              
+
               // Cập nhật số dư người dùng
               const user = await storage.getUser(payment.userId);
               if (user) {
                 // Đảm bảo user.balance tồn tại, nếu không thì set mặc định là 0
                 const currentBalance = user.balance || 0;
-                await storage.updateUserBalance(user.id, currentBalance + payment.amount);
+                await storage.updateUserBalance(
+                  user.id,
+                  currentBalance + payment.amount,
+                );
               }
-              
+
               paymentStatus = "completed";
-              
-            } else if ((apiStatus === "CANCELLED" || apiStatus === "EXPIRED") && payment.status === "pending") {
+            } else if (
+              (apiStatus === "CANCELLED" || apiStatus === "EXPIRED") &&
+              payment.status === "pending"
+            ) {
               await storage.updatePaymentStatus(payment.id, "failed");
               paymentStatus = "failed";
             }
-            
+
             // Trả về trạng thái cập nhật
             return res.json({
               status: paymentStatus,
               apiStatus: apiStatus,
-              transactionId: payment.transactionId
+              transactionId: payment.transactionId,
             });
-            
           } catch (error: any) {
             console.error("Error checking PayOS payment status:", error);
-            
+
             // Trả về trạng thái từ database nếu gọi API thất bại
             return res.json({
               status: payment.status,
               transactionId: payment.transactionId,
-              error: "Failed to check status from PayOS API"
+              error: "Failed to check status from PayOS API",
             });
           }
         }
-        
+
         // Đối với các phương thức thanh toán khác
         return res.json({
           status: payment.status,
-          transactionId: payment.transactionId
+          transactionId: payment.transactionId,
         });
-        
       } catch (error: any) {
         console.error("Payment status API error:", error);
         return res.status(500).json({
-          error: error.message || "Server error"
+          error: error.message || "Server error",
         });
       }
-    }
+    },
   );
-  
+
   // PayOS webhook endpoint
   app.post("/api/webhooks/payos", async (req, res) => {
     try {

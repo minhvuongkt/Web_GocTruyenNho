@@ -231,9 +231,51 @@ export function NovelReaderPage({ contentId, chapterId }: NovelReaderPageProps) 
           Chương {chapter.number}: {chapter.title || ''}
         </h1>
         
-        <div className="whitespace-pre-line">
-          {novelContent}
+        <div className="flex justify-end mb-4 space-x-2">
+          <select 
+            className="text-sm border rounded p-1"
+            onChange={(e) => {
+              const articleElement = document.querySelector('.novel-content');
+              if (articleElement) {
+                articleElement.style.fontFamily = e.target.value;
+              }
+            }}
+            defaultValue="TimesNewRoman"
+          >
+            <option value="TimesNewRoman, Times, serif">Times New Roman</option>
+            <option value="Arial, sans-serif">Arial</option>
+            <option value="Georgia, serif">Georgia</option>
+            <option value="Verdana, sans-serif">Verdana</option>
+            <option value="'Courier New', monospace">Courier New</option>
+          </select>
+          
+          <select 
+            className="text-sm border rounded p-1"
+            onChange={(e) => {
+              const articleElement = document.querySelector('.novel-content');
+              if (articleElement) {
+                articleElement.style.fontSize = e.target.value;
+              }
+            }}
+            defaultValue="14px"
+          >
+            <option value="12px">12px</option>
+            <option value="14px">14px</option>
+            <option value="16px">16px</option>
+            <option value="18px">18px</option>
+            <option value="20px">20px</option>
+          </select>
         </div>
+        
+        <article 
+          className="novel-content whitespace-pre-line" 
+          style={{ 
+            fontFamily: 'TimesNewRoman, Times, serif',
+            fontSize: '14px',
+            lineHeight: 1.6 
+          }}
+          dangerouslySetInnerHTML={{ __html: novelContent || '' }}
+        ></article>
       </div>
       
       {/* Chapter List Side Sheet */}
@@ -245,7 +287,9 @@ export function NovelReaderPage({ contentId, chapterId }: NovelReaderPageProps) 
               {getSortedChapters().map(ch => (
                 <div key={ch.id} className="py-2 border-b border-border">
                   <Link
-                    href={`/truyen/${contentId}/chapter-${ch.number}`}
+                    href={novelDetails?.content?.title 
+                      ? `/truyen/${novelDetails.content.title.replace(/ /g, '-')}/chapter/${ch.number}` 
+                      : `/truyen/${contentId}/chapter-${ch.number}`}
                     className={`block py-1 px-2 rounded hover:bg-muted ${ch.id === chapterId ? 'bg-primary/10 text-primary font-medium' : ''}`}
                     onClick={() => setShowChapterList(false)}
                   >

@@ -216,9 +216,8 @@ export function MangaReaderPage({ contentId, chapterId }: MangaReaderPageProps) 
     return (a.pageOrder || 0) - (b.pageOrder || 0);
   });
   
-  // Fallback to demo images if real content is not available
+  // Get manga page images from chapter content
   const pageImages = sortedPages.map(page => page.imageUrl || "").filter(Boolean);
-  const displayImages = pageImages.length > 0 ? pageImages : getMangaPageImages();
   
   return (
     <ReaderLayout
@@ -233,16 +232,24 @@ export function MangaReaderPage({ contentId, chapterId }: MangaReaderPageProps) 
       onChapterListToggle={handleChapterListToggle}
     >
       <div className="manga-reader space-y-4">
-        {displayImages.map((imageUrl, index) => (
-          <div key={index} className="mx-auto">
-            <img
-              src={imageUrl}
-              alt={`Trang ${index + 1}`}
-              className="w-full max-w-4xl mx-auto shadow-md rounded"
-              loading={index < 2 ? "eager" : "lazy"}
-            />
+        {pageImages.length > 0 ? (
+          pageImages.map((imageUrl, index) => (
+            <div key={index} className="mx-auto">
+              <img
+                src={imageUrl}
+                alt={`Trang ${index + 1}`}
+                className="w-full max-w-4xl mx-auto shadow-md rounded"
+                loading={index < 2 ? "eager" : "lazy"}
+              />
+            </div>
+          ))
+        ) : (
+          <div className="text-center py-12">
+            <AlertTriangle className="mx-auto h-12 w-12 text-yellow-500 mb-4" />
+            <h3 className="text-lg font-medium mb-2">Không có hình ảnh</h3>
+            <p className="text-muted-foreground">Chương truyện này chưa có hình ảnh hoặc đang được cập nhật.</p>
           </div>
-        ))}
+        )}
       </div>
       
       {/* Chapter List Side Sheet */}

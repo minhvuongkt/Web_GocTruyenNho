@@ -57,19 +57,39 @@ export function ChapterReaderPage({
     enabled: usingChapterNumber && !!normalizedContentId,
   });
 
+  // Fetch chapter by number using the new API
+  const { data: chapterByNumberData, isLoading: isLoadingChapterByNumber } = useQuery({
+    queryKey: [`/api/content/${normalizedContentId}/chapter-by-number/${chapterNumber}`],
+    queryFn: async () => {
+      try {
+        const res = await apiRequest("GET", `/api/content/${normalizedContentId}/chapter-by-number/${chapterNumber}`);
+        return res.json();
+      } catch (error) {
+        console.error("Error fetching chapter by number:", error);
+        return null;
+      }
+    },
+    enabled: usingChapterNumber && !!normalizedContentId && !!chapterNumber,
+  });
+
   // Effect to find the chapter ID based on chapter number
   useEffect(() => {
-    if (usingChapterNumber && chaptersData && chapterNumber) {
-      // Find the chapter that matches the number
-      const chapter = chaptersData.find((chapter: any) => chapter.number === chapterNumber);
-      if (chapter) {
-        setResolvedChapterId(chapter.id);
+    if (usingChapterNumber) {
+      if (chapterByNumberData && chapterByNumberData.chapter) {
+        // Use the chapter found directly from the API
+        setResolvedChapterId(chapterByNumberData.chapter.id);
+      } else if (chaptersData && chapterNumber) {
+        // Fallback to the old approach if the new API fails
+        const chapter = chaptersData.find((chapter: any) => chapter.number === chapterNumber);
+        if (chapter) {
+          setResolvedChapterId(chapter.id);
+        }
       }
     }
-  }, [usingChapterNumber, chaptersData, chapterNumber]);
+  }, [usingChapterNumber, chaptersData, chapterNumber, chapterByNumberData]);
 
   // Loading state
-  if (isLoadingContent || (usingChapterNumber && isLoadingChapters)) {
+  if (isLoadingContent || (usingChapterNumber && (isLoadingChapters || isLoadingChapterByNumber))) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <Loader2 className="h-10 w-10 animate-spin text-primary" />

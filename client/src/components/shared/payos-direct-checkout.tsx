@@ -61,8 +61,13 @@ export function PayOSDirectCheckout({
       const paymentData = await response.json();
       console.log("Payment created:", paymentData);
       
+      // Kiểm tra phản hồi API và xác nhận dữ liệu đầy đủ
+      if (!paymentData || !paymentData.payment) {
+        throw new Error("Không nhận được dữ liệu thanh toán từ server");
+      }
+      
       // Lưu mã giao dịch để sử dụng sau này
-      const newTransactionId = paymentData.payment?.transactionId;
+      const newTransactionId = paymentData.payment.transactionId;
       if (newTransactionId) {
         setOrderCode(newTransactionId);
       } else {
@@ -72,6 +77,9 @@ export function PayOSDirectCheckout({
       // Lấy mã QR và URL thanh toán trực tiếp từ response
       if (paymentData.qrCode) {
         setQrCode(paymentData.qrCode);
+        console.log("QR code received:", paymentData.qrCode.substring(0, 50) + "...");
+      } else {
+        console.error("No QR code in response");
       }
       
       if (paymentData.paymentLink) {
@@ -88,6 +96,7 @@ export function PayOSDirectCheckout({
         
         // Đảm bảo không đặt giá trị âm
         setCountdown(secondsRemaining > 0 ? secondsRemaining : expiryTime * 60);
+        console.log("Setting countdown to:", secondsRemaining > 0 ? secondsRemaining : expiryTime * 60);
       } else {
         // Sử dụng giá trị mặc định nếu server không trả về thời gian hết hạn
         setCountdown(expiryTime * 60);

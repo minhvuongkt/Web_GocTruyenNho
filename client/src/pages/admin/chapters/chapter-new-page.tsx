@@ -107,7 +107,7 @@ export default function ChapterNewPage({ contentId }: { contentId: number }) {
   // Mutation to create a new chapter
   const createChapterMutation = useMutation({
     mutationFn: async (chapterData: any) => {
-      const response = await apiRequest("POST", `/api/chapters`, chapterData);
+      const response = await apiRequest("POST", `/api/content/${contentId}/chapters`, chapterData);
       return await response.json();
     },
     onSuccess: (data) => {

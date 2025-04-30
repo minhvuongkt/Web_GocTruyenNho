@@ -523,6 +523,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!chapter) {
         return res.status(404).json({ error: "Chapter not found" });
       }
+      
+      // Lấy thông tin nội dung để xác định loại truyện (manga/novel)
+      const contentInfo = await storage.getContent(chapter.contentId);
+      if (!contentInfo) {
+        return res.status(404).json({ error: "Content not found" });
+      }
 
       // Check if chapter is locked and if the user has unlocked it
       let isUnlocked = !chapter.isLocked;
@@ -539,24 +545,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const chapterContentList = await storage.getChapterContentByChapter(id);
       
-      // Extract content from the result for display
+      // Xử lý khác nhau cho từng loại nội dung
       let contentHtml = "";
-      if (chapterContentList && chapterContentList.length > 0) {
-        // If there's content in the chapter_content table, use it
-        contentHtml = chapterContentList[0].content || "";
-      } else if (chapter.content) {
-        // Fallback to content stored in chapters table (legacy support)
-        contentHtml = chapter.content;
+      let processedChapterContent = [];
+      
+      if (contentInfo.type === "novel") {
+        // Novel: lấy nội dung văn bản đầu tiên
+        if (chapterContentList && chapterContentList.length > 0) {
+          contentHtml = chapterContentList[0].content || "";
+          processedChapterContent = chapterContentList;
+        } else if (chapter.content) {
+          // Fallback to legacy
+          contentHtml = chapter.content;
+        }
+      } else {
+        // Manga: trả về tất cả các trang theo thứ tự
+        processedChapterContent = chapterContentList;
+        // Nếu không có nội dung trong chapter_content, thử fallback vào content field
+        if ((!chapterContentList || chapterContentList.length === 0) && chapter.content) {
+          contentHtml = chapter.content;
+        }
       }
 
       res.json({
         chapter,
         content: isUnlocked ? contentHtml : "",
-        chapterContent: isUnlocked ? chapterContentList : [],
+        chapterContent: isUnlocked ? processedChapterContent : [],
         isUnlocked,
+        contentType: contentInfo.type // Trả về loại nội dung để client xử lý đúng
       });
     } catch (error) {
-      res.status(500).json({ error: "Failed to get chapter" });
+      console.error("Error fetching chapter:", error);
+      res.status(500).json({ 
+        error: "Failed to get chapter", 
+        message: error instanceof Error ? error.message : "Unknown error" 
+      });
     }
   });
 
@@ -792,6 +815,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
+      // Lấy thông tin nội dung để xác định loại truyện (manga/novel)
+      const contentInfo = await storage.getContent(contentId);
+      if (!contentInfo) {
+        return res.status(404).json({ error: "Content not found" });
+      }
+      
       // Find the chapter based on contentId and number
       const chapters = await db
         .select()
@@ -826,14 +855,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get chapter content
       const chapterContentList = await storage.getChapterContentByChapter(chapter.id);
       
-      // Extract content from the result for display
+      // Xử lý khác nhau cho từng loại nội dung
       let contentHtml = "";
-      if (chapterContentList && chapterContentList.length > 0) {
-        // If there's content in the chapter_content table, use it
-        contentHtml = chapterContentList[0].content || "";
-      } else if (chapter.content) {
-        // Fallback to content stored in chapters table (legacy support)
-        contentHtml = chapter.content;
+      let processedChapterContent = [];
+      
+      if (contentInfo.type === "novel") {
+        // Novel: lấy nội dung văn bản đầu tiên
+        if (chapterContentList && chapterContentList.length > 0) {
+          contentHtml = chapterContentList[0].content || "";
+          processedChapterContent = chapterContentList;
+        } else if (chapter.content) {
+          // Fallback to legacy
+          contentHtml = chapter.content;
+        }
+      } else {
+        // Manga: trả về tất cả các trang theo thứ tự
+        processedChapterContent = chapterContentList;
+        // Nếu không có nội dung trong chapter_content, thử fallback vào content field
+        if ((!chapterContentList || chapterContentList.length === 0) && chapter.content) {
+          contentHtml = chapter.content;
+        }
       }
       
       // Get previous and next chapters for navigation
@@ -849,11 +890,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const prevChapter = currentIndex > 0 ? sortedChapters[currentIndex - 1] : null;
       const nextChapter = currentIndex < sortedChapters.length - 1 ? sortedChapters[currentIndex + 1] : null;
       
+      // Lưu lịch sử đọc nếu người dùng đã đăng nhập và chương không khóa
+      if (req.isAuthenticated() && isUnlocked) {
+        try {
+          const userId = (req.user as any).id;
+          await storage.addReadingHistory(userId, contentId, chapter.id);
+        } catch (historyError) {
+          console.error("Error saving reading history:", historyError);
+          // Không trả về lỗi ở đây vì đây không phải chức năng chính
+        }
+      }
+      
       res.json({ 
         chapter, 
         content: isUnlocked ? contentHtml : "", 
-        chapterContent: isUnlocked ? chapterContentList : [],
+        chapterContent: isUnlocked ? processedChapterContent : [],
         isUnlocked,
+        contentType: contentInfo.type, // Trả về loại nội dung để client xử lý đúng
         navigation: {
           prevChapter: prevChapter ? {
             id: prevChapter.id,
@@ -869,7 +922,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error) {
       console.error("Error fetching chapter by number:", error);
-      res.status(500).json({ error: "Failed to fetch chapter" });
+      res.status(500).json({ 
+        error: "Failed to fetch chapter",
+        message: error instanceof Error ? error.message : "Unknown error"
+      });
     }
   });
 

@@ -341,6 +341,7 @@ export function MangaDetailPage({ id }: MangaDetailPageProps) {
                     chapters={chapters} 
                     contentId={id} 
                     contentType="manga"
+                    contentTitle={content?.title || ""}
                     userUnlockedChapters={unlockedChapters}
                   />
                 ) : (

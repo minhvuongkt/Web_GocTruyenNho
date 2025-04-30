@@ -330,6 +330,7 @@ export function NovelDetailPage({ id }: NovelDetailPageProps) {
                     chapters={chapters} 
                     contentId={id} 
                     contentType="novel"
+                    contentTitle={content?.title || ""}
                     userUnlockedChapters={unlockedChapters}
                   />
                 ) : (

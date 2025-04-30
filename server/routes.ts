@@ -823,15 +823,86 @@ export async function registerRoutes(app: Express): Promise<Server> {
     async (req, res) => {
       try {
         const chapterId = parseInt(req.params.chapterId);
-        const contentData = {
-          ...req.body,
-          chapterId,
-        };
-
-        const newContent = await storage.createChapterContent(contentData);
-        res.status(201).json(newContent);
+        
+        // Get the chapter to determine what type of content this is (manga or novel)
+        const chapter = await storage.getChapter(chapterId);
+        if (!chapter) {
+          return res.status(404).json({ error: "Chapter not found" });
+        }
+        
+        // Get the content to determine the type (manga or novel)
+        const contentInfo = await storage.getContent(chapter.contentId);
+        if (!contentInfo) {
+          return res.status(404).json({ error: "Content not found" });
+        }
+        
+        // For manga: store each page in a separate entry with pageOrder
+        if (contentInfo.type === "manga") {
+          // Delete any existing content first
+          const existingContent = await storage.getChapterContentByChapter(chapterId);
+          if (existingContent && existingContent.length > 0) {
+            for (const content of existingContent) {
+              await db.delete(schema.chapterContent).where(eq(schema.chapterContent.id, content.id));
+            }
+          }
+          
+          // If we receive images as an array
+          if (Array.isArray(req.body.images)) {
+            const results = [];
+            for (let i = 0; i < req.body.images.length; i++) {
+              const imageUrl = req.body.images[i];
+              const newContent = await storage.createChapterContent({
+                chapterId,
+                pageOrder: i + 1,
+                content: `<img src="${imageUrl}" alt="Page ${i + 1}">`,
+                imageUrl: imageUrl
+              });
+              results.push(newContent);
+            }
+            return res.status(201).json(results);
+          } 
+          // If we receive content as HTML with img tags
+          else if (req.body.content) {
+            const newContent = await storage.createChapterContent({
+              chapterId,
+              content: req.body.content,
+              pageOrder: 1
+            });
+            return res.status(201).json(newContent);
+          }
+          else {
+            return res.status(400).json({ error: "No content provided for manga chapter" });
+          }
+        } 
+        // For novel: store as a single entry with formatted text
+        else if (contentInfo.type === "novel") {
+          // Delete any existing content first
+          const existingContent = await storage.getChapterContentByChapter(chapterId);
+          if (existingContent && existingContent.length > 0) {
+            for (const content of existingContent) {
+              await db.delete(schema.chapterContent).where(eq(schema.chapterContent.id, content.id));
+            }
+          }
+          
+          // Create new content
+          const newContent = await storage.createChapterContent({
+            chapterId,
+            content: req.body.content || "",
+          });
+          
+          return res.status(201).json(newContent);
+        } 
+        else {
+          return res.status(400).json({ error: "Invalid content type" });
+        }
       } catch (error) {
-        res.status(500).json({ error: "Failed to create chapter content" });
+        console.error("Error creating chapter content:", error);
+        res
+          .status(500)
+          .json({ 
+            error: "Failed to create chapter content", 
+            message: error instanceof Error ? error.message : "Unknown error"
+          });
       }
     },
   );

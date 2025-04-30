@@ -28,7 +28,8 @@ import {
 import { formatDate, getRandomCoverImage, getStatusLabel } from "@/lib/utils";
 
 interface MangaDetailPageProps {
-  id: number;
+  id: number | string;
+  titleUrl?: string; // URL dạng URL-friendly của tiêu đề, ví dụ: "truyen-1"
 }
 
 interface ContentDetails {
@@ -39,38 +40,49 @@ interface ContentDetails {
   chapters?: Chapter[];
 }
 
-export function MangaDetailPage({ id }: MangaDetailPageProps) {
+export function MangaDetailPage({ id, titleUrl }: MangaDetailPageProps) {
   const [, navigate] = useLocation();
   const { user } = useAuth();
   const [comment, setComment] = useState("");
   const [activeTab, setActiveTab] = useState("chapters");
   
+  // Lưu contentId để sử dụng trong toàn bộ component
+  const [contentId, setContentId] = useState<number>(typeof id === 'number' ? id : parseInt(id as string));
+  
   // Fetch manga details
   const { data, isLoading, isError } = useQuery<ContentDetails>({
-    queryKey: [`/api/content/${id}`],
+    queryKey: [`/api/content/${contentId}`],
     queryFn: async () => {
       const res = await apiRequest("GET", `/api/content/${id}`);
       return res.json();
     }
   });
   
+  // Khi lấy được dữ liệu content, cập nhật contentId nếu cần
+  useEffect(() => {
+    if (data?.content?.id) {
+      setContentId(data.content.id);
+    }
+  }, [data]);
+
   // Fetch chapters
   const { data: chaptersData } = useQuery<Chapter[]>({
-    queryKey: [`/api/content/${id}/chapters`],
+    queryKey: [`/api/content/${contentId}/chapters`],
     queryFn: async () => {
-      const res = await apiRequest("GET", `/api/content/${id}/chapters`);
+      const res = await apiRequest("GET", `/api/content/${contentId}/chapters`);
       return res.json();
     },
-    enabled: !!id
+    enabled: !!contentId
   });
   
   // Fetch comments
   const { data: comments, isLoading: isLoadingComments } = useQuery({
-    queryKey: [`/api/content/${id}/comments`],
+    queryKey: [`/api/content/${contentId}/comments`],
     queryFn: async () => {
-      const res = await apiRequest("GET", `/api/content/${id}/comments`);
+      const res = await apiRequest("GET", `/api/content/${contentId}/comments`);
       return res.json();
-    }
+    },
+    enabled: !!contentId
   });
   
   // Check if manga is in user's favorites
@@ -86,7 +98,7 @@ export function MangaDetailPage({ id }: MangaDetailPageProps) {
   // Toggle favorite mutation
   const toggleFavoriteMutation = useMutation({
     mutationFn: async () => {
-      const res = await apiRequest("POST", `/api/favorites/${id}`);
+      const res = await apiRequest("POST", `/api/favorites/${contentId}`);
       return res.json();
     },
     onSuccess: () => {
@@ -96,31 +108,31 @@ export function MangaDetailPage({ id }: MangaDetailPageProps) {
   
   // Get user unlocked chapters
   const { data: unlockedChapters } = useQuery({
-    queryKey: [`/api/user/unlocked-chapters/${id}`],
+    queryKey: [`/api/user/unlocked-chapters/${contentId}`],
     queryFn: async () => {
-      const res = await apiRequest("GET", `/api/user/unlocked-chapters/${id}`);
+      const res = await apiRequest("GET", `/api/user/unlocked-chapters/${contentId}`);
       return res.json();
     },
-    enabled: !!user
+    enabled: !!user && !!contentId
   });
   
   // Submit comment mutation
   const commentMutation = useMutation({
     mutationFn: async () => {
       const res = await apiRequest("POST", "/api/comments", {
-        contentId: id,
+        contentId: contentId,
         text: comment
       });
       return res.json();
     },
     onSuccess: () => {
       setComment("");
-      queryClient.invalidateQueries({ queryKey: [`/api/content/${id}/comments`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/content/${contentId}/comments`] });
     }
   });
   
   // Check if content is in favorites
-  const isFavorite = favorites?.some((fav: Content) => fav.id === id);
+  const isFavorite = favorites?.some((fav: Content) => fav.id === contentId);
   
   // Handle favorite toggle
   const handleToggleFavorite = () => {
@@ -339,7 +351,7 @@ export function MangaDetailPage({ id }: MangaDetailPageProps) {
                 {chapters && chapters.length > 0 ? (
                   <ChapterList 
                     chapters={chapters} 
-                    contentId={id} 
+                    contentId={contentId} 
                     contentType="manga"
                     contentTitle={content?.title || ""}
                     userUnlockedChapters={unlockedChapters}

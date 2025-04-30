@@ -28,7 +28,8 @@ import {
 import { formatDate, getRandomCoverImage, getStatusLabel, truncateText } from "@/lib/utils";
 
 interface NovelDetailPageProps {
-  id: number;
+  id: number | string;
+  titleUrl?: string; // URL dạng URL-friendly của tiêu đề, ví dụ: "truyen-1"
 }
 
 interface ContentDetails {
@@ -39,15 +40,18 @@ interface ContentDetails {
   chapters?: Chapter[];
 }
 
-export function NovelDetailPage({ id }: NovelDetailPageProps) {
+export function NovelDetailPage({ id, titleUrl }: NovelDetailPageProps) {
   const [, navigate] = useLocation();
   const { user } = useAuth();
   const [comment, setComment] = useState("");
   const [activeTab, setActiveTab] = useState("chapters");
   
+  // Lưu contentId để sử dụng trong toàn bộ component
+  const [contentId, setContentId] = useState<number>(typeof id === 'number' ? id : parseInt(id as string));
+  
   // Fetch novel details
   const { data, isLoading, isError } = useQuery<ContentDetails>({
-    queryKey: [`/api/content/${id}`],
+    queryKey: [`/api/content/${contentId}`],
     queryFn: async () => {
       const res = await apiRequest("GET", `/api/content/${id}`);
       return res.json();

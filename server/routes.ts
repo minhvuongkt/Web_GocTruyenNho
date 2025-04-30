@@ -3231,6 +3231,69 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // New endpoint to get chapter by content ID and chapter number (for the new URL format)
+  app.get("/api/content/:contentId/chapter-by-number/:number", async (req, res) => {
+    try {
+      const contentId = parseInt(req.params.contentId);
+      const chapterNumber = parseInt(req.params.number);
+      
+      // Verify content exists
+      const content = await storage.getContent(contentId);
+      if (!content) {
+        return res.status(404).json({ error: "Content not found" });
+      }
+      
+      // Get all chapters for this content
+      const chapters = await storage.getChaptersByContent(contentId);
+      
+      // Find the chapter with matching number
+      const chapter = chapters.find(ch => ch.number === chapterNumber);
+      
+      if (!chapter) {
+        return res.status(404).json({ 
+          error: "Chapter not found",
+          message: `No chapter with number ${chapterNumber} found for this content`
+        });
+      }
+      
+      // Increment view count
+      await storage.incrementChapterViews(chapter.id);
+      
+      const chapterContentList = await storage.getChapterContentByChapter(chapter.id);
+      
+      // Extract content from the result for display
+      let contentHtml = "";
+      if (chapterContentList && chapterContentList.length > 0) {
+        // If there's content in the chapter_content table, use it
+        contentHtml = chapterContentList[0].content || "";
+      } else if (chapter.content) {
+        // Fallback to content stored in chapters table (legacy support)
+        contentHtml = chapter.content;
+      }
+      
+      // Check if chapter is locked and if the user has unlocked it
+      let isUnlocked = !chapter.isLocked;
+      
+      if (chapter.isLocked && req.isAuthenticated()) {
+        const userId = (req.user as any).id;
+        isUnlocked = await storage.isChapterUnlocked(userId, chapter.id);
+      }
+      
+      res.json({
+        chapter,
+        content: isUnlocked ? contentHtml : "",
+        chapterContent: isUnlocked ? chapterContentList : [],
+        isUnlocked,
+      });
+    } catch (error) {
+      console.error("Error fetching chapter by number:", error);
+      res.status(500).json({ 
+        error: "Failed to fetch chapter by number",
+        message: error instanceof Error ? error.message : "Unknown error" 
+      });
+    }
+  });
+
   // Create HTTP server without starting it
   return new Server(app);
 }

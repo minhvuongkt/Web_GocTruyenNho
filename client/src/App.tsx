@@ -12,10 +12,6 @@ import { normalizeId } from "@/lib/hashUtils";
 import HomePage from "@/pages/home-page";
 import NotFound from "@/pages/not-found";
 import AuthPage from "@/pages/auth-page";
-import MangaDetailPage from "@/pages/manga-detail-page";
-import NovelDetailPage from "@/pages/novel-detail-page";
-import MangaReaderPage from "@/pages/manga-reader-page";
-import NovelReaderPage from "@/pages/novel-reader-page";
 import ContentDetailPage from "@/pages/content-detail-page";
 import ChapterReaderPage from "@/pages/chapter-reader-page";
 import ProfilePage from "@/pages/profile-page";
@@ -48,7 +44,7 @@ function Router() {
       <Route path="/" component={HomePage} />
       <Route path="/auth" component={AuthPage} />
       <Route path="/search" component={SearchPage} />
-      
+
       {/* Content detail pages */}
       <Route path="/truyen/:id">
         {(params) => {
@@ -57,7 +53,7 @@ function Router() {
           return <ContentDetailPage id={id} />;
         }}
       </Route>
-      
+
       {/* Legacy routes for compatibility */}
       <Route path="/manga/:id">
         {(params) => <Redirect to={`/truyen/${params.id}`} />}
@@ -65,80 +61,109 @@ function Router() {
       <Route path="/novel/:id">
         {(params) => <Redirect to={`/truyen/${params.id}`} />}
       </Route>
-      
-      {/* Reader pages - new format according to requirements using title and chapter number */}
-      <Route path="/truyen/:contentTitle/chapter/:chapterNumber">
-        {(params) => (
-          <ChapterReaderPage 
-            contentTitle={params.contentTitle} 
-            chapterNumber={parseInt(params.chapterNumber)}
-            usingTitle={true}
-          />
-        )}
-      </Route>
-      
-      {/* Legacy routes for backward compatibility */}
-      <Route path="/truyen/:contentId/chapter-:chapterNumber">
-        {(params) => (
-          <ChapterReaderPage 
-            contentId={normalizeId(params.contentId)} 
-            chapterNumber={parseInt(params.chapterNumber)}
-            usingChapterNumber={true}
-          />
-        )}
-      </Route>
-      
+
       <Route path="/truyen/:contentId/chapter/:chapterId">
         {(params) => (
-          <ChapterReaderPage 
-            contentId={normalizeId(params.contentId)} 
-            chapterId={normalizeId(params.chapterId)} 
+          <ChapterReaderPage
+            contentId={normalizeId(params.contentId)}
+            chapterId={normalizeId(params.chapterId)}
           />
         )}
       </Route>
-      
+
       {/* Legacy reader routes for compatibility */}
       <Route path="/manga/:contentId/chapter/:chapterId">
-        {(params) => <Redirect to={`/truyen/${params.contentId}/chapter/${params.chapterId}`} />}
+        {(params) => (
+          <Redirect
+            to={`/truyen/${params.contentId}/chapter/${params.chapterId}`}
+          />
+        )}
       </Route>
       <Route path="/novel/:contentId/chapter/:chapterId">
-        {(params) => <Redirect to={`/truyen/${params.contentId}/chapter/${params.chapterId}`} />}
+        {(params) => (
+          <Redirect
+            to={`/truyen/${params.contentId}/chapter/${params.chapterId}`}
+          />
+        )}
       </Route>
-      
+
       {/* Protected user routes */}
       <ProtectedRoute path="/profile" component={ProfilePage} />
       <ProtectedRoute path="/payment" component={PaymentPage} />
-      
+
       {/* Payment related pages */}
       <Route path="/payment-test" component={PaymentTestPage} />
       <Route path="/payment-callback" component={PaymentCallbackPage} />
-      
+
       {/* Admin routes */}
-      <ProtectedRoute path="/admin" component={DashboardPage} requireAdmin={true} />
-      <ProtectedRoute path="/admin/manga" component={MangaManagementPage} requireAdmin={true} />
-      <ProtectedRoute path="/admin/users" component={UsersManagementPage} requireAdmin={true} />
+      <ProtectedRoute
+        path="/admin"
+        component={DashboardPage}
+        requireAdmin={true}
+      />
+      <ProtectedRoute
+        path="/admin/manga"
+        component={MangaManagementPage}
+        requireAdmin={true}
+      />
+      <ProtectedRoute
+        path="/admin/users"
+        component={UsersManagementPage}
+        requireAdmin={true}
+      />
       {/* Admin Chapter Routes */}
       <ProtectedRoute path="/admin/chapters/:contentId" requireAdmin={true}>
-        {(params) => <ChapterListPage contentId={normalizeId(params.contentId)} />}
+        {(params) => (
+          <ChapterListPage contentId={normalizeId(params.contentId)} />
+        )}
       </ProtectedRoute>
       <ProtectedRoute path="/admin/chapters/:contentId/new" requireAdmin={true}>
-        {(params) => <ChapterNewPage contentId={normalizeId(params.contentId)} />}
-      </ProtectedRoute>
-      <ProtectedRoute path="/admin/chapters/:contentId/chapter/:chapterId" requireAdmin={true}>
         {(params) => (
-          <ChapterEditPage 
-            contentId={normalizeId(params.contentId)} 
-            chapterId={normalizeId(params.chapterId)} 
+          <ChapterNewPage contentId={normalizeId(params.contentId)} />
+        )}
+      </ProtectedRoute>
+      <ProtectedRoute
+        path="/admin/chapters/:contentId/chapter/:chapterId"
+        requireAdmin={true}
+      >
+        {(params) => (
+          <ChapterEditPage
+            contentId={normalizeId(params.contentId)}
+            chapterId={normalizeId(params.chapterId)}
           />
         )}
       </ProtectedRoute>
-      <ProtectedRoute path="/admin/payments" component={PaymentManagementPage} requireAdmin={true} />
-      <ProtectedRoute path="/admin/payment-settings" component={PaymentSettingsPage} requireAdmin={true} />
-      <ProtectedRoute path="/admin/ads" component={AdManagementPage} requireAdmin={true} />
-      <ProtectedRoute path="/admin/genres" component={GenreManagementPage} requireAdmin={true} />
-      <ProtectedRoute path="/admin/authors" component={AuthorManagementPage} requireAdmin={true} />
-      <ProtectedRoute path="/admin/translation-groups" component={TranslationGroupManagementPage} requireAdmin={true} />
-      
+      <ProtectedRoute
+        path="/admin/payments"
+        component={PaymentManagementPage}
+        requireAdmin={true}
+      />
+      <ProtectedRoute
+        path="/admin/payment-settings"
+        component={PaymentSettingsPage}
+        requireAdmin={true}
+      />
+      <ProtectedRoute
+        path="/admin/ads"
+        component={AdManagementPage}
+        requireAdmin={true}
+      />
+      <ProtectedRoute
+        path="/admin/genres"
+        component={GenreManagementPage}
+        requireAdmin={true}
+      />
+      <ProtectedRoute
+        path="/admin/authors"
+        component={AuthorManagementPage}
+        requireAdmin={true}
+      />
+      <ProtectedRoute
+        path="/admin/translation-groups"
+        component={TranslationGroupManagementPage}
+        requireAdmin={true}
+      />
+
       {/* Fallback to 404 */}
       <Route component={NotFound} />
     </Switch>

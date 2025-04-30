@@ -2499,7 +2499,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         let paymentStatus = null;
 
         // Xử lý cả hai dạng response có thể nhận được từ PayOS
-        if (result) {
+        if (result && typeof result === 'object') {
           // Kiểm tra dạng response mới (có code, data)
           if (result.code === "00" && result.data && result.data.status) {
             paymentStatus = result.data.status;
@@ -2768,10 +2768,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
             let apiStatus = null;
             
             // Trích xuất trạng thái từ response (xử lý cả 2 dạng response)
-            if (statusResult.code === "00" && statusResult.data && statusResult.data.status) {
-              apiStatus = statusResult.data.status;
-            } else if (statusResult.status) {
-              apiStatus = statusResult.status;
+            if (statusResult && typeof statusResult === 'object') {
+              // Kiểm tra dạng response mới (có code, data)
+              if (statusResult.code === "00" && statusResult.data && statusResult.data.status) {
+                apiStatus = statusResult.data.status;
+              } 
+              // Kiểm tra dạng response trực tiếp từ SDK
+              else if (statusResult.status) {
+                apiStatus = statusResult.status;
+              }
             }
             
             // Cập nhật trạng thái nếu có thay đổi

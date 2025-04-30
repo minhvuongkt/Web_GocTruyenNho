@@ -163,7 +163,8 @@ export async function checkPaymentStatus(transactionId: string): Promise<{
   error?: string;
 }> {
   try {
-    const response = await fetch(`/api/payos/check-payment-status/${transactionId}`, {
+    // Sử dụng endpoint cập nhật
+    const response = await fetch(`/api/payments/${transactionId}/status`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
@@ -196,7 +197,8 @@ export async function getPaymentQRCode(transactionId: string): Promise<{
   expiresAt: string;
 }> {
   try {
-    const response = await fetch(`/api/payos/payments/${transactionId}/qr`, {
+    // Sửa lại đường dẫn API để khớp với endpoint trong server/routes.ts
+    const response = await fetch(`/api/payments/${transactionId}/qr`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',

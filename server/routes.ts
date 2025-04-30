@@ -440,6 +440,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: "Failed to get content by title" });
     }
   });
+  
+  // Endpoint to find chapter by content ID and chapter number
+  app.get("/api/content/:contentId/chapter-by-number/:chapterNumber", async (req, res) => {
+    try {
+      const contentId = parseInt(req.params.contentId);
+      const chapterNumber = parseInt(req.params.chapterNumber);
+      
+      const chapters = await storage.getChaptersByContent(contentId);
+      const chapter = chapters.find(ch => ch.number === chapterNumber);
+      
+      if (!chapter) {
+        return res.status(404).json({ error: "Chapter not found" });
+      }
+      
+      res.json({ chapter });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to get chapter by number" });
+    }
+  });
+  
+  // Endpoint to find chapter by content title and chapter number
+  app.get("/api/content/by-title/:title/chapter/:chapterNumber", async (req, res) => {
+    try {
+      const title = req.params.title.replace(/-/g, ' ');
+      const chapterNumber = parseInt(req.params.chapterNumber);
+      
+      // First get the content by title
+      const contentData = await storage.getContentByTitle(title);
+      
+      if (!contentData) {
+        return res.status(404).json({ error: "Content not found" });
+      }
+      
+      // Then get chapters for this content
+      const chapters = await storage.getChaptersByContent(contentData.content.id);
+      const chapter = chapters.find(ch => ch.number === chapterNumber);
+      
+      if (!chapter) {
+        return res.status(404).json({ error: "Chapter not found" });
+      }
+      
+      // Return both content and chapter data for convenience
+      res.json({ 
+        content: contentData.content,
+        chapter
+      });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to get chapter by title and number" });
+    }
+  });
 
   app.post("/api/content", ensureAdmin, async (req, res) => {
     try {

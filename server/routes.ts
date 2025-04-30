@@ -606,10 +606,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
             number: newChapterNumber
           });
           
+          // Thêm nội dung chương vào bảng chapter_content
+          if (chapterData.content) {
+            await storage.createChapterContent({
+              chapterId: newChapter.id,
+              content: chapterData.content
+            });
+          }
+          
           res.status(201).json(newChapter);
         } else {
           // Default behavior - add to end
           const newChapter = await storage.createChapter(chapterData);
+          
+          // Thêm nội dung chương vào bảng chapter_content
+          if (chapterData.content) {
+            await storage.createChapterContent({
+              chapterId: newChapter.id,
+              content: chapterData.content
+            });
+          }
+          
           res.status(201).json(newChapter);
         }
       } catch (error) {

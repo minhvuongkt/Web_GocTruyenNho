@@ -111,6 +111,14 @@ export function PayOSDirectCheckout({
       setCountdown(prev => {
         if (prev <= 1) {
           clearInterval(timer);
+          
+          // Khi hết thời gian, tự động hủy thanh toán hiện tại
+          toast({
+            title: "Hết thời gian thanh toán",
+            description: "Mã QR đã hết hiệu lực. Vui lòng tạo mới để tiếp tục.",
+            variant: "destructive"
+          });
+          
           return 0;
         }
         return prev - 1;
@@ -118,7 +126,7 @@ export function PayOSDirectCheckout({
     }, 1000);
     
     return () => clearInterval(timer);
-  }, [countdown]);
+  }, [countdown, toast]);
 
   // Format time as mm:ss
   const formatTime = (seconds: number) => {
@@ -306,15 +314,37 @@ export function PayOSDirectCheckout({
               <div className="flex flex-col items-center space-y-4">
                 <h3 className="font-semibold text-lg">Quét mã để thanh toán</h3>
                 
-                {countdown > 0 && (
-                  <div className="text-center">
-                    <span className="text-sm text-gray-500">Thời gian còn lại: </span>
-                    <span className="font-medium">{formatTime(countdown)}</span>
+                {countdown > 0 ? (
+                  <div className={`flex items-center space-x-2 px-3 py-2 rounded-md ${
+                    countdown < 60 ? 'bg-red-50 text-red-700 border border-red-200' : 
+                    countdown < 180 ? 'bg-yellow-50 text-yellow-700 border border-yellow-200' : 
+                    'bg-blue-50 text-blue-700 border border-blue-100'
+                  }`}>
+                    <Clock className={`h-4 w-4 ${
+                      countdown < 60 ? 'text-red-600' : 
+                      countdown < 180 ? 'text-yellow-600' : 
+                      'text-blue-600'
+                    }`} />
+                    <div className="flex flex-col">
+                      <span className="text-sm font-medium">Thời gian còn lại:</span>
+                      <span className="font-semibold">{formatTime(countdown)}</span>
+                      {countdown < 60 && (
+                        <span className="text-xs">Thanh toán sẽ hết hạn trong ít phút!</span>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="bg-red-50 text-red-700 border border-red-200 px-3 py-2 rounded-md flex items-center space-x-2">
+                    <Clock className="h-4 w-4" />
+                    <div>
+                      <span className="text-sm font-medium">Hết thời gian thanh toán</span>
+                      <p className="text-xs">Vui lòng tạo mã thanh toán mới</p>
+                    </div>
                   </div>
                 )}
                 
                 <div className="bg-white p-2 border border-gray-200 rounded-md">
-                  {qrCode ? (
+                  {qrCode && countdown > 0 ? (
                     <>
                       {/* Thử nhiều cách khác nhau để hiển thị mã QR */}
                       {qrCode.startsWith('000201') || qrCode.startsWith('00020101') ? (
@@ -438,6 +468,20 @@ export function PayOSDirectCheckout({
                         </div>
                       )}
                     </>
+                  ) : countdown <= 0 ? (
+                    <div className="w-48 h-48 mx-auto flex flex-col items-center justify-center bg-red-50 border border-red-200 rounded-md p-4">
+                      <Clock className="h-10 w-10 text-red-500 mb-2" />
+                      <p className="text-sm font-medium text-red-700 text-center">Hết thời gian thanh toán</p>
+                      <p className="text-xs text-red-600 text-center mt-1">Vui lòng tạo mới mã QR để tiếp tục thanh toán</p>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="mt-3"
+                        onClick={handleCreatePayment}
+                      >
+                        Tạo mới mã QR
+                      </Button>
+                    </div>
                   ) : (
                     <div className="w-48 h-48 mx-auto flex items-center justify-center bg-gray-100">
                       <p className="text-sm text-gray-500">Không thể tải mã QR</p>
@@ -455,31 +499,43 @@ export function PayOSDirectCheckout({
                 </div>
                 
                 <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2 w-full">
-                  {checkoutUrl && (
+                  {countdown > 0 ? (
+                    <>
+                      {checkoutUrl && (
+                        <Button
+                          variant="outline"
+                          className="flex-1"
+                          onClick={() => window.open(checkoutUrl, '_blank')}
+                        >
+                          Mở cổng thanh toán
+                        </Button>
+                      )}
+                      
+                      <Button
+                        variant="default"
+                        className="flex-1"
+                        onClick={handleConfirmPayment}
+                      >
+                        Tôi đã thanh toán
+                      </Button>
+                      
+                      <Button
+                        variant="ghost"
+                        className="flex-1"
+                        onClick={handleCancel}
+                      >
+                        Hủy
+                      </Button>
+                    </>
+                  ) : (
                     <Button
-                      variant="outline"
-                      className="flex-1"
-                      onClick={() => window.open(checkoutUrl, '_blank')}
+                      variant="default"
+                      className="w-full"
+                      onClick={handleCreatePayment}
                     >
-                      Mở cổng thanh toán
+                      Tạo mới mã QR
                     </Button>
                   )}
-                  
-                  <Button
-                    variant="default"
-                    className="flex-1"
-                    onClick={handleConfirmPayment}
-                  >
-                    Tôi đã thanh toán
-                  </Button>
-                  
-                  <Button
-                    variant="ghost"
-                    className="flex-1"
-                    onClick={handleCancel}
-                  >
-                    Hủy
-                  </Button>
                 </div>
               </div>
             </div>

@@ -14,19 +14,19 @@ import { getMangaPageImages } from "@/lib/utils";
 
 interface MangaReaderPageProps {
   contentId: number;
-  chapterId: number;
+  chapterNumber: number;
 }
 
-export function MangaReaderPage({ contentId, chapterId }: MangaReaderPageProps) {
+export function MangaReaderPage({ contentId, chapterNumber }: MangaReaderPageProps) {
   const { user } = useAuth();
   const [showUnlockModal, setShowUnlockModal] = useState(false);
   const [showChapterList, setShowChapterList] = useState(false);
   
-  // Fetch chapter details
+  // Fetch chapter details using the new endpoint with contentId and chapterNumber
   const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: [`/api/chapters/${chapterId}`],
+    queryKey: [`/api/content/${contentId}/chapter/${chapterNumber}`],
     queryFn: async () => {
-      const res = await apiRequest("GET", `/api/chapters/${chapterId}`);
+      const res = await apiRequest("GET", `/api/content/${contentId}/chapter/${chapterNumber}`);
       return res.json();
     }
   });
@@ -52,19 +52,8 @@ export function MangaReaderPage({ contentId, chapterId }: MangaReaderPageProps) 
     return [...mangaDetails.chapters].sort((a, b) => a.number - b.number);
   };
   
-  // Find previous and next chapter IDs
-  const getAdjacentChapterIds = () => {
-    const sortedChapters = getSortedChapters();
-    const currentIndex = sortedChapters.findIndex(chapter => chapter.id === chapterId);
-    
-    const prevChapterId = currentIndex > 0 ? sortedChapters[currentIndex - 1].id : undefined;
-    const nextChapterId = currentIndex < sortedChapters.length - 1 ? sortedChapters[currentIndex + 1].id : undefined;
-    
-    return { prevChapterId, nextChapterId };
-  };
-  
-  // Get chapter information for navigation
-  const { prevChapterId, nextChapterId } = getAdjacentChapterIds();
+  // We don't need to manually calculate previous and next chapter numbers
+  // since they are now included in the API response in the navigation field
   
   // Handle unlock success
   const handleUnlockSuccess = () => {
@@ -163,13 +152,13 @@ export function MangaReaderPage({ contentId, chapterId }: MangaReaderPageProps) 
     return (
       <ReaderLayout
         contentId={contentId}
-        chapterId={chapterId}
+        chapterId={chapter.id}
         contentType="manga"
         title={mangaTitle}
         chapterTitle={chapter.title || `Chương ${chapter.number}`}
         chapterNumber={chapter.number}
-        prevChapterId={prevChapterId}
-        nextChapterId={nextChapterId}
+        prevChapterId={data.navigation?.prevChapter?.id}
+        nextChapterId={data.navigation?.nextChapter?.id}
         onChapterListToggle={handleChapterListToggle}
       >
         <div className="flex flex-col items-center justify-center py-16">
@@ -190,8 +179,8 @@ export function MangaReaderPage({ contentId, chapterId }: MangaReaderPageProps) 
                 {getSortedChapters().map(ch => (
                   <div key={ch.id} className="py-2 border-b border-border">
                     <Link
-                      href={`/truyen/${contentId}/chapter/${ch.id}`}
-                      className={`block py-1 px-2 rounded hover:bg-muted ${ch.id === chapterId ? 'bg-primary/10 text-primary font-medium' : ''}`}
+                      href={`/truyen/${contentId}/chapter/${ch.number}`}
+                      className={`block py-1 px-2 rounded hover:bg-muted ${ch.id === chapter.id ? 'bg-primary/10 text-primary font-medium' : ''}`}
                       onClick={() => setShowChapterList(false)}
                     >
                       <div className="flex items-center justify-between">
@@ -218,18 +207,18 @@ export function MangaReaderPage({ contentId, chapterId }: MangaReaderPageProps) 
   
   // Fallback to demo images if real content is not available
   const pageImages = sortedPages.map(page => page.imageUrl || "").filter(Boolean);
-  const displayImages = pageImages.length > 0 ? pageImages : getMangaPageImages();
+  const displayImages = pageImages.length > 0 ? pageImages : getMangaPageImages(5);
   
   return (
     <ReaderLayout
       contentId={contentId}
-      chapterId={chapterId}
+      chapterId={chapter.id}
       contentType="manga"
       title={mangaTitle}
       chapterTitle={chapter.title || `Chương ${chapter.number}`}
       chapterNumber={chapter.number}
-      prevChapterId={prevChapterId}
-      nextChapterId={nextChapterId}
+      prevChapterId={data.navigation?.prevChapter?.id}
+      nextChapterId={data.navigation?.nextChapter?.id}
       onChapterListToggle={handleChapterListToggle}
     >
       <div className="manga-reader space-y-4">
@@ -254,8 +243,8 @@ export function MangaReaderPage({ contentId, chapterId }: MangaReaderPageProps) 
               {getSortedChapters().map(ch => (
                 <div key={ch.id} className="py-2 border-b border-border">
                   <Link
-                    href={`/truyen/${contentId}/chapter/${ch.id}`}
-                    className={`block py-1 px-2 rounded hover:bg-muted ${ch.id === chapterId ? 'bg-primary/10 text-primary font-medium' : ''}`}
+                    href={`/truyen/${contentId}/chapter/${ch.number}`}
+                    className={`block py-1 px-2 rounded hover:bg-muted ${ch.id === chapter.id ? 'bg-primary/10 text-primary font-medium' : ''}`}
                     onClick={() => setShowChapterList(false)}
                   >
                     <div className="flex items-center justify-between">

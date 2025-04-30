@@ -66,22 +66,38 @@ function Router() {
         {(params) => <Redirect to={`/truyen/${params.id}`} />}
       </Route>
       
-      {/* Reader pages */}
+      {/* Reader pages with contentId and chapterNumber */}
       <Route path="/truyen/:contentId/chapter/:chapterNumber">
-        {(params) => (
-          <ChapterReaderPage 
-            contentId={parseInt(params.contentId)} 
-            chapterNumber={parseInt(params.chapterNumber)} 
-          />
-        )}
+        {(params) => {
+          const contentId = parseInt(params.contentId);
+          const chapterNumber = parseInt(params.chapterNumber);
+          
+          // We'll check content type to determine which reader to use
+          return (
+            <ChapterReaderPage 
+              contentId={contentId} 
+              chapterNumber={chapterNumber} 
+            />
+          );
+        }}
       </Route>
       
-      {/* Legacy reader routes for compatibility */}
+      {/* Legacy reader routes - convert old chapterId format to new chapterNumber format */}
       <Route path="/manga/:contentId/chapter/:chapterId">
-        {(params) => <Redirect to={`/truyen/${params.contentId}/chapter/${params.chapterId}`} />}
+        {(params) => {
+          // For compatibility, we'll need to fetch the chapter first to get its number
+          const contentId = parseInt(params.contentId);
+          // We pass chapterId directly to the redirect component which will handle conversion
+          return <Redirect to={`/truyen/${contentId}/chapter/${params.chapterId}`} />;
+        }}
       </Route>
       <Route path="/novel/:contentId/chapter/:chapterId">
-        {(params) => <Redirect to={`/truyen/${params.contentId}/chapter/${params.chapterId}`} />}
+        {(params) => {
+          // For compatibility, we'll need to fetch the chapter first to get its number
+          const contentId = parseInt(params.contentId);
+          // We pass chapterId directly to the redirect component which will handle conversion
+          return <Redirect to={`/truyen/${contentId}/chapter/${params.chapterId}`} />;
+        }}
       </Route>
       
       {/* Protected user routes */}

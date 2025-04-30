@@ -128,7 +128,7 @@ export function ChapterList({
                       asChild
                     >
                       <Link href={contentTitle 
-                        ? `/truyen/${contentTitle}/chapter/${chapter.number}` 
+                        ? `/truyen/${contentTitle.replace(/ /g, '-')}/chapter/${chapter.number}` 
                         : `/truyen/${contentId}/chapter-${chapter.number}`}>
                         Đọc
                       </Link>

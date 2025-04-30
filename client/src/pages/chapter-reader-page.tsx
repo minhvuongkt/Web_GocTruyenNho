@@ -139,8 +139,13 @@ export function ChapterReaderPage({
     }
   }, [usingChapterNumber, usingTitle, chaptersData, chapterNumber, chapterByNumberData, chapterByTitleData]);
 
-  // Loading state
-  if (isLoadingContent || (usingChapterNumber && (isLoadingChapters || isLoadingChapterByNumber))) {
+  // Loading state for all possible loading scenarios
+  if (
+    isLoadingContent || 
+    isLoadingContentByTitle || 
+    (usingChapterNumber && (isLoadingChapters || isLoadingChapterByNumber)) ||
+    (usingTitle && isLoadingChapterByTitle)
+  ) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <Loader2 className="h-10 w-10 animate-spin text-primary" />
@@ -149,6 +154,58 @@ export function ChapterReaderPage({
     );
   }
 
+  // Handle title-based routing with direct data from API
+  if (usingTitle) {
+    if (isErrorContentByTitle || !contentByTitleData || !contentByTitleData.content) {
+      return (
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="text-center">
+            <h2 className="text-2xl font-bold mb-2">Không tìm thấy nội dung</h2>
+            <p className="text-muted-foreground">
+              Nội dung "{contentTitle}" không tồn tại hoặc đã bị xóa.
+            </p>
+          </div>
+        </div>
+      );
+    }
+
+    if (!resolvedChapterId) {
+      // If we're viewing the title-based route but don't have the chapter data yet
+      if (chapterByTitleData && !chapterByTitleData.chapter) {
+        return (
+          <div className="flex items-center justify-center min-h-screen">
+            <div className="text-center">
+              <h2 className="text-2xl font-bold mb-2">Không tìm thấy chương</h2>
+              <p className="text-muted-foreground">
+                Chương số {chapterNumber} không tồn tại cho truyện "{contentTitle}".
+              </p>
+            </div>
+          </div>
+        );
+      }
+      
+      // Still waiting for chapter data
+      return (
+        <div className="flex items-center justify-center min-h-screen">
+          <Loader2 className="h-10 w-10 animate-spin text-primary" />
+          <span className="ml-2 text-muted-foreground">Đang tải dữ liệu chương...</span>
+        </div>
+      );
+    }
+
+    // We have all data for title-based routing
+    const contentType = contentByTitleData.content.type;
+    
+    // Render the appropriate component based on content type
+    if (contentType === "manga") {
+      return <MangaReaderPage contentId={normalizedContentId} chapterId={resolvedChapterId} />;
+    } else if (contentType === "novel") {
+      return <NovelReaderPage contentId={normalizedContentId} chapterId={resolvedChapterId} />;
+    }
+  }
+  
+  // Handle ID-based routing (legacy path)
+  
   // Error handling for content data
   if (isErrorContent || !contentData || !contentData.content) {
     return (
@@ -179,7 +236,21 @@ export function ChapterReaderPage({
 
   // Get the content type
   const contentType = contentData.content.type;
-  const actualChapterId = resolvedChapterId || normalizeId(chapterId!);
+  const actualChapterId = resolvedChapterId || (chapterId ? normalizeId(chapterId) : null);
+
+  // Make sure we have a chapter ID
+  if (!actualChapterId) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold mb-2">Không tìm thấy thông tin chương</h2>
+          <p className="text-muted-foreground">
+            Không thể xác định chương để hiển thị.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   // Render the appropriate component based on content type
   if (contentType === "manga") {

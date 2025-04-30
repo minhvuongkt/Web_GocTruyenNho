@@ -18,6 +18,7 @@ import { formatDate } from "@/lib/utils";
 interface ChapterListProps {
   chapters: Chapter[];
   contentId: number;
+  contentTitle?: string;
   contentType: 'manga' | 'novel';
   userUnlockedChapters?: number[]; // List of chapter IDs that the user has unlocked
 }
@@ -25,6 +26,7 @@ interface ChapterListProps {
 export function ChapterList({ 
   chapters, 
   contentId, 
+  contentTitle,
   contentType,
   userUnlockedChapters = []
 }: ChapterListProps) {
@@ -125,7 +127,9 @@ export function ChapterList({
                       size="sm" 
                       asChild
                     >
-                      <Link href={`/truyen/${contentId}/chapter-${chapter.number}`}>
+                      <Link href={contentTitle 
+                        ? `/truyen/${contentTitle}/chapter/${chapter.number}` 
+                        : `/truyen/${contentId}/chapter-${chapter.number}`}>
                         Đọc
                       </Link>
                     </Button>

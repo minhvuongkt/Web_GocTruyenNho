@@ -52,6 +52,9 @@ const imageFilter = (req: any, file: Express.Multer.File, cb: Function) => {
 };
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Setup static file serving for uploads directory
+  app.use('/uploads', express.static(path.join(process.cwd(), 'public/uploads')));
+  
   // Setup authentication
   setupAuth(app);
 

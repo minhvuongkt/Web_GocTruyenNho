@@ -675,15 +675,72 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const updateChapterHandler = async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
-      const updatedChapter = await storage.updateChapter(id, req.body);
-
-      if (!updatedChapter) {
+      const { content, ...chapterData } = req.body;
+      
+      // Lấy thông tin chapter để kiểm tra
+      const chapter = await storage.getChapter(id);
+      if (!chapter) {
         return res.status(404).json({ error: "Chapter not found" });
       }
-
+      
+      // Lấy thông tin nội dung để xác định loại truyện (manga/novel)
+      const contentInfo = await storage.getContent(chapter.contentId);
+      if (!contentInfo) {
+        return res.status(404).json({ error: "Content not found" });
+      }
+      
+      // Cập nhật thông tin chapter (không bao gồm nội dung)
+      const updatedChapter = await storage.updateChapter(id, chapterData);
+      
+      // Nếu có nội dung mới, cập nhật vào bảng chapter_content
+      if (content !== undefined) {
+        // Xử lý nội dung dựa trên loại truyện (manga/novel)
+        const existingContent = await storage.getChapterContentByChapter(id);
+        
+        // Xóa nội dung cũ nếu có
+        if (existingContent && existingContent.length > 0) {
+          for (const item of existingContent) {
+            await storage.deleteChapterContent(item.id);
+          }
+        }
+        
+        // Lưu nội dung mới
+        if (contentInfo.type === "manga") {
+          // Xử lý truyện tranh
+          if (Array.isArray(content)) {
+            // Nếu là mảng các URL ảnh
+            for (let i = 0; i < content.length; i++) {
+              await storage.createChapterContent({
+                chapterId: id,
+                pageOrder: i + 1,
+                content: `<img src="${content[i]}" alt="Page ${i + 1}">`,
+                imageUrl: content[i]
+              });
+            }
+          } else if (typeof content === "string") {
+            // Nếu là chuỗi HTML
+            await storage.createChapterContent({
+              chapterId: id,
+              content: content,
+              pageOrder: 1
+            });
+          }
+        } else {
+          // Xử lý truyện chữ
+          await storage.createChapterContent({
+            chapterId: id,
+            content: content,
+          });
+        }
+      }
+      
       res.json(updatedChapter);
     } catch (error) {
-      res.status(500).json({ error: "Failed to update chapter" });
+      console.error("Error updating chapter:", error);
+      res.status(500).json({ 
+        error: "Failed to update chapter", 
+        message: error instanceof Error ? error.message : "Unknown error" 
+      });
     }
   };
 

@@ -66,7 +66,18 @@ function Router() {
         {(params) => <Redirect to={`/truyen/${params.id}`} />}
       </Route>
       
-      {/* Reader pages */}
+      {/* Reader pages - new format using chapter number */}
+      <Route path="/truyen/:contentId/chapter-:chapterNumber">
+        {(params) => (
+          <ChapterReaderPage 
+            contentId={normalizeId(params.contentId)} 
+            chapterNumber={parseInt(params.chapterNumber)}
+            usingChapterNumber={true}
+          />
+        )}
+      </Route>
+      
+      {/* Original reader pages (for backward compatibility) */}
       <Route path="/truyen/:contentId/chapter/:chapterId">
         {(params) => (
           <ChapterReaderPage 

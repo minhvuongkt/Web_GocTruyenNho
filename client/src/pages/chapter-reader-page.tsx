@@ -8,31 +8,68 @@ import { normalizeId } from "@/lib/hashUtils";
 
 interface ChapterReaderPageProps {
   contentId: string | number;
-  chapterId: string | number;
+  chapterId?: string | number;
+  chapterNumber?: number;
+  usingChapterNumber?: boolean;
 }
 
-export function ChapterReaderPage({ contentId, chapterId }: ChapterReaderPageProps) {
-  // Normalize IDs (convert from hashes if needed)
+export function ChapterReaderPage({ 
+  contentId, 
+  chapterId, 
+  chapterNumber, 
+  usingChapterNumber = false 
+}: ChapterReaderPageProps) {
+  // Normalize content ID (convert from hashes if needed)
   const normalizedContentId = normalizeId(contentId);
-  const normalizedChapterId = normalizeId(chapterId);
+  
+  // State for the actual chapter ID (will be resolved if using chapter number)
+  const [resolvedChapterId, setResolvedChapterId] = useState<number | null>(
+    usingChapterNumber ? null : normalizeId(chapterId!)
+  );
   
   // Fetch content type first to determine which component to render
-  const { data, isLoading, isError } = useQuery({
+  const { data: contentData, isLoading: isLoadingContent, isError: isErrorContent } = useQuery({
     queryKey: [`/api/content/${normalizedContentId}/type`],
     queryFn: async () => {
       try {
         const res = await apiRequest("GET", `/api/content/${normalizedContentId}`);
         const data = await res.json();
-        return data?.content?.type || null;
+        return data;
       } catch (error) {
-        console.error("Error fetching content type:", error);
+        console.error("Error fetching content:", error);
         return null;
       }
     }
   });
+  
+  // If using chapter number, fetch the chapter ID based on number
+  const { data: chaptersData, isLoading: isLoadingChapters } = useQuery({
+    queryKey: [`/api/content/${normalizedContentId}/chapters`],
+    queryFn: async () => {
+      try {
+        const res = await apiRequest("GET", `/api/content/${normalizedContentId}/chapters`);
+        return res.json();
+      } catch (error) {
+        console.error("Error fetching chapters:", error);
+        return [];
+      }
+    },
+    enabled: usingChapterNumber && !!normalizedContentId,
+  });
+
+  // Effect to find the chapter ID based on chapter number
+  useEffect(() => {
+    if (usingChapterNumber && chaptersData && chapterNumber) {
+      // Find the chapter that matches the number
+      const chapter = chaptersData.find((chapter: any) => chapter.number === chapterNumber);
+      if (chapter) {
+        setResolvedChapterId(chapter.id);
+      }
+    }
+  }, [usingChapterNumber, chaptersData, chapterNumber]);
 
   // Loading state
-  if (isLoading) {
+  if (isLoadingContent || (usingChapterNumber && isLoadingChapters)) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <Loader2 className="h-10 w-10 animate-spin text-primary" />
@@ -41,8 +78,8 @@ export function ChapterReaderPage({ contentId, chapterId }: ChapterReaderPagePro
     );
   }
 
-  // Error handling
-  if (isError || !data) {
+  // Error handling for content data
+  if (isErrorContent || !contentData || !contentData.content) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
@@ -55,11 +92,29 @@ export function ChapterReaderPage({ contentId, chapterId }: ChapterReaderPagePro
     );
   }
 
+  // Error handling for chapter number not found
+  if (usingChapterNumber && !resolvedChapterId) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold mb-2">Không tìm thấy chương</h2>
+          <p className="text-muted-foreground">
+            Chương số {chapterNumber} không tồn tại cho nội dung này.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // Get the content type
+  const contentType = contentData.content.type;
+  const actualChapterId = resolvedChapterId || normalizeId(chapterId!);
+
   // Render the appropriate component based on content type
-  if (data === "manga") {
-    return <MangaReaderPage contentId={normalizedContentId} chapterId={normalizedChapterId} />;
-  } else if (data === "novel") {
-    return <NovelReaderPage contentId={normalizedContentId} chapterId={normalizedChapterId} />;
+  if (contentType === "manga") {
+    return <MangaReaderPage contentId={normalizedContentId} chapterId={actualChapterId} />;
+  } else if (contentType === "novel") {
+    return <NovelReaderPage contentId={normalizedContentId} chapterId={actualChapterId} />;
   } else {
     return (
       <div className="flex items-center justify-center min-h-screen">

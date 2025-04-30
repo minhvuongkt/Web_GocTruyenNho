@@ -99,7 +99,7 @@ export function MangaReaderPage({ contentId, chapterId }: MangaReaderPageProps) 
             Đã xảy ra lỗi khi tải nội dung chương này. Vui lòng thử lại sau.
           </p>
           <Button asChild>
-            <Link href={`/manga/${contentId}`}>Quay lại trang truyện</Link>
+            <Link href={`/truyen/${contentId}`}>Quay lại trang truyện</Link>
           </Button>
         </div>
       </div>
@@ -117,7 +117,7 @@ export function MangaReaderPage({ contentId, chapterId }: MangaReaderPageProps) 
             Chương này không tồn tại hoặc đã bị xóa.
           </p>
           <Button asChild>
-            <Link href={`/manga/${contentId}`}>Quay lại trang truyện</Link>
+            <Link href={`/truyen/${contentId}`}>Quay lại trang truyện</Link>
           </Button>
         </div>
       </div>
@@ -142,7 +142,7 @@ export function MangaReaderPage({ contentId, chapterId }: MangaReaderPageProps) 
               Mở khóa chương
             </Button>
             <Button variant="outline" asChild>
-              <Link href={`/manga/${contentId}`}>Quay lại</Link>
+              <Link href={`/truyen/${contentId}`}>Quay lại</Link>
             </Button>
           </div>
           
@@ -190,7 +190,7 @@ export function MangaReaderPage({ contentId, chapterId }: MangaReaderPageProps) 
                 {getSortedChapters().map(ch => (
                   <div key={ch.id} className="py-2 border-b border-border">
                     <Link
-                      href={`/manga/${contentId}/chapter/${ch.id}`}
+                      href={`/truyen/${contentId}/chapter/${ch.id}`}
                       className={`block py-1 px-2 rounded hover:bg-muted ${ch.id === chapterId ? 'bg-primary/10 text-primary font-medium' : ''}`}
                       onClick={() => setShowChapterList(false)}
                     >
@@ -254,7 +254,7 @@ export function MangaReaderPage({ contentId, chapterId }: MangaReaderPageProps) 
               {getSortedChapters().map(ch => (
                 <div key={ch.id} className="py-2 border-b border-border">
                   <Link
-                    href={`/manga/${contentId}/chapter/${ch.id}`}
+                    href={`/truyen/${contentId}/chapter/${ch.id}`}
                     className={`block py-1 px-2 rounded hover:bg-muted ${ch.id === chapterId ? 'bg-primary/10 text-primary font-medium' : ''}`}
                     onClick={() => setShowChapterList(false)}
                   >

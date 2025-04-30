@@ -19,7 +19,17 @@ export function ContentDetailPage({ id }: ContentDetailPageProps) {
   const [contentIdForChildren, setContentIdForChildren] = useState<number | null>(null);
   
   // Normalize the ID (convert from hash if needed) if it's not a title
-  const normalizedId = isTitle ? id : normalizeId(id);
+  let normalizedId: string | number = id;
+  
+  // Chỉ áp dụng normalizeId cho trường hợp không phải tiêu đề và có thể chuyển thành số
+  if (!isTitle && typeof id === 'string') {
+    // Kiểm tra xem id có phải là chuỗi số không
+    if (/^\d+$/.test(id)) {
+      normalizedId = normalizeId(id);
+    }
+  } else if (typeof id === 'number') {
+    normalizedId = id;
+  }
   
   // Fetch content data - this will determine which component to render
   const { data: contentData, isLoading, isError } = useQuery({
@@ -104,12 +114,12 @@ export function ContentDetailPage({ id }: ContentDetailPageProps) {
   // Render the appropriate component based on content type
   if (contentType === "manga") {
     return <MangaDetailPage 
-      id={isTitle && contentIdForChildren ? contentIdForChildren : normalizedId} 
+      id={contentIdForChildren || (typeof normalizedId === 'number' ? normalizedId : 0)} 
       titleUrl={isTitle ? String(normalizedId) : undefined}
     />;
   } else if (contentType === "novel") {
     return <NovelDetailPage 
-      id={isTitle && contentIdForChildren ? contentIdForChildren : normalizedId} 
+      id={contentIdForChildren || (typeof normalizedId === 'number' ? normalizedId : 0)} 
       titleUrl={isTitle ? String(normalizedId) : undefined}
     />;
   } else {

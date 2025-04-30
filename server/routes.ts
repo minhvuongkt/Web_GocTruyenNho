@@ -17,6 +17,8 @@ import {
   cancelPayOSPayment,
 } from "./payos-utils";
 import { setupAuth } from "./auth";
+import { db } from "./db";
+import { eq, and } from "drizzle-orm";
 
 const ensureAuthenticated = (
   req: Request,

@@ -118,6 +118,15 @@ export interface IStorage {
     genreIds: number[],
   ): Promise<Content>;
   getContent(id: number): Promise<Content | undefined>;
+  getContentByTitle(title: string): Promise<
+    | {
+        content: Content;
+        genres: Genre[];
+        author: Author;
+        translationGroup?: TranslationGroup;
+      }
+    | undefined
+  >;
   getContentWithDetails(id: number): Promise<
     | {
         content: Content;
@@ -498,6 +507,29 @@ export class DatabaseStorage implements IStorage {
       .from(content)
       .where(eq(content.id, id));
     return contentItem;
+  }
+  
+  async getContentByTitle(title: string): Promise<
+    | {
+        content: Content;
+        genres: Genre[];
+        author: Author;
+        translationGroup?: TranslationGroup;
+      }
+    | undefined
+  > {
+    // First find the content by title (case insensitive comparison)
+    const [contentItem] = await db
+      .select()
+      .from(content)
+      .where(sql`LOWER(${content.title}) = LOWER(${title})`);
+      
+    if (!contentItem) {
+      return undefined;
+    }
+    
+    // Get the content with details using the found ID
+    return this.getContentWithDetails(contentItem.id);
   }
 
   async getContentWithDetails(id: number): Promise<

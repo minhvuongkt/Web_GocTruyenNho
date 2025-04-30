@@ -15,6 +15,7 @@ export interface PayOSPaymentData {
   description?: string;
   cancelUrl?: string;
   returnUrl?: string;
+  expiresAt?: string; // Thời gian hết hạn dạng ISO string
 }
 
 /**
@@ -37,6 +38,7 @@ export interface PayOSPaymentResponse {
   cancelUrl?: string;
   returnUrl?: string;
   message?: string;
+  expiresAt?: string; // Thời gian hết hạn dạng ISO string
 }
 
 /**
@@ -58,7 +60,7 @@ export function extractPayOSPaymentData(response: PayOSPaymentResponse): PayOSPa
     const keys: Array<keyof PayOSPaymentData> = [
       'id', 'checkoutUrl', 'qrCode', 'orderCode', 
       'status', 'amount', 'description', 
-      'cancelUrl', 'returnUrl'
+      'cancelUrl', 'returnUrl', 'expiresAt'
     ];
     
     // Chỉ sao chép các key có giá trị

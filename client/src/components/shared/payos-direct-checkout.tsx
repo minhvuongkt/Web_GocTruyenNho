@@ -77,8 +77,19 @@ export function PayOSDirectCheckout({
       setQrCode(paymentData.qrCode || null);
       setCheckoutUrl(paymentData.checkoutUrl || null);
       
-      // Đặt thời gian đếm ngược dựa trên thời gian hết hạn được cấu hình
-      setCountdown(expiryTime);
+      // Đặt thời gian đếm ngược dựa trên thời gian hết hạn từ server
+      // Nếu server trả về thời gian hết hạn, sử dụng giá trị này
+      if (paymentData.expiresAt) {
+        const expiryDate = new Date(paymentData.expiresAt);
+        const now = new Date();
+        const secondsRemaining = Math.floor((expiryDate.getTime() - now.getTime()) / 1000);
+        
+        // Đảm bảo không đặt giá trị âm
+        setCountdown(secondsRemaining > 0 ? secondsRemaining : expiryTime);
+      } else {
+        // Sử dụng giá trị mặc định nếu server không trả về thời gian hết hạn
+        setCountdown(expiryTime);
+      }
       
     } catch (error: any) {
       toast({

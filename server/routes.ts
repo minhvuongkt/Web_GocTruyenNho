@@ -2216,8 +2216,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         cancelUrl,
       });
 
-      // Return the result directly
-      res.json(result);
+      // Calculate expiry time - add to response
+      const expiresAt = new Date(Date.now() + (paymentExpiryTime * 1000));
+      
+      // Return the result directly with expiry information
+      res.json({
+        ...result,
+        expiresAt: expiresAt.toISOString()
+      });
     } catch (error: any) {
       console.error("PayOS create payment error:", error);
       res.status(500).json({

@@ -164,6 +164,32 @@ export default function ChapterManagementPage() {
     }
   });
   
+  // Mutation cập nhật chương
+  const updateChapterMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const response = await apiRequest("PATCH", `/api/chapters/${data.id}`, data);
+      return await response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Cập nhật chương thành công",
+        description: "Chương đã được cập nhật",
+      });
+      
+      setIsEditDialogOpen(false);
+      
+      // Refresh danh sách chương
+      queryClient.invalidateQueries({ queryKey: [`/api/content/${contentId}/chapters`] });
+    },
+    onError: (error) => {
+      toast({
+        title: "Không thể cập nhật chương",
+        description: error instanceof Error ? error.message : "Đã xảy ra lỗi khi cập nhật chương",
+        variant: "destructive",
+      });
+    }
+  });
+  
   // Mutation cập nhật khóa/mở khóa chương
   const updateLockStatusMutation = useMutation({
     mutationFn: async ({ chapterId, isLocked, unlockPrice }: { chapterId: number, isLocked: boolean, unlockPrice?: number }) => {
@@ -989,7 +1015,7 @@ export default function ChapterManagementPage() {
                               size="icon" 
                               asChild
                             >
-                              <a href={`/${content?.type}/${content.id}/chapter/${chapter.number}`} target="_blank">
+                              <a href={`/truyen/${content.id}/chapter/${chapter.id}`} target="_blank">
                                 <Eye className="h-4 w-4" />
                               </a>
                             </Button>
@@ -1004,7 +1030,8 @@ export default function ChapterManagementPage() {
                               variant="ghost" 
                               size="icon" 
                               onClick={() => {
-                                // handle edit
+                                setSelectedChapter({...chapter});
+                                setIsEditDialogOpen(true);
                               }}
                             >
                               <Pencil className="h-4 w-4" />
@@ -1114,6 +1141,164 @@ export default function ChapterManagementPage() {
                 )}
               </Button>
             </DialogFooter>
+          </DialogContent>
+        </Dialog>
+        
+        {/* Edit Chapter Dialog */}
+        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Chỉnh sửa chương</DialogTitle>
+              <DialogDescription>
+                Chỉnh sửa thông tin chương {selectedChapter?.number} của {content?.title}
+              </DialogDescription>
+            </DialogHeader>
+            
+            {selectedChapter && (
+              <form onSubmit={(e) => {
+                e.preventDefault();
+                updateChapterMutation.mutate(selectedChapter);
+              }}>
+                <div className="grid gap-4 py-4">
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="chapter-number" className="text-right">
+                      Số chương
+                    </Label>
+                    <div className="col-span-3">
+                      <Input
+                        id="chapter-number"
+                        name="number"
+                        type="number"
+                        value={selectedChapter.number}
+                        onChange={(e) => setSelectedChapter({...selectedChapter, number: parseInt(e.target.value, 10)})}
+                        min="1"
+                        required
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="chapter-title" className="text-right">
+                      Tiêu đề chương
+                    </Label>
+                    <div className="col-span-3">
+                      <Input
+                        id="chapter-title"
+                        name="title"
+                        type="text"
+                        value={selectedChapter.title || ''}
+                        onChange={(e) => setSelectedChapter({...selectedChapter, title: e.target.value})}
+                        placeholder="Nhập tiêu đề chương"
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="chapter-release-date" className="text-right">
+                      Ngày phát hành
+                    </Label>
+                    <div className="col-span-3">
+                      <Input
+                        id="chapter-release-date"
+                        name="releaseDate"
+                        type="date"
+                        value={
+                          selectedChapter.releaseDate 
+                            ? new Date(selectedChapter.releaseDate).toISOString().split('T')[0]
+                            : new Date().toISOString().split('T')[0]
+                        }
+                        onChange={(e) => setSelectedChapter({...selectedChapter, releaseDate: e.target.value})}
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label className="text-right flex items-center">
+                      Trạng thái khóa
+                    </Label>
+                    <div className="col-span-3 flex items-center gap-2">
+                      <Switch
+                        id="chapter-lock"
+                        checked={!selectedChapter.isLocked}
+                        onCheckedChange={(checked) => {
+                          setSelectedChapter({...selectedChapter, isLocked: !checked});
+                        }}
+                      />
+                      <Label htmlFor="chapter-lock">
+                        {selectedChapter.isLocked ? "Đã khóa" : "Công khai"}
+                      </Label>
+                    </div>
+                  </div>
+                  
+                  {selectedChapter.isLocked && (
+                    <div className="grid grid-cols-4 items-center gap-4">
+                      <Label htmlFor="chapter-price" className="text-right">
+                        Giá mở khóa (xu)
+                      </Label>
+                      <div className="col-span-3">
+                        <Input
+                          id="chapter-price"
+                          name="unlockPrice"
+                          type="number"
+                          value={selectedChapter.unlockPrice || 0}
+                          onChange={(e) => setSelectedChapter({...selectedChapter, unlockPrice: parseInt(e.target.value, 10)})}
+                          min="1"
+                        />
+                      </div>
+                    </div>
+                  )}
+                  
+                  {content?.type === 'novel' && (
+                    <div className="grid grid-cols-4 items-start gap-4">
+                      <Label htmlFor="chapter-content" className="text-right pt-2">
+                        Nội dung
+                      </Label>
+                      <div className="col-span-3">
+                        <div className="border rounded-md p-1 mb-2">
+                          <div className="flex gap-1 mb-2">
+                            <Button type="button" variant="outline" size="sm">B</Button>
+                            <Button type="button" variant="outline" size="sm">I</Button>
+                            <Button type="button" variant="outline" size="sm">U</Button>
+                            <Separator orientation="vertical" className="mx-1 h-8" />
+                            <Button type="button" variant="outline" size="sm">H1</Button>
+                            <Button type="button" variant="outline" size="sm">H2</Button>
+                            <Button type="button" variant="outline" size="sm">H3</Button>
+                            <Separator orientation="vertical" className="mx-1 h-8" />
+                            <Button type="button" variant="outline" size="sm">
+                              <ImageIcon className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                        <Textarea
+                          id="chapter-content"
+                          name="content"
+                          value={selectedChapter.content || ''}
+                          onChange={(e) => setSelectedChapter({...selectedChapter, content: e.target.value})}
+                          placeholder="Nội dung chương"
+                          className="h-[400px]"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+                
+                <DialogFooter>
+                  <Button type="button" variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+                    Hủy
+                  </Button>
+                  <Button type="submit" disabled={updateChapterMutation.isPending}>
+                    {updateChapterMutation.isPending ? (
+                      <>
+                        <span className="mr-2">Đang lưu</span>
+                        <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                      </>
+                    ) : (
+                      "Lưu thay đổi"
+                    )}
+                  </Button>
+                </DialogFooter>
+              </form>
+            )}
           </DialogContent>
         </Dialog>
         

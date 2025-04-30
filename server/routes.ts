@@ -2465,6 +2465,264 @@ export async function registerRoutes(app: Express): Promise<Server> {
     },
   );
 
+  // Tạo hoặc lấy QR code cho giao dịch PayOS
+  app.get(
+    "/api/payments/:transactionId/qr",
+    ensureAuthenticated,
+    async (req, res) => {
+      try {
+        const { transactionId } = req.params;
+        
+        if (!transactionId) {
+          return res.status(400).json({
+            error: "Transaction ID is required"
+          });
+        }
+        
+        // Lấy thông tin thanh toán từ database
+        const payment = await storage.getPaymentByTransactionId(transactionId);
+        
+        if (!payment) {
+          return res.status(404).json({
+            error: "Payment not found"
+          });
+        }
+        
+        // Chỉ cho phép người dùng sở hữu giao dịch hoặc admin truy cập
+        const userId = (req.user as any).id;
+        if (payment.userId !== userId && (req.user as any).role !== "admin") {
+          return res.status(403).json({
+            error: "You don't have permission to access this payment"
+          });
+        }
+        
+        // Nếu thanh toán không phải là PayOS thì trả về lỗi
+        if (payment.method !== "payos") {
+          return res.status(400).json({
+            error: "This payment method does not support QR codes"
+          });
+        }
+        
+        // Lấy cài đặt thanh toán
+        const settings = await storage.getPaymentSettings();
+        if (!settings || !settings.payosConfig) {
+          return res.status(500).json({
+            error: "PayOS settings not configured"
+          });
+        }
+        
+        const payosConfig = settings.payosConfig as any;
+        
+        // Tạo URL callback
+        const baseUrl = process.env.BASE_URL || `http://localhost:${process.env.PORT || 5000}`;
+        const returnUrl = `${baseUrl}/payment-callback?code=00&status=PAID&orderCode=${transactionId}`;
+        const cancelUrl = `${baseUrl}/payment-callback?cancel=true&orderCode=${transactionId}`;
+        
+        // Tạo mô tả thanh toán
+        const description = payment.description || `Thanh toán #${payment.id}`;
+        
+        // Tạo link thanh toán PayOS nếu chưa có
+        let payosData;
+        
+        try {
+          // Tính thời gian hết hạn từ metadata hoặc dựa vào cài đặt
+          let expiredAt;
+          if (payment.metadata && payment.metadata.expiredAt) {
+            expiredAt = payment.metadata.expiredAt;
+          } else {
+            const expiryMinutes = settings.expiryConfig?.bankTransfer || 15;
+            expiredAt = Math.floor(Date.now() / 1000) + (expiryMinutes * 60);
+          }
+          
+          // Tạo payment link thông qua PayOS API
+          payosData = await createPayOSPaymentLink(
+            {
+              clientId: payosConfig.clientId,
+              apiKey: payosConfig.apiKey,
+              checksumKey: payosConfig.checksumKey,
+              baseUrl: payosConfig.baseUrl || "https://api-merchant.payos.vn"
+            },
+            {
+              amount: payment.amount,
+              orderCode: transactionId,
+              description: description,
+              returnUrl: returnUrl,
+              cancelUrl: cancelUrl,
+              expiredAt: expiredAt
+            }
+          );
+          
+          if (!payosData || (!payosData.qrCode && !payosData.data?.qrCode)) {
+            throw new Error("PayOS API did not return QR code");
+          }
+          
+          // Lấy QR code từ response
+          const qrCodeContent = payosData.qrCode || payosData.data?.qrCode;
+          
+          // Lưu thông tin QR code vào metadata của payment (nếu cần)
+          const updatedMetadata = {
+            ...payment.metadata,
+            payosQrCode: qrCodeContent,
+            checkoutUrl: payosData.checkoutUrl || payosData.data?.checkoutUrl,
+            expiredAt: expiredAt
+          };
+          
+          await storage.updatePayment(payment.id, {
+            metadata: updatedMetadata
+          } as any);
+          
+          // Trả về QR code và thông tin thanh toán
+          return res.json({
+            qrCode: qrCodeContent,
+            checkoutUrl: payosData.checkoutUrl || payosData.data?.checkoutUrl,
+            amount: payment.amount,
+            description: description,
+            transactionId: transactionId,
+            expiresAt: new Date(expiredAt * 1000).toISOString()
+          });
+          
+        } catch (error: any) {
+          console.error("Error generating PayOS QR code:", error);
+          return res.status(500).json({
+            error: error.message || "Failed to generate QR code"
+          });
+        }
+      } catch (error: any) {
+        console.error("Payment QR code API error:", error);
+        return res.status(500).json({
+          error: error.message || "Server error"
+        });
+      }
+    }
+  );
+  
+  // Kiểm tra trạng thái thanh toán (sử dụng cho client polling)
+  app.get(
+    "/api/payments/:transactionId/status",
+    ensureAuthenticated,
+    async (req, res) => {
+      try {
+        const { transactionId } = req.params;
+        
+        if (!transactionId) {
+          return res.status(400).json({
+            error: "Transaction ID is required"
+          });
+        }
+        
+        // Lấy thông tin thanh toán từ database
+        const payment = await storage.getPaymentByTransactionId(transactionId);
+        
+        if (!payment) {
+          return res.status(404).json({
+            error: "Payment not found"
+          });
+        }
+        
+        // Chỉ cho phép người dùng sở hữu giao dịch hoặc admin truy cập
+        const userId = (req.user as any).id;
+        if (payment.userId !== userId && (req.user as any).role !== "admin") {
+          return res.status(403).json({
+            error: "You don't have permission to access this payment"
+          });
+        }
+        
+        // Nếu thanh toán đã hoàn thành hoặc thất bại, trả về trạng thái từ database
+        if (payment.status !== "pending") {
+          return res.json({
+            status: payment.status,
+            transactionId: payment.transactionId,
+            updatedAt: payment.updatedAt
+          });
+        }
+        
+        // Nếu là PayOS và đang trong trạng thái pending, kiểm tra với PayOS API
+        if (payment.method === "payos") {
+          // Lấy cài đặt thanh toán
+          const settings = await storage.getPaymentSettings();
+          if (!settings || !settings.payosConfig) {
+            return res.status(500).json({
+              error: "PayOS settings not configured"
+            });
+          }
+          
+          const payosConfig = settings.payosConfig as any;
+          
+          try {
+            // Kiểm tra trạng thái từ PayOS API
+            const statusResult = await checkPayOSPaymentStatus(
+              {
+                clientId: payosConfig.clientId,
+                apiKey: payosConfig.apiKey,
+                checksumKey: payosConfig.checksumKey,
+                baseUrl: payosConfig.baseUrl || "https://api-merchant.payos.vn"
+              },
+              transactionId
+            );
+            
+            // Xử lý kết quả từ PayOS API
+            let paymentStatus = payment.status; // Mặc định giữ nguyên trạng thái
+            let apiStatus = null;
+            
+            // Trích xuất trạng thái từ response (xử lý cả 2 dạng response)
+            if (statusResult.code === "00" && statusResult.data && statusResult.data.status) {
+              apiStatus = statusResult.data.status;
+            } else if (statusResult.status) {
+              apiStatus = statusResult.status;
+            }
+            
+            // Cập nhật trạng thái nếu có thay đổi
+            if (apiStatus === "PAID" && payment.status !== "completed") {
+              // Cập nhật trạng thái trong database
+              await storage.updatePaymentStatus(payment.id, "completed");
+              
+              // Cập nhật số dư người dùng
+              const user = await storage.getUser(payment.userId);
+              if (user) {
+                await storage.updateUserBalance(user.id, user.balance + payment.amount);
+              }
+              
+              paymentStatus = "completed";
+              
+            } else if ((apiStatus === "CANCELLED" || apiStatus === "EXPIRED") && payment.status !== "failed") {
+              await storage.updatePaymentStatus(payment.id, "failed");
+              paymentStatus = "failed";
+            }
+            
+            // Trả về trạng thái cập nhật
+            return res.json({
+              status: paymentStatus,
+              apiStatus: apiStatus,
+              transactionId: payment.transactionId
+            });
+            
+          } catch (error: any) {
+            console.error("Error checking PayOS payment status:", error);
+            
+            // Trả về trạng thái từ database nếu gọi API thất bại
+            return res.json({
+              status: payment.status,
+              transactionId: payment.transactionId,
+              error: "Failed to check status from PayOS API"
+            });
+          }
+        }
+        
+        // Đối với các phương thức thanh toán khác
+        return res.json({
+          status: payment.status,
+          transactionId: payment.transactionId
+        });
+        
+      } catch (error: any) {
+        console.error("Payment status API error:", error);
+        return res.status(500).json({
+          error: error.message || "Server error"
+        });
+      }
+    }
+  );
+  
   // PayOS webhook endpoint
   app.post("/api/webhooks/payos", async (req, res) => {
     try {

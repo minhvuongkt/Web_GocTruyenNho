@@ -7,6 +7,9 @@ import {
   extractPayOSPaymentData,
   isValidPayOSResponse,
   extractPayOSErrorMessage,
+  getPaymentQRCode,
+  checkPaymentStatus,
+  generateVietQRImageUrl
 } from "@/utils/payos-helpers";
 import QRCode from "qrcode";
 
@@ -39,63 +42,50 @@ export function PayOSDirectCheckout({
   // Handle QR code generation and payment creation
   const handleCreatePayment = async () => {
     setIsCreatingLink(true);
+    setMessage("");
 
     try {
-      // Generate a unique order code
-      const newOrderCode = `${Date.now().toString().slice(-8)}`;
-      setOrderCode(newOrderCode);
-
-      // Generate appropriate return/cancel URLs
-      const appUrl = window.location.origin;
-      const returnUrl = `${appUrl}/payment-callback?code=00&status=PAID&orderCode=${newOrderCode}`;
-      const cancelUrl = `${appUrl}/payment-callback?cancel=true&orderCode=${newOrderCode}`;
-
-      // Call API to create payment with expiry time
-      const response = await apiRequest("POST", "/api/payos/create-payment", {
-        amount,
-        orderCode: newOrderCode,
-        description:
-          description.length > 25 ? description.substring(0, 25) : description,
-        returnUrl,
-        cancelUrl,
-        expiryTime,
+      // Tạo giao dịch mới
+      const response = await apiRequest("POST", "/api/payments", {
+        amount: amount,
+        method: "payos",
+        description: description.length > 25 ? description.substring(0, 25) : description,
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || "Server không phản hồi");
+        throw new Error(errorData.error || "Server không phản hồi");
       }
 
-      const result = await response.json();
-      console.log("PayOS response:", result);
-
-      // Sử dụng utility để trích xuất dữ liệu từ các định dạng khác nhau
-      const paymentData = extractPayOSPaymentData(result);
-      console.log("Extracted payment data:", paymentData);
-
-      // Kiểm tra xem phản hồi có hợp lệ không
-      if (!isValidPayOSResponse(paymentData)) {
-        throw new Error(extractPayOSErrorMessage(result));
-      }
-
-      // Lưu giá trị đã trích xuất
-      setQrCode(paymentData.qrCode || null);
-      setCheckoutUrl(paymentData.checkoutUrl || null);
-
-      // Đặt thời gian đếm ngược dựa trên thời gian hết hạn từ server
-      // Nếu server trả về thời gian hết hạn, sử dụng giá trị này
-      if (paymentData.expiresAt) {
-        const expiryDate = new Date(paymentData.expiresAt);
+      // Lấy thông tin giao dịch vừa tạo
+      const paymentData = await response.json();
+      console.log("Payment created:", paymentData);
+      
+      // Lưu mã giao dịch để sử dụng sau này
+      const newTransactionId = paymentData.transactionId;
+      setOrderCode(newTransactionId);
+      
+      // Lấy mã QR từ API
+      const qrResponse = await getPaymentQRCode(newTransactionId);
+      console.log("QR code data:", qrResponse);
+      
+      // Lưu giá trị QR code và URL thanh toán
+      setQrCode(qrResponse.qrCode);
+      setCheckoutUrl(qrResponse.checkoutUrl);
+      
+      // Tính thời gian còn lại dựa trên expiresAt từ server
+      if (qrResponse.expiresAt) {
+        const expiryDate = new Date(qrResponse.expiresAt);
         const now = new Date();
         const secondsRemaining = Math.floor(
-          (expiryDate.getTime() - now.getTime()) / 1000,
+          (expiryDate.getTime() - now.getTime()) / 1000
         );
-
+        
         // Đảm bảo không đặt giá trị âm
-        setCountdown(secondsRemaining > 0 ? secondsRemaining : expiryTime);
+        setCountdown(secondsRemaining > 0 ? secondsRemaining : expiryTime * 60);
       } else {
         // Sử dụng giá trị mặc định nếu server không trả về thời gian hết hạn
-        setCountdown(expiryTime);
+        setCountdown(expiryTime * 60);
       }
     } catch (error: any) {
       toast({
@@ -147,23 +137,14 @@ export function PayOSDirectCheckout({
 
     const checkStatus = async () => {
       try {
-        const response = await apiRequest(
-          "GET",
-          `/api/payos/status/${orderCode}`,
-        );
+        // Sử dụng hàm tiện ích để kiểm tra trạng thái thanh toán
+        const statusData = await checkPaymentStatus(orderCode);
+        console.log("Payment status check response:", statusData);
 
-        if (!response.ok) return;
-
-        const data = await response.json();
-        console.log("Payment status check response:", data);
-
-        // Sử dụng utility để trích xuất dữ liệu từ các định dạng khác nhau
-        const paymentData = extractPayOSPaymentData(data);
-
-        // Kiểm tra trạng thái thanh toán
-        const isPaid = paymentData.status === "PAID";
-
-        if (isPaid) {
+        // Kiểm tra trạng thái từ phản hồi
+        const isCompleted = statusData.status === "completed";
+        
+        if (isCompleted) {
           setMessage("Thanh toán thành công!");
           onSuccess(orderCode);
 
@@ -182,7 +163,7 @@ export function PayOSDirectCheckout({
   }, [orderCode, countdown, onSuccess]);
 
   // Handle payment completion manually
-  const handleConfirmPayment = () => {
+  const handleConfirmPayment = async () => {
     if (!orderCode) return;
 
     toast({
@@ -190,39 +171,34 @@ export function PayOSDirectCheckout({
       description: "Vui lòng đợi trong giây lát...",
     });
 
-    // Check payment status immediately
-    fetch(`/api/payos/status/${orderCode}`)
-      .then((res) => res.json())
-      .then((data) => {
-        console.log("Manual payment check response:", data);
+    try {
+      // Sử dụng hàm tiện ích để kiểm tra trạng thái thanh toán
+      const statusData = await checkPaymentStatus(orderCode);
+      console.log("Manual payment check response:", statusData);
 
-        // Sử dụng utility để trích xuất dữ liệu từ các định dạng khác nhau
-        const paymentData = extractPayOSPaymentData(data);
-
-        // Kiểm tra trạng thái thanh toán
-        const isPaid = paymentData.status === "PAID";
-
-        if (isPaid) {
-          setMessage("Thanh toán thành công!");
-          onSuccess(orderCode);
-        } else {
-          toast({
-            title: "Thanh toán chưa hoàn tất",
-            description:
-              "Hệ thống chưa nhận được thanh toán. Vui lòng thử lại sau hoặc liên hệ hỗ trợ.",
-            variant: "destructive",
-          });
-        }
-      })
-      .catch((err) => {
-        console.error("Error checking manual payment:", err);
+      // Kiểm tra trạng thái từ phản hồi
+      const isCompleted = statusData.status === "completed";
+      
+      if (isCompleted) {
+        setMessage("Thanh toán thành công!");
+        onSuccess(orderCode);
+      } else {
         toast({
-          title: "Lỗi xác nhận",
+          title: "Thanh toán chưa hoàn tất",
           description:
-            "Không thể xác nhận trạng thái thanh toán. Vui lòng thử lại sau.",
+            "Hệ thống chưa nhận được thanh toán. Vui lòng thử lại sau hoặc liên hệ hỗ trợ.",
           variant: "destructive",
         });
+      }
+    } catch (error: any) {
+      console.error("Error checking manual payment:", error);
+      toast({
+        title: "Lỗi xác nhận",
+        description:
+          "Không thể xác nhận trạng thái thanh toán. Vui lòng thử lại sau.",
+        variant: "destructive",
       });
+    }
   };
 
   // Handle cancel with PayOS API call
@@ -243,25 +219,16 @@ export function PayOSDirectCheckout({
     });
 
     try {
-      // Gọi API hủy thanh toán - chuyển đổi định dạng orderCode nếu cần
-      // Đảm bảo mã giao dịch đúng định dạng mà server mong đợi
-      let cancelOrderCode = orderCode;
-
-      // Thêm tiền tố ORDER nếu chưa có
-      if (!cancelOrderCode.startsWith("ORDER")) {
-        cancelOrderCode = `ORDER${cancelOrderCode}`;
-      }
-
-      console.log("Sending cancel request for:", cancelOrderCode);
+      console.log("Sending cancel request for:", orderCode);
       const response = await apiRequest(
         "POST",
-        `/api/payos/cancel/${cancelOrderCode}`,
+        `/api/payos/cancel/${orderCode}`,
       );
 
       if (!response.ok) {
         const errorData = await response.json();
         console.error("Server error during cancel:", errorData);
-        throw new Error(errorData.desc || "Không thể hủy thanh toán");
+        throw new Error(errorData.error || "Không thể hủy thanh toán");
       }
 
       const result = await response.json();

@@ -100,3 +100,114 @@ export function extractPayOSErrorMessage(response: PayOSPaymentResponse): string
   
   return 'Không thể tạo đường dẫn thanh toán';
 }
+
+/**
+ * Format VietQR data from QR code
+ * @param qrCodeData Chuỗi mã QR nhận được từ PayOS
+ * @returns Chuỗi đã được định dạng
+ */
+export function formatVietQRCode(qrCodeData: string): string {
+  // Format QR code data for display
+  return qrCodeData;
+}
+
+/**
+ * Tạo URL ảnh VietQR từ dữ liệu QR code của PayOS
+ * 
+ * @param qrCodeData Chuỗi dữ liệu QR code từ PayOS
+ * @param options Các tuỳ chọn hiển thị (kích thước, màu sắc...)
+ * @returns URL ảnh VietQR hoặc null nếu lỗi
+ */
+export function generateVietQRImageUrl(qrCodeData: string, options: { 
+  size?: number; 
+  format?: 'svg' | 'png'; 
+  color?: string; 
+  bgcolor?: string;
+} = {}): string | null {
+  if (!qrCodeData) return null;
+  
+  const { 
+    size = 300, 
+    format = 'png', 
+    color = '000000', 
+    bgcolor = 'ffffff' 
+  } = options;
+  
+  try {
+    // Encode QR code data for URL
+    const encodedData = encodeURIComponent(qrCodeData);
+    
+    // Construct API URL based on VietQR specification
+    const vietQrUrl = `https://img.vietqr.io/image/${encodedData}?amount=0&addInfo=Payment&accountName=Merchant&size=${size}&format=${format}&color=${color}&bgcolor=${bgcolor}`;
+    
+    return vietQrUrl;
+  } catch (error) {
+    console.error('Failed to generate VietQR image URL:', error);
+    return null;
+  }
+}
+
+/**
+ * Kiểm tra trạng thái thanh toán qua API
+ * 
+ * @param transactionId Mã giao dịch cần kiểm tra
+ * @returns Thông tin trạng thái thanh toán
+ */
+export async function checkPaymentStatus(transactionId: string): Promise<{
+  status: string;
+  transactionId: string;
+  apiStatus?: string;
+  updatedAt?: string;
+  error?: string;
+}> {
+  try {
+    const response = await fetch(`/api/payments/${transactionId}/status`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to check payment status');
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error('Error checking payment status:', error);
+    throw error;
+  }
+}
+
+/**
+ * Lấy mã QR code cho giao dịch từ API
+ * 
+ * @param transactionId Mã giao dịch
+ * @returns Thông tin QR code và thanh toán
+ */
+export async function getPaymentQRCode(transactionId: string): Promise<{
+  qrCode: string;
+  checkoutUrl: string;
+  amount: number;
+  description: string;
+  transactionId: string;
+  expiresAt: string;
+}> {
+  try {
+    const response = await fetch(`/api/payments/${transactionId}/qr`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to get QR code');
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error('Error getting payment QR code:', error);
+    throw error;
+  }
+}

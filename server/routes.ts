@@ -913,6 +913,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   );
   
+  // Cover image upload endpoint
+  app.post(
+    "/api/upload/cover",
+    ensureAdmin,
+    multer({
+      storage: multer.diskStorage({
+        destination: (req, file, cb) => {
+          const uploadsDir = path.join(process.cwd(), "public/uploads/covers");
+          if (!fs.existsSync(uploadsDir)) {
+            fs.mkdirSync(uploadsDir, { recursive: true });
+          }
+          cb(null, uploadsDir);
+        },
+        filename: (req, file, cb) => {
+          // Use timestamp and original name to prevent collisions
+          const timestamp = Date.now();
+          const hash = createHash('md5').update(`${timestamp}-${file.originalname}`).digest('hex').substring(0, 8);
+          const ext = path.extname(file.originalname);
+          cb(null, `cover-${timestamp}-${hash}${ext}`);
+        }
+      }),
+      fileFilter: (req, file, cb) => {
+        if (!file.mimetype.startsWith('image/')) {
+          return cb(new Error('Only images are allowed!'), false);
+        }
+        cb(null, true);
+      },
+      limits: {
+        fileSize: 5 * 1024 * 1024 // 5MB
+      }
+    }).single('coverImage'),
+    async (req, res) => {
+      try {
+        if (!req.file) {
+          return res.status(400).json({ error: "No image uploaded" });
+        }
+        
+        // Return the path to the uploaded image
+        const coverImagePath = `/uploads/covers/${req.file.filename}`;
+        res.status(200).json({ coverImagePath });
+      } catch (error) {
+        console.error("Error uploading cover image:", error);
+        res.status(500).json({ 
+          error: "Failed to upload cover image",
+          message: error instanceof Error ? error.message : "Unknown error"
+        });
+      }
+    }
+  );
+  
   // ZIP file processing endpoint for manga chapters
   app.post(
     "/api/chapters/images/process-zip",

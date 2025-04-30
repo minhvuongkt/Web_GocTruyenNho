@@ -9,7 +9,7 @@ import {
   extractPayOSErrorMessage,
   getPaymentQRCode,
   checkPaymentStatus,
-  generateVietQRImageUrl
+  generateVietQRImageUrl,
 } from "@/utils/payos-helpers";
 import QRCode from "qrcode";
 import ReactQRCode from "react-qr-code";
@@ -47,11 +47,18 @@ export function PayOSDirectCheckout({
 
     try {
       // Tạo giao dịch mới trực tiếp qua PayOS API
-      const response = await apiRequest("POST", "/api/payment/payos/create-payment-link", {
-        amount: amount,
-        description: description.length > 25 ? description.substring(0, 25) : description,
-        // orderCode được tạo tự động bên phía server
-      });
+      const response = await apiRequest(
+        "POST",
+        "/api/payment/payos/create-payment-link",
+        {
+          amount: amount,
+          description:
+            description.length > 25
+              ? description.substring(0, 25)
+              : description,
+          // orderCode được tạo tự động bên phía server
+        },
+      );
 
       if (!response.ok) {
         const errorData = await response.json();
@@ -61,12 +68,12 @@ export function PayOSDirectCheckout({
       // Lấy thông tin giao dịch vừa tạo
       const paymentData = await response.json();
       console.log("Payment created:", paymentData);
-      
+
       // Kiểm tra phản hồi API và xác nhận dữ liệu đầy đủ
       if (!paymentData || !paymentData.payment) {
         throw new Error("Không nhận được dữ liệu thanh toán từ server");
       }
-      
+
       // Lưu mã giao dịch để sử dụng sau này
       const newTransactionId = paymentData.payment.transactionId;
       if (newTransactionId) {
@@ -74,30 +81,36 @@ export function PayOSDirectCheckout({
       } else {
         throw new Error("Không nhận được mã giao dịch từ server");
       }
-      
+
       // Lấy mã QR và URL thanh toán trực tiếp từ response
       if (paymentData.qrCode) {
         setQrCode(paymentData.qrCode);
-        console.log("QR code received:", paymentData.qrCode.substring(0, 50) + "...");
+        console.log(
+          "QR code received:",
+          paymentData.qrCode.substring(0, 50) + "...",
+        );
       } else {
         console.error("No QR code in response");
       }
-      
+
       if (paymentData.paymentLink) {
         setCheckoutUrl(paymentData.paymentLink);
       }
-      
+
       // Tính thời gian còn lại dựa trên expiresAt từ server
       if (paymentData.expiresAt) {
         const expiryDate = new Date(paymentData.expiresAt);
         const now = new Date();
         const secondsRemaining = Math.floor(
-          (expiryDate.getTime() - now.getTime()) / 1000
+          (expiryDate.getTime() - now.getTime()) / 1000,
         );
-        
+
         // Đảm bảo không đặt giá trị âm
         setCountdown(secondsRemaining > 0 ? secondsRemaining : expiryTime * 60);
-        console.log("Setting countdown to:", secondsRemaining > 0 ? secondsRemaining : expiryTime * 60);
+        console.log(
+          "Setting countdown to:",
+          secondsRemaining > 0 ? secondsRemaining : expiryTime * 60,
+        );
       } else {
         // Sử dụng giá trị mặc định nếu server không trả về thời gian hết hạn
         setCountdown(expiryTime * 60);
@@ -158,28 +171,27 @@ export function PayOSDirectCheckout({
 
         // Kiểm tra trạng thái từ phản hồi
         // Xử lý cả 2 dạng response - nếu status trực tiếp hoặc apiStatus từ PayOS API
-        const isCompleted = 
-          statusData.status === "completed" || 
-          statusData.apiStatus === "PAID";
-        
-        const isFailed = 
-          statusData.status === "failed" || 
-          statusData.apiStatus === "CANCELLED" || 
+        const isCompleted =
+          statusData.status === "completed" || statusData.apiStatus === "PAID";
+
+        const isFailed =
+          statusData.status === "failed" ||
+          statusData.apiStatus === "CANCELLED" ||
           statusData.apiStatus === "EXPIRED";
-        
+
         if (isCompleted) {
           setMessage("Thanh toán thành công!");
           onSuccess(orderCode);
           // Stop checking after success
           return true; // trả về true để dừng interval
         }
-        
+
         if (isFailed) {
           setMessage("Thanh toán đã bị hủy hoặc hết hạn");
           onCancel?.();
           return true; // trả về true để dừng interval
         }
-        
+
         return false; // tiếp tục kiểm tra
       } catch (error) {
         console.error("Error checking payment status:", error);
@@ -189,7 +201,7 @@ export function PayOSDirectCheckout({
 
     // Kiểm tra ngay lập tức lần đầu tiên
     checkStatus();
-    
+
     // Tiếp tục kiểm tra mỗi 5 giây
     const interval = setInterval(async () => {
       const shouldStop = await checkStatus();
@@ -217,10 +229,9 @@ export function PayOSDirectCheckout({
 
       // Kiểm tra trạng thái từ phản hồi
       // Xử lý cả 2 dạng response - từ database hoặc từ PayOS API
-      const isCompleted = 
-        statusData.status === "completed" || 
-        statusData.apiStatus === "PAID";
-      
+      const isCompleted =
+        statusData.status === "completed" || statusData.apiStatus === "PAID";
+
       if (isCompleted) {
         setMessage("Thanh toán thành công!");
         onSuccess(orderCode);
@@ -325,7 +336,7 @@ export function PayOSDirectCheckout({
                 </div>
               ) : (
                 <Button className="w-full" onClick={handleCreatePayment}>
-                  Thanh toán qua PayOS
+                  Tiếp tục thanh toán qua PayOS
                 </Button>
               )}
             </div>
@@ -349,24 +360,25 @@ export function PayOSDirectCheckout({
                       {/* Phát hiện loại QR code và hiển thị phù hợp */}
                       {qrCode.startsWith("000201") ||
                       qrCode.startsWith("00020101") ? (
-                        // QR Code VietQR 
-                        <div className="w-48 mx-auto">
+                        // QR Code VietQR
+                        <div className="w-68 mx-auto">
                           {/* Hiển thị mã QR bằng react-qr-code */}
                           <div className="bg-white p-3 border border-gray-200 rounded-lg mb-3">
                             <ReactQRCode
                               value={qrCode}
-                              size={180}
+                              size={250}
                               level="M"
                               className="mx-auto"
                             />
                           </div>
-                          
+
                           <div className="text-xs text-left w-full bg-yellow-50 p-2 rounded-md border border-yellow-200">
                             <p className="font-medium text-yellow-700 mb-1">
                               Thông tin chuyển khoản:
                             </p>
                             <p>
-                              - Mã GD: <span className="font-medium">{orderCode}</span>
+                              - Mã GD:{" "}
+                              <span className="font-medium">{orderCode}</span>
                             </p>
                             <p>
                               - Số tiền:{" "}
@@ -393,8 +405,8 @@ export function PayOSDirectCheckout({
                       ) : (
                         // QR code dạng chuỗi - sử dụng React QR Code
                         <div className="w-48 mx-auto">
-                          <ReactQRCode 
-                            value={qrCode} 
+                          <ReactQRCode
+                            value={qrCode}
                             size={192}
                             level="M"
                             className="mx-auto"
@@ -430,25 +442,26 @@ export function PayOSDirectCheckout({
                       variant="outline"
                       className="flex-1"
                       onClick={() => window.open(checkoutUrl, "_blank")}
+                      title="Nếu mã QR không hoạt động, vui lòng mở cổng thanh toán để thanh toán trực tiếp"
                     >
                       Mở cổng thanh toán
                     </Button>
                   )}
 
-                  <Button
+                  {/* <Button
                     variant="default"
                     className="flex-1"
                     onClick={handleConfirmPayment}
                   >
                     Tôi đã thanh toán
-                  </Button>
+                  </Button> */}
 
                   <Button
-                    variant="ghost"
+                    variant="destructive"
                     className="flex-1"
                     onClick={handleCancel}
                   >
-                    Hủy
+                    Hủy Giao Dịch
                   </Button>
                 </div>
               </div>

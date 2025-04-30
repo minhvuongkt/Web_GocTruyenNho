@@ -16,7 +16,7 @@ export function NovelCard({ novel, genres, horizontal = false }: NovelCardProps)
 
   if (horizontal) {
     return (
-      <Link href={`/truyen/${hashId(novel.id)}`}>
+      <Link href={`/truyen/${novel.title.replace(/ /g, '-')}`}>
         <Card className="h-40 bg-white dark:bg-slate-900 overflow-hidden hover:shadow-lg transition-transform hover:scale-102">
           <div className="flex h-full">
             <img 
@@ -60,7 +60,7 @@ export function NovelCard({ novel, genres, horizontal = false }: NovelCardProps)
   }
 
   return (
-    <Link href={`/truyen/${hashId(novel.id)}`}>
+    <Link href={`/truyen/${novel.title.replace(/ /g, '-')}`}>
       <Card className="bg-white dark:bg-slate-900 overflow-hidden hover:shadow-lg transition-transform hover:scale-102">
         <div className="relative">
           <img 

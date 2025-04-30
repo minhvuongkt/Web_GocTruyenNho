@@ -736,7 +736,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     multer({ 
       storage: multer.diskStorage({
         destination: (req, file, cb) => {
-          const uploadsDir = path.join(__dirname, "../public/uploads/chapter-images");
+          const uploadsDir = path.join(process.cwd(), "public/uploads/chapter-images");
           if (!fs.existsSync(uploadsDir)) {
             fs.mkdirSync(uploadsDir, { recursive: true });
           }
@@ -780,7 +780,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     multer({ 
       storage: multer.diskStorage({
         destination: (req, file, cb) => {
-          const uploadsDir = path.join(__dirname, "../public/uploads/temp-zip");
+          const uploadsDir = path.join(process.cwd(), "public/uploads/temp-zip");
           if (!fs.existsSync(uploadsDir)) {
             fs.mkdirSync(uploadsDir, { recursive: true });
           }

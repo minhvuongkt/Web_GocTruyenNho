@@ -36,8 +36,7 @@ export default function ChapterNewPage({ contentId }: { contentId: number }) {
     title: "",
     content: "",
     isLocked: false,
-    unlockPrice: 0,
-    releaseDate: new Date().toISOString().split('T')[0]
+    unlockPrice: 0
   });
   
   // State for image uploads (manga)

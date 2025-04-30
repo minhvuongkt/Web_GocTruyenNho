@@ -3302,37 +3302,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get content by title
+  // Endpoint to get content by title
   app.get("/api/content/by-title/:title", async (req, res) => {
     try {
-      const title = req.params.title;
+      // Nhận title từ tham số và chuẩn hóa (thay thế gạch ngang bằng dấu cách)
+      const title = req.params.title.replace(/-/g, ' ');
       
-      // Replace hyphens with spaces for comparison
-      const normalizedTitle = title.replace(/-/g, ' ');
-      
-      // Get all content and filter by title
-      const allContentResult = await storage.getAllContent();
-      const allContent = allContentResult.content;
-      
-      // Find content with matching title (case insensitive)
-      const content = allContent.find(item => 
-        item.title.toLowerCase() === normalizedTitle.toLowerCase() ||
-        (item.alternativeTitle && 
-         item.alternativeTitle.toLowerCase() === normalizedTitle.toLowerCase())
-      );
-      
+      // Sử dụng hàm đã tối ưu trong storage để tìm nội dung
+      const content = await storage.getContentByTitle(title);
+
       if (!content) {
+        // Log để debug
+        console.log(`Content not found for title: ${title}`);
         return res.status(404).json({ error: "Content not found" });
       }
+
+      // Log để debug
+      console.log(`Found content for title: ${title}`, content.content.id, content.content.type);
       
-      const contentWithDetails = await storage.getContentWithDetails(content.id);
-      res.json(contentWithDetails);
+      // Trả về dữ liệu mà client mong đợi
+      res.json(content);
     } catch (error) {
-      console.error("Error fetching content by title:", error);
-      res.status(500).json({ 
-        error: "Failed to fetch content by title",
-        message: error instanceof Error ? error.message : "Unknown error" 
-      });
+      console.error("Error getting content by title:", error);
+      res.status(500).json({ error: "Failed to get content by title" });
     }
   });
   

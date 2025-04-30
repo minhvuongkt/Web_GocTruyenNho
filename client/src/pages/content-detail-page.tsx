@@ -26,6 +26,7 @@ export function ContentDetailPage({ id }: ContentDetailPageProps) {
         let endpoint;
         
         if (isTitle) {
+          // Sửa: Khi normalizedId có dạng "ten-truyen", API cần nhận "ten-truyen"
           endpoint = `/api/content/by-title/${normalizedId}`;
         } else {
           endpoint = `/api/content/${normalizedId}`;
@@ -37,10 +38,10 @@ export function ContentDetailPage({ id }: ContentDetailPageProps) {
         console.log("Response data:", data);
         
         if (data?.content?.type) {
-          // If the response has content.type format
+          // Trường hợp API trả về {content: {type: ...}}
           return data.content.type;
         } else if (data?.type) {
-          // If the response has direct type property
+          // Trường hợp API trả về {type: ...}
           return data.type;
         } else {
           console.error("Unexpected response format:", data);

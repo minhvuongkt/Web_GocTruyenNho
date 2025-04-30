@@ -12,24 +12,14 @@ interface ContentDetailPageProps {
 }
 
 export function ContentDetailPage({ id }: ContentDetailPageProps) {
-  // Check if the ID is a title (contains hyphens and letters) or a numeric ID
-  const isTitle = typeof id === 'string' && /[a-zA-Z\-]/.test(id) && id.includes('-');
-  
   // Store the content ID once retrieved (for use in child components)
   const [contentIdForChildren, setContentIdForChildren] = useState<number | null>(null);
   
-  // Normalize the ID (convert from hash if needed) if it's not a title
-  let normalizedId: string | number = id;
+  // Normalize the ID (convert from hash if needed)
+  const normalizedId = typeof id === 'number' ? id : parseInt(id, 10);
   
-  // Chỉ áp dụng normalizeId cho trường hợp không phải tiêu đề và có thể chuyển thành số
-  if (!isTitle && typeof id === 'string') {
-    // Kiểm tra xem id có phải là chuỗi số không
-    if (/^\d+$/.test(id)) {
-      normalizedId = normalizeId(id);
-    }
-  } else if (typeof id === 'number') {
-    normalizedId = id;
-  }
+  // Sử dụng URL dạng ID thay vì tiêu đề
+  const isTitle = false;
   
   // Fetch content data - this will determine which component to render
   const { data: contentData, isLoading, isError } = useQuery({

@@ -12,15 +12,22 @@ interface ContentDetailPageProps {
 }
 
 export function ContentDetailPage({ id }: ContentDetailPageProps) {
-  // Normalize the ID (convert from hash if needed)
-  const normalizedId = normalizeId(id);
+  // Check if the ID is a title (contains hyphens and letters) or a numeric ID
+  const isTitle = typeof id === 'string' && /[a-zA-Z]/.test(id) && id.includes('-');
+  
+  // Normalize the ID (convert from hash if needed) if it's not a title
+  const normalizedId = isTitle ? id : normalizeId(id);
   
   // Fetch content type first to determine which component to render
   const { data, isLoading, isError } = useQuery({
-    queryKey: [`/api/content/${normalizedId}/type`],
+    queryKey: [isTitle ? `/api/content/by-title/${normalizedId}` : `/api/content/${normalizedId}/type`],
     queryFn: async () => {
       try {
-        const res = await apiRequest("GET", `/api/content/${normalizedId}`);
+        const endpoint = isTitle 
+          ? `/api/content/by-title/${normalizedId.replace(/-/g, ' ')}` 
+          : `/api/content/${normalizedId}`;
+        
+        const res = await apiRequest("GET", endpoint);
         const data = await res.json();
         return data?.content?.type || null;
       } catch (error) {

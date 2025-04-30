@@ -1,0 +1,26 @@
+[
+  {
+    "id": 2,
+    "username": "admin",
+    "password": "$2b$10$3URV0.cuMjfgBc1Ipd9IwelhyAS1C.BpEyyoSfErdm1bqgJITp8pq",
+    "email": "admin@goctruyennho.com",
+    "role": "admin",
+    "firstName": "Admin",
+    "lastName": "Miu",
+    "balance": 10000,
+    "isActive": true,
+    "createdAt": "2025-04-29T19:02:46.101Z"
+  },
+  {
+    "id": 1,
+    "username": "miu2k3",
+    "password": "$2b$10$wyIVmj3rdRrCSG/qVRDUhuvyAqzZoSnoZuuDg9RVuvsOJd0oeK/BG",
+    "email": "miu2k3@gmail.com",
+    "role": "user",
+    "firstName": "miu",
+    "lastName": "2k3",
+    "balance": 5000,
+    "isActive": true,
+    "createdAt": "2025-04-29T19:02:10.184Z"
+  }
+]

@@ -1,0 +1,83 @@
+[
+  {
+    "id": 42,
+    "userId": 2,
+    "transactionId": "05506172",
+    "amount": 10000,
+    "method": "payos",
+    "status": "completed",
+    "createdAt": "2025-04-30T09:31:46.172Z"
+  },
+  {
+    "id": 43,
+    "userId": 1,
+    "transactionId": "37d694804ce4",
+    "amount": 5000,
+    "method": "bank_transfer",
+    "status": "completed",
+    "createdAt": "2025-04-30T09:35:47.174Z"
+  },
+  {
+    "id": 46,
+    "userId": 2,
+    "transactionId": "06896767",
+    "amount": 5000,
+    "method": "payos",
+    "status": "completed",
+    "createdAt": "2025-04-30T09:54:56.767Z"
+  },
+  {
+    "id": 45,
+    "userId": 2,
+    "transactionId": "05935932",
+    "amount": 5000,
+    "method": "payos",
+    "status": "completed",
+    "createdAt": "2025-04-30T09:38:55.932Z"
+  },
+  {
+    "id": 47,
+    "userId": 1,
+    "transactionId": "07870491",
+    "amount": 5000,
+    "method": "payos",
+    "status": "completed",
+    "createdAt": "2025-04-30T10:11:10.491Z"
+  },
+  {
+    "id": 48,
+    "userId": 2,
+    "transactionId": "08014896",
+    "amount": 5000,
+    "method": "payos",
+    "status": "failed",
+    "createdAt": "2025-04-30T10:13:34.897Z"
+  },
+  {
+    "id": 49,
+    "userId": 2,
+    "transactionId": "08266925",
+    "amount": 5000,
+    "method": "payos",
+    "status": "pending",
+    "createdAt": "2025-04-30T10:17:46.925Z"
+  },
+  {
+    "id": 50,
+    "userId": 2,
+    "transactionId": "08350465",
+    "amount": 5000,
+    "method": "payos",
+    "status": "pending",
+    "createdAt": "2025-04-30T10:19:10.465Z"
+  },
+  {
+    "id": 51,
+    "userId": 2,
+    "transactionId": "08574718",
+    "amount": 5000,
+    "method": "payos",
+    "status": "failed",
+    "createdAt": "2025-04-30T10:22:54.718Z"
+  }
+]

@@ -1,0 +1,16 @@
+[
+  {
+    "id": 1,
+    "title": "Truyện 1",
+    "alternativeTitle": null,
+    "type": "manga",
+    "authorId": 1,
+    "translationGroupId": 1,
+    "releaseYear": "2023",
+    "status": "ongoing",
+    "description": "Truyện tranh 1",
+    "coverImage": "",
+    "views": 10,
+    "createdAt": "2025-04-29T19:43:13.017Z"
+  }
+]

@@ -1,0 +1,14 @@
+[
+  {
+    "id": 1,
+    "title": "Quảng cáo miu2k3",
+    "imageUrl": "https://images.pexels.com/photos/206359/pexels-photo-206359.jpeg?cs=srgb&dl=pexels-pixabay-206359.jpg&fm=jpg",
+    "targetUrl": "https://miu2k3.com",
+    "position": "popup",
+    "startDate": "2025-04-30T00:00:00.000Z",
+    "endDate": "2025-05-30T00:00:00.000Z",
+    "isActive": true,
+    "views": 0,
+    "clicks": 0
+  }
+]

@@ -1,0 +1,12 @@
+[
+  {
+    "id": 1,
+    "name": "Action",
+    "description": "Hành động"
+  },
+  {
+    "id": 2,
+    "name": "Romance",
+    "description": "Tình cảm\n"
+  }
+]

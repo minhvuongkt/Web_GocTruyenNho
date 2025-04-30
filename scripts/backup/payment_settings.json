@@ -1,0 +1,64 @@
+[
+  {
+    "id": 1,
+    "bankConfig": {
+      "enabled": false,
+      "bankName": "MB Bank",
+      "bankBranch": "Ho Chi Minh",
+      "accountName": "Mèo Đi Dịch Truyện",
+      "accountNumber": "0862713897",
+      "transferContent": "NAP_{username}"
+    },
+    "vietQRConfig": {
+      "bankId": "970422",
+      "enabled": true,
+      "template": "NAP_{username}",
+      "accountName": "Mèo Đi Dịch Truyện",
+      "accountNumber": "0862713897"
+    },
+    "payosConfig": {
+      "apiKey": "76c46446-fd4b-4cab-a2b4-7330b4ea1086",
+      "baseUrl": "https://api-merchant.payos.vn",
+      "enabled": true,
+      "clientId": "0e1f0f43-3be6-41b0-860c-b2866f1b635b",
+      "checksumKey": "1e1357c5f332d8af06b66a6a8e084940f06cc8076c38c236adbed0393a24a7a5"
+    },
+    "priceConfig": {
+      "discountTiers": [
+        {
+          "amount": 50000,
+          "discountPercent": 5
+        },
+        {
+          "amount": 100000,
+          "discountPercent": 10
+        },
+        {
+          "amount": 200000,
+          "discountPercent": 15
+        },
+        {
+          "amount": 500000,
+          "discountPercent": 20
+        }
+      ],
+      "minimumDeposit": 5000,
+      "chapterUnlockPrice": 500,
+      "coinConversionRate": 1
+    },
+    "emailConfig": {
+      "smtpHost": "smtp.gmail.com",
+      "smtpPass": "woduauqbdzilecsx",
+      "smtpPort": 587,
+      "smtpUser": "miu2k3a@gmail.com",
+      "adminEmail": "hlmvuong123@gmail.com",
+      "senderEmail": "noreply@goctruyennho.com"
+    },
+    "expiryConfig": {
+      "payos": 15,
+      "bankTransfer": 10
+    },
+    "createdAt": "2025-04-29T19:03:37.044Z",
+    "updatedAt": "2025-04-29T19:03:37.044Z"
+  }
+]

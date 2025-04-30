@@ -42,29 +42,38 @@ function Router() {
       <Route path="/search" component={SearchPage} />
       
       {/* Content detail pages */}
+      <Route path="/truyen/:id">
+        {(params) => {
+          const id = parseInt(params.id);
+          // We'll fetch the content type and render the appropriate component
+          return <ContentDetailPage id={id} />;
+        }}
+      </Route>
+      
+      {/* Legacy routes for compatibility */}
       <Route path="/manga/:id">
-        {(params) => <MangaDetailPage id={parseInt(params.id)} />}
+        {(params) => <Redirect to={`/truyen/${params.id}`} />}
       </Route>
       <Route path="/novel/:id">
-        {(params) => <NovelDetailPage id={parseInt(params.id)} />}
+        {(params) => <Redirect to={`/truyen/${params.id}`} />}
       </Route>
       
       {/* Reader pages */}
-      <Route path="/manga/:contentId/chapter/:chapterId">
+      <Route path="/truyen/:contentId/chapter/:chapterId">
         {(params) => (
-          <MangaReaderPage 
+          <ChapterReaderPage 
             contentId={parseInt(params.contentId)} 
             chapterId={parseInt(params.chapterId)} 
           />
         )}
       </Route>
+      
+      {/* Legacy reader routes for compatibility */}
+      <Route path="/manga/:contentId/chapter/:chapterId">
+        {(params) => <Redirect to={`/truyen/${params.contentId}/chapter/${params.chapterId}`} />}
+      </Route>
       <Route path="/novel/:contentId/chapter/:chapterId">
-        {(params) => (
-          <NovelReaderPage 
-            contentId={parseInt(params.contentId)} 
-            chapterId={parseInt(params.chapterId)} 
-          />
-        )}
+        {(params) => <Redirect to={`/truyen/${params.contentId}/chapter/${params.chapterId}`} />}
       </Route>
       
       {/* Protected user routes */}

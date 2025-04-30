@@ -432,7 +432,7 @@ export function PaymentPage() {
             <CardHeader>
               <CardTitle>Thanh toán</CardTitle>
               <CardDescription>
-                Nạp tiền vào tài khoản để mở khóa các chương truyện cao cấp
+                Nạp tiền vào tài khoản để mở khóa các chương truyện nhanh chóng
               </CardDescription>
             </CardHeader>
             <CardContent>

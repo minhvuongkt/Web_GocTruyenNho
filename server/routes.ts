@@ -1431,79 +1431,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // PayOS routes
-  app.post(
-    "/api/payos/create-payment",
-    ensureAuthenticated,
-    async (req, res) => {
-      try {
-        const {
-          amount,
-          orderCode,
-          description,
-          returnUrl,
-          cancelUrl,
-          expiredAt,
-        } = req.body;
-
-        if (!amount || !orderCode || !description || !returnUrl || !cancelUrl) {
-          return res.status(400).json({
-            code: "01",
-            desc: "Missing required parameters",
-            data: null,
-          });
-        }
-
-        // Get PayOS settings
-        const settings = await storage.getPaymentSettings();
-
-        if (!settings || !settings.payosConfig) {
-          return res.status(500).json({
-            code: "02",
-            desc: "PayOS settings not configured",
-            data: null,
-          });
-        }
-
-        const payosConfig = settings.payosConfig as any;
-
-        // Check for required configurations
-        if (
-          !payosConfig.clientId ||
-          !payosConfig.apiKey ||
-          !payosConfig.checksumKey ||
-          !payosConfig.baseUrl
-        ) {
-          return res.status(500).json({
-            code: "03",
-            desc: "Incomplete PayOS configuration",
-            data: null,
-          });
-        }
-
-        // Create payment link
-        const result = await createPayOSPaymentLink(payosConfig, {
-          amount,
-          orderCode,
-          description,
-          returnUrl,
-          cancelUrl,
-          expiredAt,
-        });
-
-        // Return the result directly
-        res.json(result);
-      } catch (error: any) {
-        console.error("PayOS create payment error:", error);
-        res.status(500).json({
-          code: "99",
-          desc: error.message || "Failed to create PayOS payment",
-          data: null,
-        });
-      }
-    },
-  );
-
   app.get(
     "/api/payment/payos/check-payment-status/:orderCode",
     ensureAuthenticated,
@@ -2199,7 +2126,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         // Get expiry time in seconds (default: 10 minutes)
         const paymentExpiryTime =
-          expiryTime && Number(expiryTime) > 0 ? Number(expiryTime) : 600;
+          expiryTime && Number(expiryTime) > 0 ? Number(expiryTime) : 900;
 
         // Get PayOS settings
         const settings = await storage.getPaymentSettings();
@@ -2235,7 +2162,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           description,
           returnUrl,
           cancelUrl,
-          expiredAt,
+          expiredAt: Date.now() + paymentExpiryTime * 1000,
         });
 
         // Calculate expiry time - add to response

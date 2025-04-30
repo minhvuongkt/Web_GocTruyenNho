@@ -1,15 +1,20 @@
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
+import { useTheme } from "next-themes";
 import { Link } from "wouter";
 import { apiRequest } from "@/lib/queryClient";
 import { Chapter, ChapterContent } from "@shared/schema";
 import { ReaderLayout } from "@/components/layouts/reader-layout";
 import { UnlockModal } from "@/components/shared/unlock-modal";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Loader2, LockIcon, AlertTriangle } from "lucide-react";
+import { Loader2, LockIcon, AlertTriangle, Settings } from "lucide-react";
 
 interface NovelReaderPageProps {
   contentId: number;
@@ -217,6 +222,80 @@ export function NovelReaderPage({ contentId, chapterNumber }: NovelReaderPagePro
     );
   }
   
+  // Novel reader settings with localStorage
+  const [readerSettings, setReaderSettings] = useState(() => {
+    // Default settings
+    const defaultSettings = {
+      fontSize: 14,
+      fontFamily: 'Times New Roman',
+      textColor: '',
+      backgroundColor: '',
+    };
+    
+    // Try to get settings from localStorage
+    try {
+      const savedSettings = localStorage.getItem('novelReaderSettings');
+      return savedSettings ? JSON.parse(savedSettings) : defaultSettings;
+    } catch (e) {
+      console.error('Error loading reader settings:', e);
+      return defaultSettings;
+    }
+  });
+  
+  // Handle settings change and save to localStorage
+  const updateSettings = (newSettings: any) => {
+    const updatedSettings = { ...readerSettings, ...newSettings };
+    setReaderSettings(updatedSettings);
+    try {
+      localStorage.setItem('novelReaderSettings', JSON.stringify(updatedSettings));
+    } catch (e) {
+      console.error('Error saving reader settings:', e);
+    }
+  };
+  
+  // Vietnamese optimized fonts
+  const fontOptions = [
+    { value: 'Times New Roman', label: 'Times New Roman' },
+    { value: 'Arial', label: 'Arial' },
+    { value: 'Roboto', label: 'Roboto' },
+    { value: 'Noto Sans', label: 'Noto Sans' },
+    { value: 'Noto Serif', label: 'Noto Serif' },
+    { value: 'Open Sans', label: 'Open Sans' },
+    { value: 'Montserrat', label: 'Montserrat' },
+    { value: 'Quicksand', label: 'Quicksand' },
+    { value: 'Be Vietnam Pro', label: 'Be Vietnam Pro' },
+    { value: 'Josefin Sans', label: 'Josefin Sans' },
+  ];
+  
+  // Font size options
+  const fontSizeOptions = [
+    { value: 12, label: 'Rất nhỏ' },
+    { value: 14, label: 'Nhỏ' },
+    { value: 16, label: 'Vừa' },
+    { value: 18, label: 'Lớn' },
+    { value: 20, label: 'Rất lớn' },
+    { value: 22, label: 'Cực lớn' },
+  ];
+  
+  // Determine text color based on theme if not set manually
+  const { theme } = useTheme();
+  const defaultTextColor = theme === 'dark' ? 'white' : 'black';
+  
+  // Settings modal state
+  const [showSettings, setShowSettings] = useState(false);
+  
+  // Parse HTML content safely
+  const renderFormattedContent = () => {
+    if (!novelContent) return null;
+    
+    return (
+      <div 
+        dangerouslySetInnerHTML={{ __html: novelContent }} 
+        className="novel-content"
+      />
+    );
+  };
+  
   return (
     <ReaderLayout
       contentId={contentId}
@@ -229,15 +308,134 @@ export function NovelReaderPage({ contentId, chapterNumber }: NovelReaderPagePro
       nextChapterId={data.navigation?.nextChapter?.id}
       onChapterListToggle={handleChapterListToggle}
     >
-      <div className="novel-reader">
-        <h1 className="text-2xl font-semibold mb-6">
+      <div className="novel-reader relative">
+        {/* Reader settings button */}
+        <div className="absolute right-0 top-0">
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={() => setShowSettings(true)}
+            className="flex items-center gap-1"
+          >
+            <Settings className="h-4 w-4" />
+            <span className="text-xs">Cài đặt</span>
+          </Button>
+        </div>
+        
+        <h1 className="text-2xl font-semibold mb-6 pr-24">
           Chương {chapter.number}: {chapter.title || ''}
         </h1>
         
-        <div className="whitespace-pre-line">
-          {novelContent}
+        <div 
+          className="novel-content-container"
+          style={{ 
+            fontFamily: readerSettings.fontFamily, 
+            fontSize: `${readerSettings.fontSize}px`,
+            color: readerSettings.textColor || defaultTextColor,
+            backgroundColor: readerSettings.backgroundColor || '',
+            padding: readerSettings.backgroundColor ? '1rem' : '0',
+            borderRadius: readerSettings.backgroundColor ? '0.5rem' : '0',
+          }}
+        >
+          {renderFormattedContent()}
         </div>
       </div>
+      
+      {/* Settings Dialog */}
+      <Dialog open={showSettings} onOpenChange={setShowSettings}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Tùy chỉnh hiển thị</DialogTitle>
+            <DialogDescription>
+              Điều chỉnh giao diện đọc truyện theo ý thích của bạn
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="fontFamily">Phông chữ</Label>
+              <Select 
+                value={readerSettings.fontFamily} 
+                onValueChange={(value) => updateSettings({ fontFamily: value })}
+              >
+                <SelectTrigger id="fontFamily">
+                  <SelectValue placeholder="Chọn phông chữ" />
+                </SelectTrigger>
+                <SelectContent>
+                  {fontOptions.map(font => (
+                    <SelectItem key={font.value} value={font.value}>
+                      {font.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="fontSize">Cỡ chữ</Label>
+              <Select 
+                value={readerSettings.fontSize.toString()} 
+                onValueChange={(value) => updateSettings({ fontSize: parseInt(value) })}
+              >
+                <SelectTrigger id="fontSize">
+                  <SelectValue placeholder="Chọn cỡ chữ" />
+                </SelectTrigger>
+                <SelectContent>
+                  {fontSizeOptions.map(size => (
+                    <SelectItem key={size.value} value={size.value.toString()}>
+                      {size.label} ({size.value}px)
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="textColor">Màu chữ</Label>
+              <div className="flex items-center gap-2">
+                <Input
+                  id="textColor"
+                  type="color"
+                  value={readerSettings.textColor || defaultTextColor}
+                  onChange={(e) => updateSettings({ textColor: e.target.value })}
+                  className="w-12 h-8 p-1"
+                />
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => updateSettings({ textColor: '' })}
+                >
+                  Mặc định
+                </Button>
+              </div>
+            </div>
+            
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="backgroundColor">Màu nền</Label>
+              <div className="flex items-center gap-2">
+                <Input
+                  id="backgroundColor"
+                  type="color"
+                  value={readerSettings.backgroundColor || (theme === 'dark' ? '#1e1e2e' : '#ffffff')}
+                  onChange={(e) => updateSettings({ backgroundColor: e.target.value })}
+                  className="w-12 h-8 p-1"
+                />
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => updateSettings({ backgroundColor: '' })}
+                >
+                  Mặc định
+                </Button>
+              </div>
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button onClick={() => setShowSettings(false)}>Đóng</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       
       {/* Chapter List Side Sheet */}
       <Sheet open={showChapterList} onOpenChange={setShowChapterList}>

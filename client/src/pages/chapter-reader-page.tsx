@@ -4,19 +4,24 @@ import { apiRequest } from "@/lib/queryClient";
 import { Loader2 } from "lucide-react";
 import MangaReaderPage from "./manga-reader-page";
 import NovelReaderPage from "./novel-reader-page";
+import { normalizeId } from "@/lib/hashUtils";
 
 interface ChapterReaderPageProps {
-  contentId: number;
-  chapterId: number;
+  contentId: string | number;
+  chapterId: string | number;
 }
 
 export function ChapterReaderPage({ contentId, chapterId }: ChapterReaderPageProps) {
+  // Normalize IDs (convert from hashes if needed)
+  const normalizedContentId = normalizeId(contentId);
+  const normalizedChapterId = normalizeId(chapterId);
+  
   // Fetch content type first to determine which component to render
   const { data, isLoading, isError } = useQuery({
-    queryKey: [`/api/content/${contentId}/type`],
+    queryKey: [`/api/content/${normalizedContentId}/type`],
     queryFn: async () => {
       try {
-        const res = await apiRequest("GET", `/api/content/${contentId}`);
+        const res = await apiRequest("GET", `/api/content/${normalizedContentId}`);
         const data = await res.json();
         return data?.content?.type || null;
       } catch (error) {
@@ -52,9 +57,9 @@ export function ChapterReaderPage({ contentId, chapterId }: ChapterReaderPagePro
 
   // Render the appropriate component based on content type
   if (data === "manga") {
-    return <MangaReaderPage contentId={contentId} chapterId={chapterId} />;
+    return <MangaReaderPage contentId={normalizedContentId} chapterId={normalizedChapterId} />;
   } else if (data === "novel") {
-    return <NovelReaderPage contentId={contentId} chapterId={chapterId} />;
+    return <NovelReaderPage contentId={normalizedContentId} chapterId={normalizedChapterId} />;
   } else {
     return (
       <div className="flex items-center justify-center min-h-screen">

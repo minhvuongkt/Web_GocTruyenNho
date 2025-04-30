@@ -5,18 +5,22 @@ import { Content } from "@shared/schema";
 import { Loader2 } from "lucide-react";
 import MangaDetailPage from "./manga-detail-page";
 import NovelDetailPage from "./novel-detail-page";
+import { normalizeId } from "@/lib/hashUtils";
 
 interface ContentDetailPageProps {
-  id: number;
+  id: string | number;
 }
 
 export function ContentDetailPage({ id }: ContentDetailPageProps) {
+  // Normalize the ID (convert from hash if needed)
+  const normalizedId = normalizeId(id);
+  
   // Fetch content type first to determine which component to render
   const { data, isLoading, isError } = useQuery({
-    queryKey: [`/api/content/${id}/type`],
+    queryKey: [`/api/content/${normalizedId}/type`],
     queryFn: async () => {
       try {
-        const res = await apiRequest("GET", `/api/content/${id}`);
+        const res = await apiRequest("GET", `/api/content/${normalizedId}`);
         const data = await res.json();
         return data?.content?.type || null;
       } catch (error) {
@@ -52,9 +56,9 @@ export function ContentDetailPage({ id }: ContentDetailPageProps) {
 
   // Render the appropriate component based on content type
   if (data === "manga") {
-    return <MangaDetailPage id={id} />;
+    return <MangaDetailPage id={normalizedId} />;
   } else if (data === "novel") {
-    return <NovelDetailPage id={id} />;
+    return <NovelDetailPage id={normalizedId} />;
   } else {
     return (
       <div className="flex items-center justify-center min-h-screen">

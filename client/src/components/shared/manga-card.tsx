@@ -3,6 +3,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Content, Genre } from "@shared/schema";
 import { getRandomCoverImage } from "@/lib/utils";
+import { hashId } from "@/lib/hashUtils";
 
 interface MangaCardProps {
   manga: Content;
@@ -14,7 +15,7 @@ export function MangaCard({ manga, genres, featured = false }: MangaCardProps) {
   const coverImage = manga.coverImage || getRandomCoverImage('manga');
   
   return (
-    <Link href={`/truyen/${manga.id}`}>
+    <Link href={`/truyen/${hashId(manga.id)}`}>
       <Card className={`bg-white dark:bg-slate-900 overflow-hidden hover:shadow-lg transition-all ${featured ? 'hover:scale-105' : 'hover:scale-102'}`}>
         <div className="relative">
           <img 

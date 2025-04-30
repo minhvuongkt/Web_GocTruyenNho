@@ -3,6 +3,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Content, Genre } from "@shared/schema";
 import { getRandomCoverImage, truncateText } from "@/lib/utils";
+import { hashId } from "@/lib/hashUtils";
 
 interface NovelCardProps {
   novel: Content;
@@ -15,7 +16,7 @@ export function NovelCard({ novel, genres, horizontal = false }: NovelCardProps)
 
   if (horizontal) {
     return (
-      <Link href={`/novel/${novel.id}`}>
+      <Link href={`/truyen/${hashId(novel.id)}`}>
         <Card className="h-40 bg-white dark:bg-slate-900 overflow-hidden hover:shadow-lg transition-transform hover:scale-102">
           <div className="flex h-full">
             <img 
@@ -59,7 +60,7 @@ export function NovelCard({ novel, genres, horizontal = false }: NovelCardProps)
   }
 
   return (
-    <Link href={`/truyen/${novel.id}`}>
+    <Link href={`/truyen/${hashId(novel.id)}`}>
       <Card className="bg-white dark:bg-slate-900 overflow-hidden hover:shadow-lg transition-transform hover:scale-102">
         <div className="relative">
           <img 

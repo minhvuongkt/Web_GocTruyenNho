@@ -403,6 +403,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: "Failed to get content" });
     }
   });
+  
+  // Endpoint to get only the content type (for route handling)
+  app.get("/api/content/:id/type", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const contentInfo = await storage.getContent(id);
+
+      if (!contentInfo) {
+        return res.status(404).json({ error: "Content not found" });
+      }
+
+      res.json({ type: contentInfo.type });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to get content type" });
+    }
+  });
 
   app.post("/api/content", ensureAdmin, async (req, res) => {
     try {

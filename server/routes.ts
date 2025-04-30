@@ -2751,19 +2751,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
             }
             
             // Cập nhật trạng thái nếu có thay đổi
-            if (apiStatus === "PAID" && payment.status !== "completed") {
+            if (apiStatus === "PAID" && payment.status === "pending") {
               // Cập nhật trạng thái trong database
               await storage.updatePaymentStatus(payment.id, "completed");
               
               // Cập nhật số dư người dùng
               const user = await storage.getUser(payment.userId);
               if (user) {
-                await storage.updateUserBalance(user.id, user.balance + payment.amount);
+                // Đảm bảo user.balance tồn tại, nếu không thì set mặc định là 0
+                const currentBalance = user.balance || 0;
+                await storage.updateUserBalance(user.id, currentBalance + payment.amount);
               }
               
               paymentStatus = "completed";
               
-            } else if ((apiStatus === "CANCELLED" || apiStatus === "EXPIRED") && payment.status !== "failed") {
+            } else if ((apiStatus === "CANCELLED" || apiStatus === "EXPIRED") && payment.status === "pending") {
               await storage.updatePaymentStatus(payment.id, "failed");
               paymentStatus = "failed";
             }

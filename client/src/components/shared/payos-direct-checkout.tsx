@@ -12,6 +12,7 @@ import {
   generateVietQRImageUrl
 } from "@/utils/payos-helpers";
 import QRCode from "qrcode";
+import ReactQRCode from "react-qr-code";
 
 // Add a declaration file for QRCode to fix TypeScript error
 declare module "qrcode";
@@ -236,7 +237,7 @@ export function PayOSDirectCheckout({
       console.log("Sending cancel request for:", orderCode);
       const response = await apiRequest(
         "POST",
-        `/api/payment/payos/cancel/${orderCode}`,
+        `/api/payos/cancel/${orderCode}`,
       );
 
       if (!response.ok) {
@@ -321,60 +322,33 @@ export function PayOSDirectCheckout({
                       {/* Phát hiện loại QR code và hiển thị phù hợp */}
                       {qrCode.startsWith("000201") ||
                       qrCode.startsWith("00020101") ? (
-                        // QR Code VietQR - Tạo hình ảnh từ VietQR API
-                        <>
-                          {/* Hiển thị ảnh QR code từ VietQR API */}
-                          <img
-                            src={generateVietQRImageUrl(qrCode, { size: 200 })}
-                            alt="QR Code VietQR thanh toán"
-                            className="w-48 h-48 mx-auto mb-2 border border-gray-200 p-1 rounded-md"
-                            onError={(e) => {
-                              console.log("VietQR image error, showing fallback");
-                              const imgElement = e.currentTarget as HTMLImageElement;
-                              imgElement.style.display = "none";
-                              
-                              // Hiển thị text thông tin thanh toán
-                              const container = imgElement.nextElementSibling as HTMLElement;
-                              if (container) {
-                                container.style.display = "flex";
-                              }
-                            }}
-                          />
-                          
-                          {/* Fallback info nếu ảnh QR không load được */}
-                          <div 
-                            className="w-48 h-48 mx-auto flex flex-col items-center justify-center bg-gray-50 p-3 text-center" 
-                            style={{ display: "none" }}
-                          >
-                            <p className="text-sm text-gray-700 font-medium mb-2">
-                              Mở ứng dụng ngân hàng
-                            </p>
-                            <p className="text-xs text-gray-500 mb-3">
-                              Quét mã VietQR hoặc chuyển khoản theo thông tin bên dưới
-                            </p>
-                            <div className="border border-gray-200 rounded-md p-2 bg-white mb-2">
-                              <p className="text-xs font-medium">Mã giao dịch</p>
-                              <p className="text-sm text-gray-600 break-all">
-                                {orderCode}
-                              </p>
-                            </div>
-                            <div className="text-xs text-left w-full bg-yellow-50 p-2 rounded-md border border-yellow-200">
-                              <p className="font-medium text-yellow-700 mb-1">
-                                Thông tin chuyển khoản:
-                              </p>
-                              <p>
-                                - Nội dung CK:{" "}
-                                <span className="font-medium">{orderCode}</span>
-                              </p>
-                              <p>
-                                - Số tiền:{" "}
-                                <span className="font-medium">
-                                  {amount?.toLocaleString("vi-VN")}đ
-                                </span>
-                              </p>
-                            </div>
+                        // QR Code VietQR 
+                        <div className="w-48 mx-auto">
+                          {/* Hiển thị mã QR bằng react-qr-code */}
+                          <div className="bg-white p-3 border border-gray-200 rounded-lg mb-3">
+                            <ReactQRCode
+                              value={qrCode}
+                              size={180}
+                              level="M"
+                              className="mx-auto"
+                            />
                           </div>
-                        </>
+                          
+                          <div className="text-xs text-left w-full bg-yellow-50 p-2 rounded-md border border-yellow-200">
+                            <p className="font-medium text-yellow-700 mb-1">
+                              Thông tin chuyển khoản:
+                            </p>
+                            <p>
+                              - Mã GD: <span className="font-medium">{orderCode}</span>
+                            </p>
+                            <p>
+                              - Số tiền:{" "}
+                              <span className="font-medium">
+                                {amount?.toLocaleString("vi-VN")}đ
+                              </span>
+                            </p>
+                          </div>
+                        </div>
                       ) : qrCode.startsWith("data:image") ? (
                         // QR code dạng data URL
                         <img
@@ -390,28 +364,15 @@ export function PayOSDirectCheckout({
                           className="w-48 h-48 mx-auto"
                         />
                       ) : (
-                        // QR code dạng chuỗi (thử chuyển sang base64)
-                        <img
-                          src={`data:image/png;base64,${qrCode}`}
-                          alt="QR Code thanh toán"
-                          className="w-48 h-48 mx-auto"
-                          onError={(e) => {
-                            console.log("QR code error, trying other format");
-                            e.currentTarget.style.display = "none";
-                            // Hiển thị dạng text thay thế
-                            const container = e.currentTarget.parentElement;
-                            if (container) {
-                              const msg = document.createElement("div");
-                              msg.innerHTML = `
-                                <div class="w-48 h-48 mx-auto flex flex-col items-center justify-center text-center">
-                                  <p class="text-sm text-gray-700 font-medium mb-2">Mở ứng dụng ngân hàng</p>
-                                  <p class="text-xs text-gray-500">Quét mã VietQR hoặc chuyển khoản theo thông tin bên dưới</p>
-                                </div>
-                              `;
-                              container.appendChild(msg);
-                            }
-                          }}
-                        />
+                        // QR code dạng chuỗi - sử dụng React QR Code
+                        <div className="w-48 mx-auto">
+                          <ReactQRCode 
+                            value={qrCode} 
+                            size={192}
+                            level="M"
+                            className="mx-auto"
+                          />
+                        </div>
                       )}
                     </>
                   ) : (

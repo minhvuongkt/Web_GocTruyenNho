@@ -125,7 +125,7 @@ export function ChapterList({
                       size="sm" 
                       asChild
                     >
-                      <Link href={`/${contentType}/${contentId}/chapter/${chapter.id}`}>
+                      <Link href={`/truyen/${contentId}/chapter/${chapter.id}`}>
                         Đọc
                       </Link>
                     </Button>

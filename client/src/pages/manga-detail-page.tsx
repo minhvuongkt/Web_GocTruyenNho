@@ -202,7 +202,7 @@ export function MangaDetailPage({ id }: MangaDetailPageProps) {
               {chapters && chapters.length > 0 && (
                 <>
                   <Button asChild>
-                    <Link href={`/manga/${id}/chapter/${chapters[0].id}`}>
+                    <Link href={`/truyen/${id}/chapter/${chapters[0].id}`}>
                       <BookOpen className="mr-2 h-4 w-4" />
                       Đọc từ đầu
                     </Link>
@@ -210,7 +210,7 @@ export function MangaDetailPage({ id }: MangaDetailPageProps) {
                   
                   {chapters.length > 1 && (
                     <Button variant="outline" asChild>
-                      <Link href={`/manga/${id}/chapter/${chapters[chapters.length - 1].id}`}>
+                      <Link href={`/truyen/${id}/chapter/${chapters[chapters.length - 1].id}`}>
                         <Clock className="mr-2 h-4 w-4" />
                         Đọc chương mới nhất
                       </Link>

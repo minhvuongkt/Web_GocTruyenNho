@@ -260,8 +260,6 @@ export const insertChapterContentSchema = createInsertSchema(
 ).pick({
   chapterId: true,
   content: true,
-  pageOrder: true,
-  imageUrl: true,
 });
 
 export const insertCommentSchema = createInsertSchema(comments).pick({

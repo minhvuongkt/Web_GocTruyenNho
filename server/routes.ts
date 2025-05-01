@@ -53,8 +53,11 @@ const imageFilter = (req: any, file: Express.Multer.File, cb: Function) => {
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Setup static file serving for uploads directory
-  app.use('/uploads', express.static(path.join(process.cwd(), 'public/uploads')));
-  
+  app.use(
+    "/uploads",
+    express.static(path.join(process.cwd(), "public/uploads")),
+  );
+
   // Setup authentication
   setupAuth(app);
 
@@ -408,7 +411,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: "Failed to get content" });
     }
   });
-  
+
   // Endpoint to get only the content type (for route handling)
   app.get("/api/content/:id/type", async (req, res) => {
     try {
@@ -523,7 +526,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!chapter) {
         return res.status(404).json({ error: "Chapter not found" });
       }
-      
+
       // Lấy thông tin nội dung để xác định loại truyện (manga/novel)
       const contentInfo = await storage.getContent(chapter.contentId);
       if (!contentInfo) {
@@ -537,18 +540,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const userId = (req.user as any).id;
         isUnlocked = await storage.isChapterUnlocked(userId, id);
       }
-      
+
       // Only increment view count if user can view the content
       if (isUnlocked) {
         await storage.incrementChapterViews(id);
       }
 
       const chapterContentList = await storage.getChapterContentByChapter(id);
-      
+
       // Xử lý khác nhau cho từng loại nội dung
       let contentHtml = "";
       let processedChapterContent = [];
-      
+
       if (contentInfo.type === "novel") {
         // Novel: lấy nội dung văn bản đầu tiên
         if (chapterContentList && chapterContentList.length > 0) {
@@ -562,7 +565,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Manga: trả về tất cả các trang theo thứ tự
         processedChapterContent = chapterContentList;
         // Nếu không có nội dung trong chapter_content, thử fallback vào content field
-        if ((!chapterContentList || chapterContentList.length === 0) && chapter.content) {
+        if (
+          (!chapterContentList || chapterContentList.length === 0) &&
+          chapter.content
+        ) {
           contentHtml = chapter.content;
         }
       }
@@ -572,13 +578,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         content: isUnlocked ? contentHtml : "",
         chapterContent: isUnlocked ? processedChapterContent : [],
         isUnlocked,
-        contentType: contentInfo.type // Trả về loại nội dung để client xử lý đúng
+        contentType: contentInfo.type, // Trả về loại nội dung để client xử lý đúng
       });
     } catch (error) {
       console.error("Error fetching chapter:", error);
-      res.status(500).json({ 
-        error: "Failed to get chapter", 
-        message: error instanceof Error ? error.message : "Unknown error" 
+      res.status(500).json({
+        error: "Failed to get chapter",
+        message: error instanceof Error ? error.message : "Unknown error",
       });
     }
   });
@@ -590,105 +596,113 @@ export async function registerRoutes(app: Express): Promise<Server> {
       try {
         const contentId = parseInt(req.params.contentId);
         const { positionInfo, ...otherData } = req.body;
-        
+
         const chapterData = {
           ...otherData,
           contentId,
         };
-        
+
         // Handle insertion at specific position
-        if (positionInfo && positionInfo.insertPosition === 'specific' && positionInfo.referenceChapterId) {
+        if (
+          positionInfo &&
+          positionInfo.insertPosition === "specific" &&
+          positionInfo.referenceChapterId
+        ) {
           // Get reference chapter
           const referenceChapterId = parseInt(positionInfo.referenceChapterId);
           const referenceChapter = await storage.getChapter(referenceChapterId);
-          
+
           if (!referenceChapter) {
-            return res.status(404).json({ error: "Reference chapter not found" });
+            return res
+              .status(404)
+              .json({ error: "Reference chapter not found" });
           }
-          
+
           // Get all chapters for this content
           const contentChapters = await storage.getChaptersByContent(contentId);
-          const sortedChapters = contentChapters.sort((a, b) => a.number - b.number);
-          
+          const sortedChapters = contentChapters.sort(
+            (a, b) => a.number - b.number,
+          );
+
           // Determine new chapter number based on insertion position
           let newChapterNumber;
-          
-          if (positionInfo.insertRelative === 'before') {
+
+          if (positionInfo.insertRelative === "before") {
             // Insert before reference chapter
             newChapterNumber = referenceChapter.number;
-            
+
             // Shift existing chapters up by 1
             for (const chapter of sortedChapters) {
               if (chapter.number >= newChapterNumber) {
-                await storage.updateChapter(chapter.id, { 
+                await storage.updateChapter(chapter.id, {
                   ...chapter,
-                  number: chapter.number + 1 
+                  number: chapter.number + 1,
                 });
               }
             }
           } else {
             // Insert after reference chapter
             newChapterNumber = referenceChapter.number + 1;
-            
+
             // Shift existing chapters up by 1
             for (const chapter of sortedChapters) {
               if (chapter.number >= newChapterNumber) {
-                await storage.updateChapter(chapter.id, { 
+                await storage.updateChapter(chapter.id, {
                   ...chapter,
-                  number: chapter.number + 1 
+                  number: chapter.number + 1,
                 });
               }
             }
           }
-          
+
           // Create new chapter with calculated position
           const newChapter = await storage.createChapter({
             ...chapterData,
-            number: newChapterNumber
+            number: newChapterNumber,
           });
-          
+
           // Thêm nội dung chương vào bảng chapter_content
           if (chapterData.content) {
-            console.log('Saving chapter content:', {
+            console.log("Saving chapter content:", {
               chapterId: newChapter.id,
-              contentLength: chapterData.content.length
+              contentLength: chapterData.content.length,
             });
-            
+
             const savedContent = await storage.createChapterContent({
               chapterId: newChapter.id,
-              content: chapterData.content
+              content: chapterData.content,
             });
-            
-            console.log('Saved chapter content:', savedContent);
+
+            console.log("Saved chapter content:", savedContent);
           }
-          
+
           res.status(201).json(newChapter);
         } else {
           // Default behavior - add to end
           const newChapter = await storage.createChapter(chapterData);
-          
+
           // Thêm nội dung chương vào bảng chapter_content
           if (chapterData.content) {
-            console.log('Saving chapter content (default case):', {
+            console.log("Saving chapter content (default case):", {
               chapterId: newChapter.id,
-              contentLength: chapterData.content.length
+              contentLength: chapterData.content.length,
             });
-            
+
             const savedContent = await storage.createChapterContent({
               chapterId: newChapter.id,
-              content: chapterData.content
+              content: chapterData.content,
             });
-            
-            console.log('Saved chapter content (default case):', savedContent);
+
+            console.log("Saved chapter content (default case):", savedContent);
           }
-          
+
           res.status(201).json(newChapter);
         }
       } catch (error) {
         console.error("Error creating chapter:", error);
-        res.status(500).json({ 
+        res.status(500).json({
           error: "Failed to create chapter",
-          message: error instanceof Error ? error.message : "Unknown error"
+          message: error instanceof Error ? error.message : "Unknown error",
         });
       }
     },
@@ -699,63 +713,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const id = parseInt(req.params.id);
       const { content, ...chapterData } = req.body;
-      
+
       // Lấy thông tin chapter để kiểm tra
       const chapter = await storage.getChapter(id);
       if (!chapter) {
         return res.status(404).json({ error: "Chapter not found" });
       }
-      
+
       // Lấy thông tin nội dung để xác định loại truyện (manga/novel)
       const contentInfo = await storage.getContent(chapter.contentId);
       if (!contentInfo) {
         return res.status(404).json({ error: "Content not found" });
       }
-      
+
       // Cập nhật thông tin chapter (không bao gồm nội dung)
       const updatedChapter = await storage.updateChapter(id, chapterData);
-      
+
       // Nếu có nội dung mới, cập nhật vào bảng chapter_content
       if (content !== undefined) {
         // Xử lý nội dung dựa trên loại truyện (manga/novel)
         const existingContent = await storage.getChapterContentByChapter(id);
-        
+
         // Xóa nội dung cũ nếu có
         if (existingContent && existingContent.length > 0) {
           for (const item of existingContent) {
             await storage.deleteChapterContent(item.id);
           }
         }
-        
+
         // Lưu nội dung mới
         if (contentInfo.type === "manga") {
-          // Xử lý truyện tranh
-          if (Array.isArray(content)) {
-            // Nếu là mảng các URL ảnh
-            for (let i = 0; i < content.length; i++) {
-              await storage.createChapterContent({
-                chapterId: id,
-                pageOrder: i + 1,
-                imageUrl: content[i]
-              });
-            }
-          } else if (typeof content === "object" && content !== null && Array.isArray(content.pages)) {
-            // Nếu là object với mảng pages
-            for (let i = 0; i < content.pages.length; i++) {
-              await storage.createChapterContent({
-                chapterId: id,
-                pageOrder: i + 1,
-                imageUrl: content.pages[i]
-              });
-            }
-          } else if (typeof content === "string") {
-            // Nếu là chuỗi HTML (hoặc URL duy nhất)
-            await storage.createChapterContent({
-              chapterId: id,
-              content: content,
-              pageOrder: 1
-            });
-          }
+          // Nếu là chuỗi HTML (hoặc URL duy nhất)
+          await storage.createChapterContent({
+            chapterId: id,
+            content: content,
+          });
         } else {
           // Xử lý truyện chữ
           await storage.createChapterContent({
@@ -764,13 +756,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
         }
       }
-      
+
       res.json(updatedChapter);
     } catch (error) {
       console.error("Error updating chapter:", error);
-      res.status(500).json({ 
-        error: "Failed to update chapter", 
-        message: error instanceof Error ? error.message : "Unknown error" 
+      res.status(500).json({
+        error: "Failed to update chapter",
+        message: error instanceof Error ? error.message : "Unknown error",
       });
     }
   };
@@ -809,128 +801,148 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: "Failed to delete chapter" });
     }
   });
-  
+
   // Get chapter by contentId and chapterNumber
-  app.get("/api/content/:contentId/chapter/:chapterNumber", async (req, res) => {
-    try {
-      const contentId = parseInt(req.params.contentId);
-      const chapterNumber = parseInt(req.params.chapterNumber);
-      
-      if (isNaN(contentId) || isNaN(chapterNumber)) {
-        return res.status(400).json({ 
-          error: "Invalid content ID or chapter number",
-          details: `ContentId: ${req.params.contentId}, ChapterNumber: ${req.params.chapterNumber}`
-        });
-      }
-      
-      // Lấy thông tin nội dung để xác định loại truyện (manga/novel)
-      const contentInfo = await storage.getContent(contentId);
-      if (!contentInfo) {
-        return res.status(404).json({ error: "Content not found" });
-      }
-      
-      // Find the chapter based on contentId and number
-      const chapters = await db
-        .select()
-        .from(schema.chapters)
-        .where(and(
-          eq(schema.chapters.contentId, contentId),
-          eq(schema.chapters.number, chapterNumber)
-        ));
-      
-      if (!chapters || chapters.length === 0) {
-        return res.status(404).json({ 
-          error: "Chapter not found",
-          details: `No chapter found with contentId: ${contentId} and number: ${chapterNumber}`
-        });
-      }
-      
-      const chapter = chapters[0];
-      
-      // Check if chapter is locked and if the user has unlocked it
-      let isUnlocked = !chapter.isLocked;
+  app.get(
+    "/api/content/:contentId/chapter/:chapterNumber",
+    async (req, res) => {
+      try {
+        const contentId = parseInt(req.params.contentId);
+        const chapterNumber = parseInt(req.params.chapterNumber);
 
-      if (chapter.isLocked && req.isAuthenticated()) {
-        const userId = (req.user as any).id;
-        isUnlocked = await storage.isChapterUnlocked(userId, chapter.id);
-      }
-      // Only increment view count if not locked or user has unlocked it
-      if (isUnlocked) {
-        await storage.incrementChapterViews(chapter.id);
-      }
-      // Get chapter content
-      const chapterContentList = await storage.getChapterContentByChapter(chapter.id);
-      
-      // Xử lý khác nhau cho từng loại nội dung
-      let contentHtml = "";
-      let processedChapterContent = [];
+        if (isNaN(contentId) || isNaN(chapterNumber)) {
+          return res.status(400).json({
+            error: "Invalid content ID or chapter number",
+            details: `ContentId: ${req.params.contentId}, ChapterNumber: ${req.params.chapterNumber}`,
+          });
+        }
 
-      if (contentInfo.type === "novel") {
-        // Novel: lấy nội dung văn bản đầu tiên
-        if (chapterContentList && chapterContentList.length > 0) {
-          contentHtml = chapterContentList[0].content || "";
-          processedChapterContent = chapterContentList;
-        } else if (chapter.content) {
-          contentHtml = chapter.content;
+        // Lấy thông tin nội dung để xác định loại truyện (manga/novel)
+        const contentInfo = await storage.getContent(contentId);
+        if (!contentInfo) {
+          return res.status(404).json({ error: "Content not found" });
         }
-      } else {
-        processedChapterContent = chapterContentList;
-        if ((!chapterContentList || chapterContentList.length === 0) && chapter.content) {
-          contentHtml = chapter.content;
+
+        // Find the chapter based on contentId and number
+        const chapters = await db
+          .select()
+          .from(schema.chapters)
+          .where(
+            and(
+              eq(schema.chapters.contentId, contentId),
+              eq(schema.chapters.number, chapterNumber),
+            ),
+          );
+
+        if (!chapters || chapters.length === 0) {
+          return res.status(404).json({
+            error: "Chapter not found",
+            details: `No chapter found with contentId: ${contentId} and number: ${chapterNumber}`,
+          });
         }
-      }
-      
-      // Get previous and next chapters for navigation
-      const allChapters = await db
-        .select()
-        .from(schema.chapters)
-        .where(eq(schema.chapters.contentId, contentId))
-        .orderBy(schema.chapters.number);
-      
-      const sortedChapters = allChapters.sort((a, b) => a.number - b.number);
-      const currentIndex = sortedChapters.findIndex(ch => ch.id === chapter.id);
-      
-      const prevChapter = currentIndex > 0 ? sortedChapters[currentIndex - 1] : null;
-      const nextChapter = currentIndex < sortedChapters.length - 1 ? sortedChapters[currentIndex + 1] : null;
-      
-      // Lưu lịch sử đọc nếu người dùng đã đăng nhập và chương không khóa
-      if (req.isAuthenticated() && isUnlocked) {
-        try {
+
+        const chapter = chapters[0];
+
+        // Check if chapter is locked and if the user has unlocked it
+        let isUnlocked = !chapter.isLocked;
+
+        if (chapter.isLocked && req.isAuthenticated()) {
           const userId = (req.user as any).id;
-          await storage.addReadingHistory(userId, contentId, chapter.id);
-        } catch (historyError) {
-          console.error("Error saving reading history:", historyError);
-          // Không trả về lỗi ở đây vì đây không phải chức năng chính
+          isUnlocked = await storage.isChapterUnlocked(userId, chapter.id);
         }
+        // Only increment view count if not locked or user has unlocked it
+        if (isUnlocked) {
+          await storage.incrementChapterViews(chapter.id);
+        }
+        // Get chapter content
+        const chapterContentList = await storage.getChapterContentByChapter(
+          chapter.id,
+        );
+
+        // Xử lý khác nhau cho từng loại nội dung
+        let contentHtml = "";
+        let processedChapterContent = [];
+
+        if (contentInfo.type === "novel") {
+          // Novel: lấy nội dung văn bản đầu tiên
+          if (chapterContentList && chapterContentList.length > 0) {
+            contentHtml = chapterContentList[0].content || "";
+            processedChapterContent = chapterContentList;
+          } else if (chapter.content) {
+            contentHtml = chapter.content;
+          }
+        } else {
+          processedChapterContent = chapterContentList;
+          if (
+            (!chapterContentList || chapterContentList.length === 0) &&
+            chapter.content
+          ) {
+            contentHtml = chapter.content;
+          }
+        }
+
+        // Get previous and next chapters for navigation
+        const allChapters = await db
+          .select()
+          .from(schema.chapters)
+          .where(eq(schema.chapters.contentId, contentId))
+          .orderBy(schema.chapters.number);
+
+        const sortedChapters = allChapters.sort((a, b) => a.number - b.number);
+        const currentIndex = sortedChapters.findIndex(
+          (ch) => ch.id === chapter.id,
+        );
+
+        const prevChapter =
+          currentIndex > 0 ? sortedChapters[currentIndex - 1] : null;
+        const nextChapter =
+          currentIndex < sortedChapters.length - 1
+            ? sortedChapters[currentIndex + 1]
+            : null;
+
+        // Lưu lịch sử đọc nếu người dùng đã đăng nhập và chương không khóa
+        if (req.isAuthenticated() && isUnlocked) {
+          try {
+            const userId = (req.user as any).id;
+            await storage.addReadingHistory(userId, contentId, chapter.id);
+          } catch (historyError) {
+            console.error("Error saving reading history:", historyError);
+            // Không trả về lỗi ở đây vì đây không phải chức năng chính
+          }
+        }
+
+        res.json({
+          chapter,
+          content: isUnlocked ? contentHtml : "",
+          chapterContent: isUnlocked ? processedChapterContent : [],
+          isUnlocked,
+          contentType: contentInfo.type,
+          navigation: {
+            prevChapter: prevChapter
+              ? {
+                  id: prevChapter.id,
+                  number: prevChapter.number,
+                  title: prevChapter.title,
+                }
+              : null,
+            nextChapter: nextChapter
+              ? {
+                  id: nextChapter.id,
+                  number: nextChapter.number,
+                  title: nextChapter.title,
+                }
+              : null,
+          },
+        });
+      } catch (error) {
+        console.error("Error fetching chapter by number:", error);
+        res.status(500).json({
+          error: "Failed to fetch chapter",
+          message: error instanceof Error ? error.message : "Unknown error",
+        });
       }
-      
-      res.json({ 
-        chapter, 
-        content: isUnlocked ? contentHtml : "", 
-        chapterContent: isUnlocked ? processedChapterContent : [],
-        isUnlocked,
-        contentType: contentInfo.type,
-        navigation: {
-          prevChapter: prevChapter ? {
-            id: prevChapter.id,
-            number: prevChapter.number,
-            title: prevChapter.title
-          } : null,
-          nextChapter: nextChapter ? {
-            id: nextChapter.id,
-            number: nextChapter.number,
-            title: nextChapter.title
-          } : null
-        }
-      });
-    } catch (error) {
-      console.error("Error fetching chapter by number:", error);
-      res.status(500).json({ 
-        error: "Failed to fetch chapter",
-        message: error instanceof Error ? error.message : "Unknown error"
-      });
-    }
-  });
+    },
+  );
 
   // Chapter Content Routes
   app.post(
@@ -939,29 +951,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
     async (req, res) => {
       try {
         const chapterId = parseInt(req.params.chapterId);
-        
+
         // Get the chapter to determine what type of content this is (manga or novel)
         const chapter = await storage.getChapter(chapterId);
         if (!chapter) {
           return res.status(404).json({ error: "Chapter not found" });
         }
-        
+
         // Get the content to determine the type (manga or novel)
         const contentInfo = await storage.getContent(chapter.contentId);
         if (!contentInfo) {
           return res.status(404).json({ error: "Content not found" });
         }
-        
+
         // For manga: store each page in a separate entry with pageOrder
         if (contentInfo.type === "manga") {
           // Delete any existing content first
-          const existingContent = await storage.getChapterContentByChapter(chapterId);
+          const existingContent =
+            await storage.getChapterContentByChapter(chapterId);
           if (existingContent && existingContent.length > 0) {
             for (const content of existingContent) {
-              await db.delete(schema.chapterContent).where(eq(schema.chapterContent.id, content.id));
+              await db
+                .delete(schema.chapterContent)
+                .where(eq(schema.chapterContent.id, content.id));
             }
           }
-          
+
           // If we receive images as an array
           if (Array.isArray(req.body.images)) {
             const results = [];
@@ -969,56 +984,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
               const imageUrl = req.body.images[i];
               const newContent = await storage.createChapterContent({
                 chapterId,
-                pageOrder: i + 1,
                 content: `<img src="${imageUrl}" alt="Page ${i + 1}">`,
-                imageUrl: imageUrl
               });
               results.push(newContent);
             }
             return res.status(201).json(results);
-          } 
+          }
           // If we receive content as HTML with img tags
           else if (req.body.content) {
             const newContent = await storage.createChapterContent({
               chapterId,
               content: req.body.content,
-              pageOrder: 1
             });
             return res.status(201).json(newContent);
+          } else {
+            return res
+              .status(400)
+              .json({ error: "No content provided for manga chapter" });
           }
-          else {
-            return res.status(400).json({ error: "No content provided for manga chapter" });
-          }
-        } 
+        }
         // For novel: store as a single entry with formatted text
         else if (contentInfo.type === "novel") {
           // Delete any existing content first
-          const existingContent = await storage.getChapterContentByChapter(chapterId);
+          const existingContent =
+            await storage.getChapterContentByChapter(chapterId);
           if (existingContent && existingContent.length > 0) {
             for (const content of existingContent) {
-              await db.delete(schema.chapterContent).where(eq(schema.chapterContent.id, content.id));
+              await db
+                .delete(schema.chapterContent)
+                .where(eq(schema.chapterContent.id, content.id));
             }
           }
-          
+
           // Create new content
           const newContent = await storage.createChapterContent({
             chapterId,
             content: req.body.content || "",
           });
-          
+
           return res.status(201).json(newContent);
-        } 
-        else {
+        } else {
           return res.status(400).json({ error: "Invalid content type" });
         }
       } catch (error) {
         console.error("Error creating chapter content:", error);
-        res
-          .status(500)
-          .json({ 
-            error: "Failed to create chapter content", 
-            message: error instanceof Error ? error.message : "Unknown error"
-          });
+        res.status(500).json({
+          error: "Failed to create chapter content",
+          message: error instanceof Error ? error.message : "Unknown error",
+        });
       }
     },
   );
@@ -1058,15 +1071,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // File upload processing endpoints
-  
+
   // Image upload endpoint for manga chapters
   app.post(
     "/api/chapters/images/upload",
     ensureAdmin,
-    multer({ 
+    multer({
       storage: multer.diskStorage({
         destination: (req, file, cb) => {
-          const uploadsDir = path.join(process.cwd(), "public/uploads/chapter-images");
+          const uploadsDir = path.join(
+            process.cwd(),
+            "public/uploads/chapter-images",
+          );
           if (!fs.existsSync(uploadsDir)) {
             fs.mkdirSync(uploadsDir, { recursive: true });
           }
@@ -1075,34 +1091,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
         filename: (req, file, cb) => {
           // Use timestamp and original name to prevent collisions
           const timestamp = Date.now();
-          const hash = createHash('md5').update(`${timestamp}-${file.originalname}`).digest('hex').substring(0, 8);
+          const hash = createHash("md5")
+            .update(`${timestamp}-${file.originalname}`)
+            .digest("hex")
+            .substring(0, 8);
           const ext = path.extname(file.originalname);
           cb(null, `${timestamp}-${hash}${ext}`);
-        }
+        },
       }),
       fileFilter: (req, file, cb) => {
-        if (!file.mimetype.startsWith('image/')) {
-          return cb(new Error('Only images are allowed!'), false);
+        if (!file.mimetype.startsWith("image/")) {
+          return cb(new Error("Only images are allowed!"), false);
         }
         cb(null, true);
       },
       limits: {
-        fileSize: 5 * 1024 * 1024 // 5MB
-      }
-    }).array('images', 50), // Allow up to 50 images
+        fileSize: 5 * 1024 * 1024, // 5MB
+      },
+    }).array("images", 50), // Allow up to 50 images
     async (req, res) => {
       try {
-        const imageUrls = (req.files as Express.Multer.File[]).map(file => 
-          `/uploads/chapter-images/${file.filename}`
+        const imageUrls = (req.files as Express.Multer.File[]).map(
+          (file) => `/uploads/chapter-images/${file.filename}`,
         );
-        
+
         res.status(200).json({ imageUrls });
       } catch (error) {
         res.status(500).json({ error: "Failed to process image upload" });
       }
-    }
+    },
   );
-  
+
   // Cover image upload endpoint
   app.post(
     "/api/upload/cover",
@@ -1119,48 +1138,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
         filename: (req, file, cb) => {
           // Use timestamp and original name to prevent collisions
           const timestamp = Date.now();
-          const hash = createHash('md5').update(`${timestamp}-${file.originalname}`).digest('hex').substring(0, 8);
+          const hash = createHash("md5")
+            .update(`${timestamp}-${file.originalname}`)
+            .digest("hex")
+            .substring(0, 8);
           const ext = path.extname(file.originalname);
           cb(null, `cover-${timestamp}-${hash}${ext}`);
-        }
+        },
       }),
       fileFilter: (req, file, cb) => {
-        if (!file.mimetype.startsWith('image/')) {
-          return cb(new Error('Only images are allowed!'), false);
+        if (!file.mimetype.startsWith("image/")) {
+          return cb(new Error("Only images are allowed!"), false);
         }
         cb(null, true);
       },
       limits: {
-        fileSize: 5 * 1024 * 1024 // 5MB
-      }
-    }).single('coverImage'),
+        fileSize: 5 * 1024 * 1024, // 5MB
+      },
+    }).single("coverImage"),
     async (req, res) => {
       try {
         if (!req.file) {
           return res.status(400).json({ error: "No image uploaded" });
         }
-        
+
         // Return the path to the uploaded image
         const coverImagePath = `/uploads/covers/${req.file.filename}`;
         res.status(200).json({ coverImagePath });
       } catch (error) {
         console.error("Error uploading cover image:", error);
-        res.status(500).json({ 
+        res.status(500).json({
           error: "Failed to upload cover image",
-          message: error instanceof Error ? error.message : "Unknown error"
+          message: error instanceof Error ? error.message : "Unknown error",
         });
       }
-    }
+    },
   );
-  
+
   // ZIP file processing endpoint for manga chapters
   app.post(
     "/api/chapters/images/process-zip",
     ensureAdmin,
-    multer({ 
+    multer({
       storage: multer.diskStorage({
         destination: (req, file, cb) => {
-          const uploadsDir = path.join(process.cwd(), "public/uploads/temp-zip");
+          const uploadsDir = path.join(
+            process.cwd(),
+            "public/uploads/temp-zip",
+          );
           if (!fs.existsSync(uploadsDir)) {
             fs.mkdirSync(uploadsDir, { recursive: true });
           }
@@ -1169,89 +1194,92 @@ export async function registerRoutes(app: Express): Promise<Server> {
         filename: (req, file, cb) => {
           const timestamp = Date.now();
           cb(null, `temp-${timestamp}.zip`);
-        }
+        },
       }),
       fileFilter: (req, file, cb) => {
-        const validTypes = ['application/zip', 'application/x-zip-compressed'];
+        const validTypes = ["application/zip", "application/x-zip-compressed"];
         if (!validTypes.includes(file.mimetype)) {
-          return cb(new Error('Only ZIP files are allowed!'), false);
+          return cb(new Error("Only ZIP files are allowed!"), false);
         }
         cb(null, true);
       },
       limits: {
-        fileSize: 50 * 1024 * 1024 // 50MB
-      }
-    }).single('zipFile'),
+        fileSize: 50 * 1024 * 1024, // 50MB
+      },
+    }).single("zipFile"),
     async (req, res) => {
       try {
         if (!req.file) {
           return res.status(400).json({ error: "No ZIP file uploaded" });
         }
-        
+
         // In a real implementation, we would extract the ZIP file,
         // process images, and return their URLs
         // For now, we'll return a mock response
-        
+
         const imageUrls = [
           "/uploads/chapter-images/sample-image-1.jpg",
           "/uploads/chapter-images/sample-image-2.jpg",
-          "/uploads/chapter-images/sample-image-3.jpg"
+          "/uploads/chapter-images/sample-image-3.jpg",
         ];
-        
+
         res.status(200).json({ imageUrls });
       } catch (error) {
         res.status(500).json({ error: "Failed to process ZIP file" });
       }
-    }
+    },
   );
-  
+
   // Text file processing endpoint for novel chapters
   app.post(
     "/api/chapters/text/process",
     ensureAdmin,
-    multer({ 
+    multer({
       storage: multer.memoryStorage(),
       fileFilter: (req, file, cb) => {
         const validTypes = [
-          'text/plain',
-          'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-          'application/msword'
+          "text/plain",
+          "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+          "application/msword",
         ];
         if (!validTypes.includes(file.mimetype)) {
-          return cb(new Error('Only TXT, DOC, and DOCX files are allowed!'), false);
+          return cb(
+            new Error("Only TXT, DOC, and DOCX files are allowed!"),
+            false,
+          );
         }
         cb(null, true);
       },
       limits: {
-        fileSize: 10 * 1024 * 1024 // 10MB
-      }
-    }).single('textFile'),
+        fileSize: 10 * 1024 * 1024, // 10MB
+      },
+    }).single("textFile"),
     async (req, res) => {
       try {
         if (!req.file) {
           return res.status(400).json({ error: "No text file uploaded" });
         }
-        
+
         // In a real implementation, we would process the file based on its type
         // For now, we'll return a simple response
         let content = "";
-        
-        if (req.file.mimetype === 'text/plain') {
+
+        if (req.file.mimetype === "text/plain") {
           // For text files, just read the buffer as UTF-8
-          content = req.file.buffer.toString('utf-8');
+          content = req.file.buffer.toString("utf-8");
         } else {
           // For DOC/DOCX, we would use a library like mammoth.js
           // For now, we'll return a placeholder
           content = `<p>This is the processed content from the ${req.file.originalname} file.</p>`;
         }
-        
+
         res.status(200).json({ content });
       } catch (error) {
         res.status(500).json({ error: "Failed to process text file" });
       }
-    }
+    },
   );
-  
+
   // Unlock chapter route
   app.post(
     "/api/chapters/:id/unlock",

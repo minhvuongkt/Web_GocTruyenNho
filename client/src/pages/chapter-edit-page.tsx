@@ -194,15 +194,24 @@ export function ChapterEditPage({ contentId, chapterNumber }: ChapterEditPagePro
 }
 
 export default function DefaultChapterEditPage() {
+  // Using destructuring to get the matched params from the current location
   const [, params] = useLocation();
+  console.log('URL Params:', params);
 
-  if (!params) return null;
+  // Check if we have valid params from the route matching
+  if (!params) {
+    console.error('No params available');
+    return <div>Không tìm thấy thông tin chương</div>;
+  }
 
+  // Parse parameters from the URL
   const contentId = parseInt(params.contentId);
   const chapterNumber = parseInt(params.chapterNumber);
+  console.log('Parsed IDs:', { contentId, chapterNumber });
 
   if (isNaN(contentId) || isNaN(chapterNumber)) {
-    return <div>ID hoặc số chương không hợp lệ</div>;
+    console.error('Invalid IDs:', { contentId, chapterNumber });
+    return <div>ID nội dung hoặc số chương không hợp lệ</div>;
   }
 
   return <ChapterEditPage contentId={contentId} chapterNumber={chapterNumber} />;

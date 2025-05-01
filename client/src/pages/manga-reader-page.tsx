@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
-import { Link, useRoute } from "wouter";
+import { Link, useParams, useRoute } from "wouter";
 import { apiRequest } from "@/lib/queryClient";
 import { Chapter, ChapterContent, Content } from "@shared/schema";
 import { ReaderLayout } from "@/components/layouts/reader-layout";
@@ -9,8 +9,17 @@ import { UnlockModal } from "@/components/shared/unlock-modal";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Loader2, LockIcon, AlertTriangle } from "lucide-react";
-import { getMangaPageImages } from "@/lib/utils";
+import { Input } from "@/components/ui/input";
+import { 
+  Loader2, 
+  LockIcon, 
+  AlertTriangle,
+  Search,
+  SearchX,
+  ChevronRight,
+  Eye as EyeIcon,
+  X
+} from "lucide-react";
 
 interface MangaReaderPageProps {
   contentId: number;
@@ -24,6 +33,7 @@ export function MangaReaderPage({
   const { user } = useAuth();
   const [showUnlockModal, setShowUnlockModal] = useState(false);
   const [showChapterList, setShowChapterList] = useState(false);
+  const [searchChapter, setSearchChapter] = useState("");
 
   // Fetch chapter details using the new endpoint with contentId and chapterNumber
   const { data, isLoading, isError, refetch } = useQuery({
@@ -545,4 +555,10 @@ export function MangaReaderPage({
   );
 }
 
-export default MangaReaderPage;
+export default function DefaultMangaReaderPage() {
+  const params = useParams();
+  const contentId = params.contentId ? parseInt(params.contentId) : 0;
+  const chapterNumber = params.chapterNumber ? parseInt(params.chapterNumber) : 0;
+  
+  return <MangaReaderPage contentId={contentId} chapterNumber={chapterNumber} />;
+}

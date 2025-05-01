@@ -312,11 +312,8 @@ export function MangaReaderPage({
     setShowChapterList(!showChapterList);
   };
 
-  // State to track scroll direction and settings visibility
-  const [isSettingVisible, setIsSettingVisible] = useState(true);
+  // State to track only for top button scrolling
   const [isTopButtonVisible, setIsTopButtonVisible] = useState(false);
-  const [lastScrollTop, setLastScrollTop] = useState(0);
-  const [isAtPageStart, setIsAtPageStart] = useState(true);
 
   // Scroll to top function
   const scrollToTop = () => {
@@ -326,32 +323,13 @@ export function MangaReaderPage({
     });
   };
 
-  // Handle scroll to hide/show settings bar and top button
+  // Handle scroll only for top button visibility
   useEffect(() => {
     const handleScroll = () => {
       const currentScrollTop = window.scrollY;
-      const documentHeight = document.documentElement.scrollHeight;
-      const windowHeight = window.innerHeight;
-      const scrollPercentage =
-        (currentScrollTop / (documentHeight - windowHeight)) * 100;
-
-      // Check if we're at the beginning of the page
-      setIsAtPageStart(currentScrollTop < 100);
-
-      // Show top button only when user has scrolled down a bit (20% of page)
-      setIsTopButtonVisible(scrollPercentage > 20 && !isAtPageStart);
-
-      // Determine scroll direction for settings bar
-      if (currentScrollTop > lastScrollTop + 20) {
-        // Scrolling down - hide settings
-        setIsSettingVisible(false);
-      } else if (currentScrollTop < lastScrollTop - 20) {
-        // Scrolling up - show settings
-        setIsSettingVisible(true);
-      }
-
-      // Update scroll position
-      setLastScrollTop(currentScrollTop);
+      
+      // Show top button only when user has scrolled down a bit
+      setIsTopButtonVisible(currentScrollTop > 300);
     };
 
     window.addEventListener("scroll", handleScroll, { passive: true });
@@ -359,7 +337,7 @@ export function MangaReaderPage({
     return () => {
       window.removeEventListener("scroll", handleScroll);
     };
-  }, [lastScrollTop, isAtPageStart]);
+  }, []);
 
   // Handle keyboard navigation in horizontal mode
   useEffect(() => {
@@ -707,64 +685,22 @@ export function MangaReaderPage({
       nextChapterId={data.navigation?.nextChapter?.id}
       onChapterListToggle={handleChapterListToggle}
     >
-      {/* Reader controls - styled like in the screenshot */}
+      {/* Reader controls - always visible, styled like in the screenshot */}
       <div
-        className={`sticky top-[72px] z-10 bg-gray-900/95 backdrop-blur-sm rounded-lg shadow-md mb-4 transition-all duration-300 ${
-          isSettingVisible
-            ? "opacity-100 translate-y-0"
-            : "opacity-0 -translate-y-20 pointer-events-none"
-        }`}
+        className="sticky top-[72px] z-10 bg-gray-900/95 backdrop-blur-sm rounded-lg shadow-md mb-4"
       >
-        {/* Top navigation for prev/next chapter - visible only at top of page */}
-        {isAtPageStart && (
-          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-800">
-            <Button
-              variant="ghost"
-              size="sm"
-              disabled={!data.navigation?.prevChapter?.id}
-              asChild
-              className="text-gray-300 hover:text-white"
-            >
-              {data.navigation?.prevChapter?.id ? (
-                <Link
-                  href={`/truyen/${contentId}/chapter/${data.navigation.prevChapter.number}`}
-                >
-                  Chương trước
-                </Link>
-              ) : (
-                <span>Chương trước</span>
-              )}
-            </Button>
-
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleChapterListToggle}
-              className="rounded-full h-9 w-9 p-0 flex items-center justify-center"
-              title="Mục lục"
-            >
-              <BookOpen className="h-4 w-4" />
-            </Button>
-
-            <Button
-              variant="ghost"
-              size="sm"
-              disabled={!data.navigation?.nextChapter?.id}
-              asChild
-              className="text-gray-300 hover:text-white"
-            >
-              {data.navigation?.nextChapter?.id ? (
-                <Link
-                  href={`/truyen/${contentId}/chapter/${data.navigation.nextChapter.number}`}
-                >
-                  Chương tiếp
-                </Link>
-              ) : (
-                <span>Chương tiếp</span>
-              )}
-            </Button>
-          </div>
-        )}
+        {/* Button to show chapter list */}
+        <div className="flex items-center justify-center px-4 py-3 border-b border-gray-800">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleChapterListToggle}
+            className="rounded-full h-9 w-9 p-0 flex items-center justify-center"
+            title="Mục lục"
+          >
+            <BookOpen className="h-4 w-4" />
+          </Button>
+        </div>
 
         <div className="flex flex-wrap gap-1 md:gap-4 justify-between p-3">
           {/* Layout controls */}
@@ -860,6 +796,63 @@ export function MangaReaderPage({
 
       {/* Manga content */}
       {renderMangaContent()}
+      
+      {/* Chapter navigation at bottom */}
+      <div className="flex items-center justify-between px-8 py-6 mt-8 bg-gray-900/95 backdrop-blur-sm rounded-lg shadow-md mb-4">
+        <Button
+          variant="outline"
+          size="lg"
+          disabled={!data.navigation?.prevChapter?.id}
+          asChild
+          className="text-gray-300 hover:text-white"
+        >
+          {data.navigation?.prevChapter?.id ? (
+            <Link
+              href={`/truyen/${contentId}/chapter/${data.navigation.prevChapter.number}`}
+            >
+              <ChevronRight className="h-5 w-5 mr-2 rotate-180" />
+              Chương trước
+            </Link>
+          ) : (
+            <span>
+              <ChevronRight className="h-5 w-5 mr-2 rotate-180" />
+              Chương trước
+            </span>
+          )}
+        </Button>
+
+        <Button
+          variant="outline"
+          size="lg"
+          onClick={handleChapterListToggle}
+          className="rounded-full h-12 w-12 p-0 flex items-center justify-center"
+          title="Mục lục"
+        >
+          <BookOpen className="h-5 w-5" />
+        </Button>
+
+        <Button
+          variant="outline"
+          size="lg"
+          disabled={!data.navigation?.nextChapter?.id}
+          asChild
+          className="text-gray-300 hover:text-white"
+        >
+          {data.navigation?.nextChapter?.id ? (
+            <Link
+              href={`/truyen/${contentId}/chapter/${data.navigation.nextChapter.number}`}
+            >
+              Chương tiếp
+              <ChevronRight className="h-5 w-5 ml-2" />
+            </Link>
+          ) : (
+            <span>
+              Chương tiếp
+              <ChevronRight className="h-5 w-5 ml-2" />
+            </span>
+          )}
+        </Button>
+      </div>
 
       {/* Chapter List Side Sheet */}
       <ChapterListSidebar

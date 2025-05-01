@@ -286,6 +286,35 @@ export function MangaReaderPage({
     setShowChapterList(!showChapterList);
   };
 
+  // State to track scroll direction and settings visibility
+  const [isSettingVisible, setIsSettingVisible] = useState(true);
+  const [lastScrollTop, setLastScrollTop] = useState(0);
+
+  // Handle scroll to hide/show settings bar
+  useEffect(() => {
+    const handleScroll = () => {
+      const currentScrollTop = window.scrollY;
+      
+      // Determine scroll direction
+      if (currentScrollTop > lastScrollTop + 20) {
+        // Scrolling down - hide settings
+        setIsSettingVisible(false);
+      } else if (currentScrollTop < lastScrollTop - 20) {
+        // Scrolling up - show settings
+        setIsSettingVisible(true);
+      }
+      
+      // Update scroll position
+      setLastScrollTop(currentScrollTop);
+    };
+    
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+    };
+  }, [lastScrollTop]);
+
   // Handle keyboard navigation in horizontal mode
   useEffect(() => {
     if (layout === "horizontal") {
@@ -409,13 +438,10 @@ export function MangaReaderPage({
 
         {/* Unlock modal */}
         <UnlockModal
-          open={showUnlockModal}
-          onOpenChange={setShowUnlockModal}
-          chapterId={data.chapter.id}
-          chapterTitle={data.chapter.title || `Chương ${data.chapter.number}`}
-          contentTitle={mangaTitle}
-          price={data.chapter.unlockPrice}
-          onUnlocked={handleUnlockConfirm}
+          isOpen={showUnlockModal}
+          onClose={() => setShowUnlockModal(false)}
+          chapter={data.chapter}
+          onUnlockSuccess={handleUnlockConfirm}
         />
 
         {/* Chapter List Side Sheet */}
@@ -629,8 +655,14 @@ export function MangaReaderPage({
       nextChapterId={data.navigation?.nextChapter?.id}
       onChapterListToggle={handleChapterListToggle}
     >
-      {/* Reader controls */}
-      <div className="sticky top-[72px] z-10 bg-background/80 backdrop-blur-sm p-3 rounded-lg shadow-sm mb-4">
+      {/* Reader controls - with animation for show/hide on scroll */}
+      <div 
+        className={`sticky top-[72px] z-10 bg-background/80 backdrop-blur-sm p-3 rounded-lg shadow-sm mb-4 transition-all duration-300 ${
+          isSettingVisible 
+            ? 'opacity-100 translate-y-0' 
+            : 'opacity-0 -translate-y-20 pointer-events-none'
+        }`}
+      >
         <div className="flex flex-wrap gap-4 justify-between">
           {/* Layout controls */}
           <div className="flex items-center gap-2">

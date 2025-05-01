@@ -3,7 +3,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Content, Genre } from "@shared/schema";
 import { getRandomCoverImage, truncateText } from "@/lib/utils";
-import { hashId } from "@/lib/hashUtils";
 
 interface NovelCardProps {
   novel: Content;
@@ -11,38 +10,43 @@ interface NovelCardProps {
   horizontal?: boolean;
 }
 
-export function NovelCard({ novel, genres, horizontal = false }: NovelCardProps) {
-  const coverImage = novel.coverImage || getRandomCoverImage('novel');
+export function NovelCard({
+  novel,
+  genres,
+  horizontal = false,
+}: NovelCardProps) {
+  const coverImage = novel.coverImage || getRandomCoverImage("novel");
 
   if (horizontal) {
     return (
-      <Link href={`/truyen/${hashId(novel.id)}`}>
+      <Link href={`/truyen/${novel.id}`}>
         <Card className="h-40 bg-white dark:bg-slate-900 overflow-hidden hover:shadow-lg transition-transform hover:scale-102">
           <div className="flex h-full">
-            <img 
+            <img
               src={coverImage}
-              alt={novel.title} 
+              alt={novel.title}
               className="w-28 h-full object-cover"
               loading="lazy"
             />
             <CardContent className="p-4 flex-1 flex flex-col justify-between">
               <div>
-                <h3 className="font-medium text-foreground">
-                  {novel.title}
-                </h3>
+                <h3 className="font-medium text-foreground">{novel.title}</h3>
                 <p className="text-muted-foreground text-sm mt-1 line-clamp-2">
-                  {truncateText(novel.description || '', 80)}
+                  {truncateText(novel.description || "", 80)}
                 </p>
               </div>
               <div className="flex justify-between items-center">
                 <div className="flex space-x-1">
                   {genres && genres.length > 0 && (
-                    <Badge variant="outline" className="text-xs px-1.5 py-0 h-5 bg-secondary/10 text-secondary">
+                    <Badge
+                      variant="outline"
+                      className="text-xs px-1.5 py-0 h-5 bg-secondary/10 text-secondary"
+                    >
                       {genres[0].name}
                     </Badge>
                   )}
                 </div>
-                {novel.status === 'completed' ? (
+                {novel.status === "completed" ? (
                   <Badge className="text-xs bg-primary/10 text-primary">
                     Hoàn thành
                   </Badge>
@@ -60,16 +64,16 @@ export function NovelCard({ novel, genres, horizontal = false }: NovelCardProps)
   }
 
   return (
-    <Link href={`/truyen/${hashId(novel.id)}`}>
+    <Link href={`/truyen/${novel.id}`}>
       <Card className="bg-white dark:bg-slate-900 overflow-hidden hover:shadow-lg transition-transform hover:scale-102">
         <div className="relative">
-          <img 
+          <img
             src={coverImage}
-            alt={novel.title} 
+            alt={novel.title}
             className="w-full h-56 object-cover"
             loading="lazy"
           />
-          {novel.status === 'completed' && (
+          {novel.status === "completed" && (
             <Badge className="absolute top-2 right-2 bg-primary/90 text-primary-foreground">
               Hoàn thành
             </Badge>
@@ -84,16 +88,23 @@ export function NovelCard({ novel, genres, horizontal = false }: NovelCardProps)
               {novel.alternativeTitle}
             </p>
           )}
-          
+
           {genres && genres.length > 0 && (
             <div className="flex flex-wrap gap-1 mt-2">
               {genres.slice(0, 2).map((genre) => (
-                <Badge key={genre.id} variant="outline" className="text-xs px-1.5 py-0 h-5 bg-secondary/10 text-secondary">
+                <Badge
+                  key={genre.id}
+                  variant="outline"
+                  className="text-xs px-1.5 py-0 h-5 bg-secondary/10 text-secondary"
+                >
                   {genre.name}
                 </Badge>
               ))}
               {genres.length > 2 && (
-                <Badge variant="outline" className="text-xs px-1.5 py-0 h-5 bg-muted text-muted-foreground">
+                <Badge
+                  variant="outline"
+                  className="text-xs px-1.5 py-0 h-5 bg-muted text-muted-foreground"
+                >
                   +{genres.length - 2}
                 </Badge>
               )}

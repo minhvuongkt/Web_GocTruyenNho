@@ -46,7 +46,9 @@ export function ChapterEditPage({ contentId, chapterNumber }: ChapterEditPagePro
     queryKey: [`/api/content/${contentId}/chapter/${chapterNumber}`],
     queryFn: async () => {
       const res = await apiRequest('GET', `/api/content/${contentId}/chapter/${chapterNumber}`);
-      return res.json();
+      const data = await res.json();
+      console.log('ChapterData loaded:', data);
+      return data;
     }
   });
 
@@ -146,7 +148,12 @@ export function ChapterEditPage({ contentId, chapterNumber }: ChapterEditPagePro
     );
   }
 
-  const { chapter, content: chapterContent } = chapterData;
+  const { chapter, content: chapterContent, chapterContent: chapterContentArray } = chapterData;
+  
+  // Use content from chapterContent array if available
+  const finalContent = chapterContentArray && chapterContentArray.length > 0 
+    ? chapterContentArray[0].content 
+    : chapterContent;
   const contentTitle = contentData?.content?.title || 'Nội dung chưa có tiêu đề';
 
   return (
@@ -177,7 +184,7 @@ export function ChapterEditPage({ contentId, chapterNumber }: ChapterEditPagePro
         </div>
 
         <RichTextEditor
-          initialValue={chapterContent || ''}
+          initialValue={finalContent || ''}
           title={chapter.title || ''}
           onSave={handleSaveChapter}
         />

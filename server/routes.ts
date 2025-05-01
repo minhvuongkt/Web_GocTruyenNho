@@ -714,17 +714,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const id = parseInt(req.params.id);
       const { content, ...chapterData } = req.body;
 
-      // Handle the releaseDate properly - remove if it's a string that can't be converted to a valid date
-      if (chapterData.releaseDate && typeof chapterData.releaseDate === 'string') {
+      // Handle the releaseDate properly - ensure it's a valid Date object or null
+      if (chapterData.releaseDate !== undefined) {
         try {
-          // Try to parse it as a valid date
-          const testDate = new Date(chapterData.releaseDate);
-          // If the date is invalid, remove it from the object
-          if (isNaN(testDate.getTime())) {
+          if (typeof chapterData.releaseDate === 'string') {
+            // Only keep the date part for ISO strings to avoid timezone issues
+            if (chapterData.releaseDate.match(/^\d{4}-\d{2}-\d{2}$/)) {
+              // Format is YYYY-MM-DD, convert to Date object
+              chapterData.releaseDate = new Date(chapterData.releaseDate + 'T00:00:00.000Z');
+            } else {
+              // Try to parse as a full date
+              const testDate = new Date(chapterData.releaseDate);
+              if (!isNaN(testDate.getTime())) {
+                chapterData.releaseDate = testDate;
+              } else {
+                // Invalid date, remove it
+                delete chapterData.releaseDate;
+              }
+            }
+          } else if (!(chapterData.releaseDate instanceof Date)) {
+            // Not a string or Date object, remove it
             delete chapterData.releaseDate;
           }
         } catch (e) {
-          // If there's any error in parsing the date, remove it
+          console.error("Error handling releaseDate:", e);
           delete chapterData.releaseDate;
         }
       }

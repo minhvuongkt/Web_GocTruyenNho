@@ -18,7 +18,7 @@ import MangaReaderPage from "@/pages/manga-reader-page";
 import NovelReaderPage from "@/pages/novel-reader-page";
 import ContentDetailPage from "@/pages/content-detail-page";
 import ChapterReaderPage from "@/pages/chapter-reader-page";
-import { default as UserChapterEditPage } from "@/pages/chapter-edit-page";
+import UserChapterEditPage from "@/pages/chapter-edit-page";
 import ProfilePage from "@/pages/profile-page";
 import PaymentPage from "@/pages/payment-page";
 import SearchPage from "@/pages/search-page";
@@ -83,6 +83,21 @@ function Router() {
         }}
       </Route>
       
+      {/* Chapter edit page for novel content */}
+      <ProtectedRoute path="/truyen/:contentId/chapter/:chapterNumber/edit" requireAdmin={true}>
+        {(params) => {
+          const contentId = parseInt(params.contentId);
+          const chapterNumber = parseInt(params.chapterNumber);
+          
+          return (
+            <UserChapterEditPage 
+              contentId={contentId} 
+              chapterNumber={chapterNumber} 
+            />
+          );
+        }}
+      </ProtectedRoute>
+      
       {/* Legacy reader routes - convert old chapterId format to new chapterNumber format */}
       <Route path="/manga/:contentId/chapter/:chapterId">
         {(params) => {
@@ -122,7 +137,7 @@ function Router() {
       </ProtectedRoute>
       <ProtectedRoute path="/admin/chapters/:contentId/chapter/:chapterId" requireAdmin={true}>
         {(params) => (
-          <ChapterEditPage 
+          <AdminChapterEditPage 
             contentId={normalizeId(params.contentId)} 
             chapterId={normalizeId(params.chapterId)} 
           />

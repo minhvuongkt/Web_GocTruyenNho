@@ -187,9 +187,7 @@ export function ChapterEditPage({ contentId, chapterNumber }: ChapterEditPagePro
 }
 
 export default function DefaultChapterEditPage() {
-  const [, params] = useLocation<{ contentId: string; chapterNumber: string }>(
-    '/truyen/:contentId/chapter/:chapterNumber/edit'
-  );
+  const [, params] = useLocation();
 
   if (!params) return null;
 

@@ -112,7 +112,7 @@ export function RichTextEditor({
   useEffect(() => {
     if (quillRef.current) {
       const editor = quillRef.current.getEditor();
-      const container = editor.container as HTMLElement;
+      const container = editor.root as HTMLElement;
       container.style.fontFamily = fontFamily;
     }
   }, [fontFamily]);

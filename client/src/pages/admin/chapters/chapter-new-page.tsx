@@ -55,13 +55,20 @@ export default function ChapterNewPage({ contentId }: { contentId: number }) {
 
   // State for chapter data
   const [chapter, setChapter] = useState({
-    contentId,
+    contentId: contentId || 0, // Initialize with the prop value but don't recreate the object when contentId changes
     number: 1,
     title: "",
     content: "",
     isLocked: false,
     unlockPrice: 0,
   });
+  
+  // Update contentId when the prop changes (without causing infinite updates)
+  useEffect(() => {
+    if (contentId && contentId !== chapter.contentId) {
+      setChapter(prev => ({...prev, contentId}));
+    }
+  }, [contentId]);
 
   // State for image uploads (manga)
   const [chapterImages, setChapterImages] = useState<File[]>([]);

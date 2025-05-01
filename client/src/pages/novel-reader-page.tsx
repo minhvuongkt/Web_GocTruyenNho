@@ -230,19 +230,23 @@ export function NovelReaderPage({ contentId, chapterNumber }: NovelReaderPagePro
     backgroundColor: '',
   };
   
-  // Novel reader settings with localStorage
-  const [readerSettings, setReaderSettings] = useState(() => {
+  // Novel reader settings with useState only
+  const [readerSettings, setReaderSettings] = useState(defaultSettings);
+  
+  // Load settings from localStorage on mount only
+  useEffect(() => {
     // Try to get settings from localStorage if available
     if (typeof window !== 'undefined') {
       try {
         const savedSettings = localStorage.getItem('novelReaderSettings');
-        return savedSettings ? JSON.parse(savedSettings) : defaultSettings;
+        if (savedSettings) {
+          setReaderSettings(JSON.parse(savedSettings));
+        }
       } catch (e) {
         console.error('Error loading reader settings:', e);
       }
     }
-    return defaultSettings;
-  });
+  }, []);
   
   // Handle settings change and save to localStorage
   const updateSettings = (newSettings: any) => {

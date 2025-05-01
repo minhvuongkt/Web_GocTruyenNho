@@ -996,16 +996,10 @@ export class DatabaseStorage implements IStorage {
     const chapterContentList = await db
       .select()
       .from(chapterContent)
-      .where(eq(chapterContent.chapterId, chapterId))
-      .orderBy(asc(chapterContent.pageOrder));
+      .where(eq(chapterContent.chapterId, chapterId));
 
     // Sort by page order if available
-    return chapterContentList.sort((a, b) => {
-      if (a.pageOrder === null && b.pageOrder === null) return 0;
-      if (a.pageOrder === null) return 1;
-      if (b.pageOrder === null) return -1;
-      return a.pageOrder - b.pageOrder;
-    });
+    return chapterContentList;
   }
 
   async updateChapterContent(

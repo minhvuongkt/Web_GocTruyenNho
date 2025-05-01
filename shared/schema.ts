@@ -105,9 +105,7 @@ export const chapters = pgTable("chapters", {
 export const chapterContent = pgTable("chapter_content", {
   id: serial("id").primaryKey(),
   chapterId: integer("chapter_id").notNull(),
-  content: text("content"), // For novels
-  pageOrder: integer("page_order"), // For manga pages order
-  imageUrl: text("image_url"), // For manga pages
+  content: text("content"),
 });
 
 // User Activity Tables
@@ -173,11 +171,11 @@ export const paymentSettings = pgTable("payment_settings", {
     smtpUser: "",
     smtpPass: "",
     senderEmail: "",
-    adminEmail: "hlmvuong123@gmail.com" // Email mặc định
+    adminEmail: "hlmvuong123@gmail.com", // Email mặc định
   }),
   expiryConfig: jsonb("expiry_config").notNull().default({
     bankTransfer: 10, // Số phút hết hạn cho giao dịch chuyển khoản
-    payos: 15 // Số phút hết hạn cho giao dịch PayOS
+    payos: 15, // Số phút hết hạn cho giao dịch PayOS
   }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
@@ -282,21 +280,23 @@ export const insertReportSchema = createInsertSchema(reports).pick({
   reportText: true,
 });
 
-export const insertPaymentSchema = createInsertSchema(payments).pick({
-  userId: true,
-  transactionId: true,
-  amount: true,
-  method: true,
-  status: true,
-}).extend({
-  createdAt: z.preprocess(
-    (arg) => (typeof arg === "string" ? new Date(arg) : arg),
-    z
-      .date()
-      .optional()
-      .default(() => new Date()),
-  ),
-});
+export const insertPaymentSchema = createInsertSchema(payments)
+  .pick({
+    userId: true,
+    transactionId: true,
+    amount: true,
+    method: true,
+    status: true,
+  })
+  .extend({
+    createdAt: z.preprocess(
+      (arg) => (typeof arg === "string" ? new Date(arg) : arg),
+      z
+        .date()
+        .optional()
+        .default(() => new Date()),
+    ),
+  });
 
 export const insertAdvertisementSchema = createInsertSchema(advertisements)
   .pick({
@@ -413,9 +413,12 @@ export const authorsRelations = relations(authors, ({ many }) => ({
   contents: many(content),
 }));
 
-export const translationGroupsRelations = relations(translationGroups, ({ many }) => ({
-  contents: many(content),
-}));
+export const translationGroupsRelations = relations(
+  translationGroups,
+  ({ many }) => ({
+    contents: many(content),
+  }),
+);
 
 export const contentRelations = relations(content, ({ one, many }) => ({
   author: one(authors, {
@@ -490,16 +493,19 @@ export const readingHistoryRelations = relations(readingHistory, ({ one }) => ({
   }),
 }));
 
-export const unlockedChaptersRelations = relations(unlockedChapters, ({ one }) => ({
-  user: one(users, {
-    fields: [unlockedChapters.userId],
-    references: [users.id],
+export const unlockedChaptersRelations = relations(
+  unlockedChapters,
+  ({ one }) => ({
+    user: one(users, {
+      fields: [unlockedChapters.userId],
+      references: [users.id],
+    }),
+    chapter: one(chapters, {
+      fields: [unlockedChapters.chapterId],
+      references: [chapters.id],
+    }),
   }),
-  chapter: one(chapters, {
-    fields: [unlockedChapters.chapterId],
-    references: [chapters.id],
-  }),
-}));
+);
 
 export const commentsRelations = relations(comments, ({ one }) => ({
   user: one(users, {

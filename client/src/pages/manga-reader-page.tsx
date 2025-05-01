@@ -219,10 +219,7 @@ export function MangaReaderPage({
   const [isImageLoading, setIsImageLoading] = useState<boolean[]>([]);
 
   // Sort manga pages by page order
-  const sortedPages = [...chapterContent].sort((a, b) => {
-    // If pageOrder is not available for some reason, maintain original order
-    return (a.pageOrder || 0) - (b.pageOrder || 0);
-  });
+  const sortedPages = [...chapterContent];
 
   // Process image URLs from content
   const pageImages = useMemo(() => {
@@ -252,15 +249,15 @@ export function MangaReaderPage({
       }
     }
 
-    // Phương pháp 1: Tìm kiếm ảnh trực tiếp trong chapterContent
-    const directImages = sortedPages
-      .filter((page) => page.imageUrl && page.imageUrl.trim() !== "")
-      .map((page) => page.imageUrl);
+    // // Phương pháp 1: Tìm kiếm ảnh trực tiếp trong chapterContent
+    // const directImages = sortedPages
+    //   .filter((page) => page.content && page.content.trim() !== "")
+    //   .map((page) => page.content);
 
-    if (directImages.length > 0) {
-      console.log("Found direct images:", directImages);
-      return directImages;
-    }
+    // if (directImages.length > 0) {
+    //   console.log("Found direct images:", directImages);
+    //   return directImages;
+    // }
 
     // Phương pháp 2: Tìm trong HTML của mỗi trang
     const extractedImages = [];

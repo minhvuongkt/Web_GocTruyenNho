@@ -854,32 +854,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const userId = (req.user as any).id;
         isUnlocked = await storage.isChapterUnlocked(userId, chapter.id);
       }
-      
       // Only increment view count if not locked or user has unlocked it
       if (isUnlocked) {
         await storage.incrementChapterViews(chapter.id);
       }
-      
       // Get chapter content
       const chapterContentList = await storage.getChapterContentByChapter(chapter.id);
       
       // Xử lý khác nhau cho từng loại nội dung
       let contentHtml = "";
       let processedChapterContent = [];
-      
+
       if (contentInfo.type === "novel") {
         // Novel: lấy nội dung văn bản đầu tiên
         if (chapterContentList && chapterContentList.length > 0) {
           contentHtml = chapterContentList[0].content || "";
           processedChapterContent = chapterContentList;
         } else if (chapter.content) {
-          // Fallback to legacy
           contentHtml = chapter.content;
         }
       } else {
-        // Manga: trả về tất cả các trang theo thứ tự
         processedChapterContent = chapterContentList;
-        // Nếu không có nội dung trong chapter_content, thử fallback vào content field
         if ((!chapterContentList || chapterContentList.length === 0) && chapter.content) {
           contentHtml = chapter.content;
         }
@@ -914,7 +909,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         content: isUnlocked ? contentHtml : "", 
         chapterContent: isUnlocked ? processedChapterContent : [],
         isUnlocked,
-        contentType: contentInfo.type, // Trả về loại nội dung để client xử lý đúng
+        contentType: contentInfo.type,
         navigation: {
           prevChapter: prevChapter ? {
             id: prevChapter.id,

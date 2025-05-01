@@ -22,27 +22,11 @@ interface NovelReaderPageProps {
 }
 
 export function NovelReaderPage({ contentId, chapterNumber }: NovelReaderPageProps) {
-  // Đặt tất cả các Hooks lên đầu - quy tắc của React Hooks
   const { user } = useAuth();
-  const { theme } = useTheme();
-  
-  // State hooks
   const [showUnlockModal, setShowUnlockModal] = useState(false);
   const [showChapterList, setShowChapterList] = useState(false);
-  const [showSettings, setShowSettings] = useState(false);
   
-  // Reader settings
-  const defaultSettings = {
-    fontSize: 14,
-    fontFamily: 'Times New Roman',
-    lineHeight: 1.5,
-    textColor: '',
-    backgroundColor: '',
-  };
-  
-  const [readerSettings, setReaderSettings] = useState(defaultSettings);
-
-  // Data fetching with React Query
+  // Fetch chapter details using the new endpoint with contentId and chapterNumber
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: [`/api/content/${contentId}/chapter/${chapterNumber}`],
     queryFn: async () => {
@@ -51,6 +35,7 @@ export function NovelReaderPage({ contentId, chapterNumber }: NovelReaderPagePro
     }
   });
   
+  // Fetch novel details (for title and chapter list)
   const { data: novelDetails } = useQuery({
     queryKey: [`/api/content/${contentId}`],
     queryFn: async () => {
@@ -60,95 +45,56 @@ export function NovelReaderPage({ contentId, chapterNumber }: NovelReaderPagePro
     enabled: !!contentId
   });
   
-  // Effects
-  useEffect(() => {
-    // Load reader settings from localStorage on mount
-    if (typeof window !== 'undefined') {
-      try {
-        const savedSettings = localStorage.getItem('novelReaderSettings');
-        if (savedSettings) {
-          setReaderSettings(JSON.parse(savedSettings));
-        }
-      } catch (e) {
-        console.error('Error loading reader settings:', e);
-      }
-    }
-  }, []);
-  
-  // Show unlock modal when chapter is locked
-  useEffect(() => {
-    if (data && data.chapter && data.chapter.isLocked && !data.isUnlocked) {
-      setShowUnlockModal(true);
-    }
-  }, [data]);
-  
-  // Handlers and utilities
+  // Handle chapter list toggle
   const handleChapterListToggle = () => {
     setShowChapterList(!showChapterList);
   };
   
-  const updateSettings = (newSettings: any) => {
-    const updatedSettings = { ...readerSettings, ...newSettings };
-    setReaderSettings(updatedSettings);
-    try {
-      localStorage.setItem('novelReaderSettings', JSON.stringify(updatedSettings));
-    } catch (e) {
-      console.error('Error saving reader settings:', e);
-    }
-  };
-  
+  // Get sorted chapters for navigation
   const getSortedChapters = () => {
     if (!novelDetails?.chapters) return [];
     return [...novelDetails.chapters].sort((a, b) => a.number - b.number);
   };
   
-  // Font options and sizes
-  const fontOptions = [
-    { value: 'Times New Roman', label: 'Times New Roman' },
-    { value: 'Arial', label: 'Arial' },
-    { value: 'Roboto', label: 'Roboto' },
-    { value: 'Noto Sans', label: 'Noto Sans' },
-    { value: 'Noto Serif', label: 'Noto Serif' },
-    { value: 'Open Sans', label: 'Open Sans' },
-    { value: 'Montserrat', label: 'Montserrat' },
-    { value: 'Quicksand', label: 'Quicksand' },
-    { value: 'Be Vietnam Pro', label: 'Be Vietnam Pro' },
-    { value: 'Josefin Sans', label: 'Josefin Sans' },
-  ];
+  // Find previous and next chapter numbers for navigation
+  // We'll use the navigation info from the API response if available
+  let prevChapterNumber, nextChapterNumber;
   
-  const fontSizeOptions = [
-    { value: 12, label: 'Rất nhỏ' },
-    { value: 14, label: 'Nhỏ' },
-    { value: 16, label: 'Vừa' },
-    { value: 18, label: 'Lớn' },
-    { value: 20, label: 'Rất lớn' },
-    { value: 22, label: 'Cực lớn' },
-  ];
-  
-  // Calculated values
-  const defaultTextColor = theme === 'dark' ? 'white' : 'black';
+  if (data && data.navigation) {
+    // Use the navigation data from the API
+    prevChapterNumber = data.navigation.prevChapter?.number;
+    nextChapterNumber = data.navigation.nextChapter?.number;
+  } else {
+    // Fallback to manually calculating
+    const sortedChapters = getSortedChapters();
+    const currentIndex = sortedChapters.findIndex(chapter => chapter.number === chapterNumber);
     
+    prevChapterNumber = currentIndex > 0 ? sortedChapters[currentIndex - 1].number : undefined;
+    nextChapterNumber = currentIndex < sortedChapters.length - 1 ? sortedChapters[currentIndex + 1].number : undefined;
+  }
+  
+  // Handle unlock success
+  const handleUnlockSuccess = () => {
+    refetch();
+  };
+  
+  // Show unlock modal when chapter is locked
+  useEffect(() => {
+    if (data && data.chapter.isLocked && !data.isUnlocked) {
+      setShowUnlockModal(true);
+    }
+  }, [data]);
+  
   // Loading state
   if (isLoading) {
     return (
-      <ReaderLayout
-        contentId={contentId}
-        contentType="novel"
-        title="Đang tải..."
-        chapterTitle="Đang tải..."
-        chapterNumber={chapterNumber}
-        onChapterListToggle={handleChapterListToggle}
-      >
-        <div className="flex items-center justify-center min-h-[60vh]">
-          <div className="text-center">
-            <Loader2 className="h-12 w-12 animate-spin mx-auto mb-4" />
-            <p className="text-muted-foreground">Đang tải nội dung...</p>
-          </div>
-        </div>
-      </ReaderLayout>
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-10 w-10 animate-spin text-primary" />
+        <span className="ml-2 text-muted-foreground">Đang tải...</span>
+      </div>
     );
   }
-
+  
   // Error state
   if (isError) {
     return (
@@ -185,22 +131,8 @@ export function NovelReaderPage({ contentId, chapterNumber }: NovelReaderPagePro
     );
   }
   
-  // Extract data now that we know it exists
   const { chapter, content: chapterContent, chapterContent: chapterContentList, isUnlocked } = data;
   const novelTitle = novelDetails?.content?.title || "Đang tải...";
-  const novelContent = chapterContent || "";
-  
-  // Parse HTML content safely
-  const renderFormattedContent = () => {
-    if (!novelContent) return null;
-    
-    return (
-      <div 
-        dangerouslySetInnerHTML={{ __html: novelContent }} 
-        className="novel-content"
-      />
-    );
-  };
   
   // Chapter locked state
   if (chapter.isLocked && !isUnlocked) {
@@ -216,33 +148,160 @@ export function NovelReaderPage({ contentId, chapterNumber }: NovelReaderPagePro
             <Button onClick={() => setShowUnlockModal(true)}>
               Mở khóa chương
             </Button>
-            <Button asChild variant="outline">
-              <Link href={`/truyen/${contentId}`}>Quay lại trang truyện</Link>
+            <Button variant="outline" asChild>
+              <Link href={`/truyen/${contentId}`}>Quay lại</Link>
             </Button>
           </div>
           
-          <Alert className="mt-8" variant="destructive">
-            <AlertTriangle className="h-4 w-4" />
-            <AlertTitle>Thông báo</AlertTitle>
-            <AlertDescription>
-              Cần đăng nhập để mở khóa chương này. Mỗi chương truyện mở khóa yêu cầu {chapter.unlockPrice} xu.
-            </AlertDescription>
-          </Alert>
-          
-          <UnlockModal 
-            show={showUnlockModal} 
+          {/* Unlock Modal */}
+          <UnlockModal
+            isOpen={showUnlockModal}
             onClose={() => setShowUnlockModal(false)}
-            contentId={contentId}
-            chapterId={chapter.id}
-            price={chapter.unlockPrice || 0}
-            onUnlockSuccess={refetch}
+            chapter={chapter}
+            onUnlockSuccess={handleUnlockSuccess}
           />
         </div>
       </div>
     );
   }
   
-  // Main content view
+  // Extract novel content (trước tiên dùng chapterContent string từ API đã nâng cấp)
+  const novelContent = chapterContent || (chapterContentList && chapterContentList.length > 0 
+    ? chapterContentList[0]?.content 
+    : null);
+  
+  // No content state
+  if (!novelContent) {
+    return (
+      <ReaderLayout
+        contentId={contentId}
+        chapterId={chapter.id}
+        contentType="novel"
+        title={novelTitle}
+        chapterTitle={chapter.title || `Chương ${chapter.number}`}
+        chapterNumber={chapter.number}
+        prevChapterId={data.navigation?.prevChapter?.id}
+        nextChapterId={data.navigation?.nextChapter?.id}
+        onChapterListToggle={handleChapterListToggle}
+      >
+        <div className="flex flex-col items-center justify-center py-16">
+          <Alert className="max-w-md">
+            <AlertTitle>Không có nội dung</AlertTitle>
+            <AlertDescription>
+              Chương này hiện không có nội dung. Vui lòng quay lại sau.
+            </AlertDescription>
+          </Alert>
+        </div>
+        
+        {/* Chapter List Side Sheet */}
+        <Sheet open={showChapterList} onOpenChange={setShowChapterList}>
+          <SheetContent side="right">
+            <div className="h-full flex flex-col">
+              <h3 className="text-lg font-semibold mb-4">Danh sách chương</h3>
+              <div className="flex-grow overflow-y-auto">
+                {getSortedChapters().map(ch => (
+                  <div key={ch.id} className="py-2 border-b border-border">
+                    <Link
+                      href={`/truyen/${contentId}/chapter/${ch.number}`}
+                      className={`block py-1 px-2 rounded hover:bg-muted ${ch.id === chapter.id ? 'bg-primary/10 text-primary font-medium' : ''}`}
+                      onClick={() => setShowChapterList(false)}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span>Chương {ch.number}</span>
+                        {ch.isLocked && <LockIcon className="h-3 w-3" />}
+                      </div>
+                      {ch.title && <span className="text-sm text-muted-foreground">{ch.title}</span>}
+                    </Link>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </SheetContent>
+        </Sheet>
+      </ReaderLayout>
+    );
+  }
+  
+  // Default settings - define outside the component for stability
+  const defaultSettings = {
+    fontSize: 14,
+    fontFamily: 'Times New Roman',
+    textColor: '',
+    backgroundColor: '',
+  };
+  
+  // Novel reader settings with useState only
+  const [readerSettings, setReaderSettings] = useState(defaultSettings);
+  
+  // Load settings from localStorage on mount only
+  useEffect(() => {
+    // Try to get settings from localStorage if available
+    if (typeof window !== 'undefined') {
+      try {
+        const savedSettings = localStorage.getItem('novelReaderSettings');
+        if (savedSettings) {
+          setReaderSettings(JSON.parse(savedSettings));
+        }
+      } catch (e) {
+        console.error('Error loading reader settings:', e);
+      }
+    }
+  }, []);
+  
+  // Handle settings change and save to localStorage
+  const updateSettings = (newSettings: any) => {
+    const updatedSettings = { ...readerSettings, ...newSettings };
+    setReaderSettings(updatedSettings);
+    try {
+      localStorage.setItem('novelReaderSettings', JSON.stringify(updatedSettings));
+    } catch (e) {
+      console.error('Error saving reader settings:', e);
+    }
+  };
+  
+  // Vietnamese optimized fonts
+  const fontOptions = [
+    { value: 'Times New Roman', label: 'Times New Roman' },
+    { value: 'Arial', label: 'Arial' },
+    { value: 'Roboto', label: 'Roboto' },
+    { value: 'Noto Sans', label: 'Noto Sans' },
+    { value: 'Noto Serif', label: 'Noto Serif' },
+    { value: 'Open Sans', label: 'Open Sans' },
+    { value: 'Montserrat', label: 'Montserrat' },
+    { value: 'Quicksand', label: 'Quicksand' },
+    { value: 'Be Vietnam Pro', label: 'Be Vietnam Pro' },
+    { value: 'Josefin Sans', label: 'Josefin Sans' },
+  ];
+  
+  // Font size options
+  const fontSizeOptions = [
+    { value: 12, label: 'Rất nhỏ' },
+    { value: 14, label: 'Nhỏ' },
+    { value: 16, label: 'Vừa' },
+    { value: 18, label: 'Lớn' },
+    { value: 20, label: 'Rất lớn' },
+    { value: 22, label: 'Cực lớn' },
+  ];
+  
+  // Determine text color based on theme if not set manually
+  const { theme } = useTheme();
+  const defaultTextColor = theme === 'dark' ? 'white' : 'black';
+  
+  // Settings modal state
+  const [showSettings, setShowSettings] = useState(false);
+  
+  // Parse HTML content safely
+  const renderFormattedContent = () => {
+    if (!novelContent) return null;
+    
+    return (
+      <div 
+        dangerouslySetInnerHTML={{ __html: novelContent }} 
+        className="novel-content"
+      />
+    );
+  };
+  
   return (
     <ReaderLayout
       contentId={contentId}

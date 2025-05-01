@@ -101,24 +101,50 @@ export default function ChapterEditPage({
   // Initialize chapter data when chapter is loaded
   useEffect(() => {
     if (chapterData) {
+      console.log("ChapterData loaded:", chapterData);
+      
+      // Cập nhật dữ liệu chapter từ API response
       setChapter({
-        ...chapterData,
-        releaseDate: chapterData.releaseDate
-          ? new Date(chapterData.releaseDate).toISOString().split("T")[0]
+        ...chapterData.chapter,
+        releaseDate: chapterData.chapter?.releaseDate
+          ? new Date(chapterData.chapter.releaseDate).toISOString().split("T")[0]
           : new Date().toISOString().split("T")[0],
+        content: chapterData.content || ""
       });
 
       // Extract existing image URLs if content type is manga
-      if (content?.type === "manga" && chapterData.content) {
-        const imgRegex = /<img[^>]+src="([^">]+)"/g;
-        const images: string[] = [];
-        let match;
+      if (content?.type === "manga") {
+        // Trường hợp 1: Nếu có content HTML có chứa ảnh
+        if (chapterData.content) {
+          const imgRegex = /<img[^>]+src="([^"'>]+)"/g;
+          const images: string[] = [];
+          let match;
 
-        while ((match = imgRegex.exec(chapterData.content)) !== null) {
-          images.push(match[1]);
+          while ((match = imgRegex.exec(chapterData.content)) !== null) {
+            images.push(match[1]);
+          }
+
+          if (images.length > 0) {
+            setExistingImages(images);
+          }
+        } 
+        // Trường hợp 2: Nếu có chapterContent (cấu trúc mới)
+        if (chapterData.chapterContent && chapterData.chapterContent.length > 0) {
+          const images = chapterData.chapterContent
+            .sort((a, b) => a.pageOrder - b.pageOrder)
+            .map(item => item.imageUrl)
+            .filter(Boolean);
+          
+          if (images.length > 0) {
+            setExistingImages(images);
+          }
         }
-
-        setExistingImages(images);
+      } else if (content?.type === "novel" && chapterData.chapterContent && chapterData.chapterContent.length > 0) {
+        // Novel content từ cấu trúc mới
+        setChapter(prev => ({
+          ...prev,
+          content: chapterData.chapterContent[0]?.content || chapterData.content || ""
+        }));
       }
     }
   }, [chapterData, content]);
@@ -181,18 +207,13 @@ export default function ChapterEditPage({
       if (data.imageUrls && data.imageUrls.length > 0) {
         // Combine existing and new images
         const allImages = [...existingImages, ...data.imageUrls];
-
-        const imageContent = allImages
-          .map(
-            (url: string) =>
-              `<img src="${url}" alt="Trang truyện" class="manga-page" />`,
-          )
-          .join("\n");
-
-        // Update chapter with image content
+        
+        // Cấu trúc mới: Sử dụng cấu trúc dữ liệu đúng cho API
         updateChapterMutation.mutate({
           ...chapter,
-          content: imageContent,
+          content: { 
+            pages: allImages 
+          }
         });
       }
     },
@@ -227,18 +248,13 @@ export default function ChapterEditPage({
       if (data.imageUrls && data.imageUrls.length > 0) {
         // Combine existing and new images
         const allImages = [...existingImages, ...data.imageUrls];
-
-        const imageContent = allImages
-          .map(
-            (url: string) =>
-              `<img src="${url}" alt="Trang truyện" class="manga-page" />`,
-          )
-          .join("\n");
-
-        // Update chapter with image content
+        
+        // Cấu trúc mới: Sử dụng cấu trúc dữ liệu đúng cho API
         updateChapterMutation.mutate({
           ...chapter,
-          content: imageContent,
+          content: { 
+            pages: allImages 
+          }
         });
       }
     },
@@ -554,22 +570,33 @@ export default function ChapterEditPage({
         description: `Đang xử lý ${chapterImages.length} ảnh mới...`,
       });
 
+      // Upload new images then update chapter
       uploadImagesMutation.mutate(formData);
+      
     } else if (content?.type === "manga" && existingImages.length > 0) {
-      // Update with existing images only
-      const imageContent = existingImages
-        .map(
-          (url: string) =>
-            `<img src="${url}" alt="Trang truyện" class="manga-page" />`,
-        )
-        .join("\n");
-
-      updateChapterMutation.mutate({
+      // Format data for manga with existing images
+      // Cấu trúc mới: Gửi mảng URL ảnh trong pages[]
+      const chapterUpdateData = {
         ...chapter,
-        content: imageContent,
-      });
+        content: { 
+          pages: existingImages
+        }
+      };
+      
+      console.log("Updating manga chapter with existing images:", chapterUpdateData);
+      updateChapterMutation.mutate(chapterUpdateData);
+      
+    } else if (content?.type === "novel") {
+      // Format data for novel
+      const chapterUpdateData = {
+        ...chapter
+      };
+      
+      console.log("Updating novel chapter with content:", chapterUpdateData);
+      updateChapterMutation.mutate(chapterUpdateData);
     } else {
-      // Update novel chapter directly
+      // Fallback
+      console.log("Updating chapter with basic data");
       updateChapterMutation.mutate(chapter);
     }
   };

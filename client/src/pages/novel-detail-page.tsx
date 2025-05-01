@@ -185,7 +185,7 @@ export function NovelDetailPage({ id }: NovelDetailPageProps) {
   
   // Extract data
   const { content, genres, author, translationGroup } = data || {};
-  const coverImage = content?.coverImage || getRandomCoverImage('novel');
+  const coverImage = content?.coverImage || getRandomCoverImage();
   
   return (
     <MainLayout>
@@ -202,7 +202,7 @@ export function NovelDetailPage({ id }: NovelDetailPageProps) {
               />
               {content?.status && (
                 <Badge className="absolute top-2 right-2 bg-secondary/90 text-secondary-foreground">
-                  {getStatusLabel(content.status)}
+                  {getContentStatusLabel(content.status)}
                 </Badge>
               )}
             </div>

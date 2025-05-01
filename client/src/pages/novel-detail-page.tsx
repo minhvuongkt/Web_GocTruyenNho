@@ -25,7 +25,7 @@ import {
   BookmarkCheck,
   Clock
 } from "lucide-react";
-import { formatDate, getRandomCoverImage, getStatusLabel, truncateText } from "@/lib/utils";
+import { formatDate, getRandomCoverImage, getContentStatusLabel, truncateText } from "@/lib/utils";
 
 interface NovelDetailPageProps {
   id: number;
@@ -184,7 +184,7 @@ export function NovelDetailPage({ id }: NovelDetailPageProps) {
   }
   
   // Extract data
-  const { content, genres, author, translationGroup, chapters } = data || {};
+  const { content, genres, author, translationGroup } = data || {};
   const coverImage = content?.coverImage || getRandomCoverImage('novel');
   
   return (
@@ -209,18 +209,18 @@ export function NovelDetailPage({ id }: NovelDetailPageProps) {
             
             {/* Action buttons */}
             <div className="flex flex-col gap-3 mt-4">
-              {chapters && chapters.length > 0 && (
+              {chaptersData && chaptersData.length > 0 && (
                 <>
                   <Button asChild>
-                    <Link href={`/truyen/${id}/chapter/${chapters[0].id}`}>
+                    <Link href={`/truyen/${id}/chapter/${chaptersData[0].id}`}>
                       <BookOpen className="mr-2 h-4 w-4" />
                       Đọc từ đầu
                     </Link>
                   </Button>
                   
-                  {chapters.length > 1 && (
+                  {chaptersData.length > 1 && (
                     <Button variant="outline" asChild>
-                      <Link href={`/truyen/${id}/chapter/${chapters[chapters.length - 1].id}`}>
+                      <Link href={`/truyen/${id}/chapter/${chaptersData[chaptersData.length - 1].id}`}>
                         <Clock className="mr-2 h-4 w-4" />
                         Đọc chương mới nhất
                       </Link>

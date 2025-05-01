@@ -159,7 +159,7 @@ export function ReaderLayout({
       </main>
 
       {/* Bottom Navigation */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white/90 dark:bg-slate-900/90 backdrop-blur-sm border-t border-border py-3 px-4">
+      <div className="stiky bottom-0 left-0 right-0 bg-white/90 dark:bg-slate-900/90 backdrop-blur-sm border-t border-border py-3 px-4">
         <div className="container mx-auto flex justify-between items-center">
           <Button
             variant="outline"

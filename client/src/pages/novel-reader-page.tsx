@@ -27,7 +27,18 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Loader2, LockIcon, AlertTriangle, Settings, BookOpen, ArrowUp, ChevronRight } from "lucide-react";
+import {
+  Loader2,
+  LockIcon,
+  AlertTriangle,
+  Search,
+  SearchX,
+  Eye as EyeIcon,
+  Settings,
+  BookOpen,
+  ArrowUp,
+  ChevronRight,
+} from "lucide-react";
 
 interface NovelReaderPageProps {
   contentId: number;
@@ -46,6 +57,7 @@ export function NovelReaderPage({
   const [showUnlockModal, setShowUnlockModal] = useState(false);
   const [showChapterList, setShowChapterList] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [searchChapter, setSearchChapter] = useState("");
 
   // Reader settings
   const defaultSettings = {
@@ -306,7 +318,7 @@ export function NovelReaderPage({
               <Settings className="h-4 w-4 text-gray-300" />
             </Button>
           </div>
-          
+
           {/* Chapter list button */}
           <Button
             variant="outline"
@@ -335,63 +347,6 @@ export function NovelReaderPage({
           }}
         >
           {renderFormattedContent()}
-        </div>
-        
-        {/* Chapter navigation at bottom */}
-        <div className="flex items-center justify-between px-8 py-6 mt-8 bg-gray-900/95 backdrop-blur-sm rounded-lg shadow-md mb-4">
-          <Button
-            variant="outline"
-            size="lg"
-            disabled={!data.navigation?.prevChapter?.number}
-            asChild
-            className="text-gray-300 hover:text-white"
-          >
-            {data.navigation?.prevChapter?.number ? (
-              <Link
-                href={`/truyen/${contentId}/chapter/${data.navigation.prevChapter.number}`}
-              >
-                <ChevronRight className="h-5 w-5 mr-2 rotate-180" />
-                Chương trước
-              </Link>
-            ) : (
-              <span>
-                <ChevronRight className="h-5 w-5 mr-2 rotate-180" />
-                Chương trước
-              </span>
-            )}
-          </Button>
-
-          <Button
-            variant="outline"
-            size="lg"
-            onClick={handleChapterListToggle}
-            className="rounded-full h-12 w-12 p-0 flex items-center justify-center"
-            title="Mục lục"
-          >
-            <BookOpen className="h-5 w-5" />
-          </Button>
-
-          <Button
-            variant="outline"
-            size="lg"
-            disabled={!data.navigation?.nextChapter?.number}
-            asChild
-            className="text-gray-300 hover:text-white"
-          >
-            {data.navigation?.nextChapter?.number ? (
-              <Link
-                href={`/truyen/${contentId}/chapter/${data.navigation.nextChapter.number}`}
-              >
-                Chương tiếp
-                <ChevronRight className="h-5 w-5 ml-2" />
-              </Link>
-            ) : (
-              <span>
-                Chương tiếp
-                <ChevronRight className="h-5 w-5 ml-2" />
-              </span>
-            )}
-          </Button>
         </div>
       </div>
 
@@ -501,7 +456,16 @@ export function NovelReaderPage({
       </Dialog>
 
       {/* Chapter List Side Sheet */}
-      <Sheet open={showChapterList} onOpenChange={setShowChapterList}>
+      <ChapterListSidebar
+        showChapterList={showChapterList}
+        setShowChapterList={setShowChapterList}
+        searchChapter={searchChapter}
+        setSearchChapter={setSearchChapter}
+        getSortedChapters={getSortedChapters}
+        currentChapterId={data.chapter.id}
+        contentId={contentId}
+      />
+      {/* <Sheet open={showChapterList} onOpenChange={setShowChapterList}>
         <SheetContent side="right">
           <div className="h-full flex flex-col">
             <h3 className="text-lg font-semibold mb-4">Danh sách chương</h3>
@@ -528,9 +492,120 @@ export function NovelReaderPage({
             </div>
           </div>
         </SheetContent>
-      </Sheet>
+      </Sheet> */}
     </ReaderLayout>
   );
 }
+function ChapterListSidebar({
+  showChapterList,
+  setShowChapterList,
+  searchChapter,
+  setSearchChapter,
+  getSortedChapters,
+  currentChapterId,
+  contentId,
+}: {
+  showChapterList: boolean;
+  setShowChapterList: (show: boolean) => void;
+  searchChapter: string;
+  setSearchChapter: (search: string) => void;
+  getSortedChapters: () => any[];
+  currentChapterId: number;
+  contentId: number;
+}) {
+  // Filter chapters based on search
+  const filteredChapters = getSortedChapters().filter(
+    (ch) =>
+      searchChapter === "" ||
+      (ch.title &&
+        ch.title.toLowerCase().includes(searchChapter.toLowerCase())) ||
+      `chương ${ch.number}`.toLowerCase().includes(searchChapter.toLowerCase()),
+  );
 
+  // Check if there are no matching chapters
+  const noResults = filteredChapters.length === 0;
+
+  return (
+    <Sheet open={showChapterList} onOpenChange={setShowChapterList}>
+      <SheetContent
+        side="right"
+        className="w-[300px] sm:w-[350px] md:w-[400px] bg-gray-900 border-l-gray-800"
+      >
+        <div className="h-full flex flex-col">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-lg font-semibold text-white">
+              Danh sách chương
+            </h3>
+            {/* <Button variant="ghost" size="sm" onClick={() => setShowChapterList(false)} className="text-gray-400 hover:text-white hover:bg-gray-800">
+              <X className="h-4 w-4" />
+            </Button> */}
+          </div>
+
+          <div className="mb-4">
+            <div className="relative">
+              <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Input
+                type="text"
+                placeholder="Tìm chương..."
+                className="pl-8 bg-gray-800 border-gray-700 text-gray-100 placeholder:text-gray-500 focus-visible:ring-gray-700"
+                value={searchChapter}
+                onChange={(e) => setSearchChapter(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <div className="flex-grow overflow-y-auto">
+            {!noResults ? (
+              filteredChapters.map((ch) => (
+                <div key={ch.id} className="py-1 border-b border-gray-800">
+                  <Link
+                    href={`/truyen/${contentId}/chapter/${ch.number}`}
+                    className={`block py-2 px-3 rounded-md hover:bg-gray-800 transition-colors duration-200 ${
+                      ch.id === currentChapterId
+                        ? "bg-primary/10 text-primary font-medium border-l-4 border-primary pl-2"
+                        : "text-gray-300"
+                    }`}
+                    onClick={() => setShowChapterList(false)}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center">
+                        {ch.id === currentChapterId && (
+                          <ChevronRight className="h-3 w-3 mr-1 text-primary" />
+                        )}
+                        <span>Chương {ch.number}</span>
+                      </div>
+                      <div className="flex items-center space-x-1">
+                        {ch.views > 0 && (
+                          <EyeIcon className="h-3 w-3 text-gray-500" />
+                        )}
+                        {ch.isLocked && (
+                          <LockIcon className="h-3 w-3 text-amber-500" />
+                        )}
+                      </div>
+                    </div>
+                    {ch.title && (
+                      <div className="text-xs text-gray-500 mt-1 truncate">
+                        {ch.title}
+                      </div>
+                    )}
+                  </Link>
+                </div>
+              ))
+            ) : (
+              // Empty state design from screenshot
+              <div className="py-12 flex flex-col items-center justify-center text-center">
+                <div className="rounded-full bg-gray-800 p-6 mb-4">
+                  <SearchX className="h-8 w-8 text-gray-500" />
+                </div>
+                <p className="text-gray-400 font-medium">
+                  Không tìm thấy chương phù hợp
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      </SheetContent>
+    </Sheet>
+  );
+}
 export default NovelReaderPage;

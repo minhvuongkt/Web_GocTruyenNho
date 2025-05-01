@@ -316,21 +316,24 @@ export function MangaReaderPage({
   // State to track UI behavior
   const [isTopButtonVisible, setIsTopButtonVisible] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
-  
+
   // Track click outside settings popup to close it
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (showSettings) {
         const target = event.target as HTMLElement;
-        if (!target.closest('.settings-popup') && !target.closest('.settings-btn')) {
+        if (
+          !target.closest(".settings-popup") &&
+          !target.closest(".settings-btn")
+        ) {
           setShowSettings(false);
         }
       }
     };
-    
-    document.addEventListener('mousedown', handleClickOutside);
+
+    document.addEventListener("mousedown", handleClickOutside);
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener("mousedown", handleClickOutside);
     };
   }, [showSettings]);
 
@@ -346,7 +349,7 @@ export function MangaReaderPage({
   useEffect(() => {
     const handleScroll = () => {
       const currentScrollTop = window.scrollY;
-      
+
       // Show top button only when user has scrolled down a bit
       setIsTopButtonVisible(currentScrollTop > 300);
     };
@@ -713,12 +716,14 @@ export function MangaReaderPage({
           >
             <Settings className="h-4 w-4 text-gray-300" />
           </Button>
-          
+
           {/* Settings popup */}
           {showSettings && (
             <div className="absolute right-0 top-10 z-50 w-[300px] bg-gray-900/95 border border-gray-700 rounded-lg shadow-lg p-4 settings-popup">
               <div className="mb-4">
-                <h3 className="text-sm font-medium mb-2 text-white border-b border-gray-700 pb-2">Kiểu xem:</h3>
+                <h3 className="text-sm font-medium mb-2 text-white border-b border-gray-700 pb-2">
+                  Kiểu xem:
+                </h3>
                 <div className="flex flex-wrap gap-1.5">
                   <Button
                     variant={layout === "vertical" ? "default" : "outline"}
@@ -752,9 +757,11 @@ export function MangaReaderPage({
                   </Button>
                 </div>
               </div>
-              
+
               <div>
-                <h3 className="text-sm font-medium mb-2 text-white border-b border-gray-700 pb-2">Kích thước:</h3>
+                <h3 className="text-sm font-medium mb-2 text-white border-b border-gray-700 pb-2">
+                  Kích thước:
+                </h3>
                 <div className="flex flex-wrap gap-1.5">
                   <Button
                     variant={viewMode === "fit" ? "default" : "outline"}
@@ -791,7 +798,7 @@ export function MangaReaderPage({
             </div>
           )}
         </div>
-        
+
         {/* Chapter list button */}
         <Button
           variant="outline"
@@ -821,9 +828,9 @@ export function MangaReaderPage({
 
       {/* Manga content */}
       {renderMangaContent()}
-      
+
       {/* Chapter navigation at bottom */}
-      <div className="flex items-center justify-between px-8 py-6 mt-8 bg-gray-900/95 backdrop-blur-sm rounded-lg shadow-md mb-4">
+      {/* <div className="flex items-center justify-between px-8 py-6 mt-8 bg-gray-900/95 backdrop-blur-sm rounded-lg shadow-md mb-4">
         <Button
           variant="outline"
           size="lg"
@@ -877,7 +884,7 @@ export function MangaReaderPage({
             </span>
           )}
         </Button>
-      </div>
+      </div> */}
 
       {/* Chapter List Side Sheet */}
       <ChapterListSidebar

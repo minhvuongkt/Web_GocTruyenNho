@@ -1332,10 +1332,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(400).json({ error: "No ZIP file uploaded" });
         }
 
-        // Import extract-zip
-        const extract = require('extract-zip');
-        
-        // Create unique folder name for this extraction
+        // Use a manual approach to extract the zip file instead of the library
+        // since we can't use require in ESM context
         const extractionId = Date.now();
         const extractDir = path.join(
           process.cwd(),
@@ -1348,36 +1346,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
           fs.mkdirSync(extractDir, { recursive: true });
         }
         
-        // Extract the ZIP file
-        await extract(req.file.path, { dir: extractDir });
+        // Use child_process to extract the ZIP file with unzip system command
+        const { execSync } = await import('child_process');
         
-        // Read the extracted files
-        const files = fs.readdirSync(extractDir);
-        
-        // Filter image files and sort them
-        const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
-        const imageFiles = files
-          .filter(file => {
-            const ext = path.extname(file).toLowerCase();
-            return imageExtensions.includes(ext);
-          })
-          .sort((a, b) => {
-            // Natural sorting for numeric filenames (1.jpg, 2.jpg, etc)
-            const numA = parseInt(a.replace(/[^0-9]/g, '')) || 0;
-            const numB = parseInt(b.replace(/[^0-9]/g, '')) || 0;
-            return numA - numB;
+        try {
+          // Extract the ZIP file using unzip command
+          execSync(`unzip -j "${req.file.path}" -d "${extractDir}"`);
+          
+          // Read the extracted files
+          const files = fs.readdirSync(extractDir);
+          
+          // Filter image files and sort them
+          const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
+          const imageFiles = files
+            .filter(file => {
+              const ext = path.extname(file).toLowerCase();
+              return imageExtensions.includes(ext);
+            })
+            .sort((a, b) => {
+              // Natural sorting for numeric filenames (1.jpg, 2.jpg, etc)
+              const numA = parseInt(a.replace(/[^0-9]/g, '')) || 0;
+              const numB = parseInt(b.replace(/[^0-9]/g, '')) || 0;
+              return numA - numB;
+            });
+          
+          // Generate URLs for each image
+          const imageUrls = imageFiles.map(file => 
+            `/uploads/chapter-images/${extractionId}/${file}`
+          );
+          
+          // Delete the ZIP file after extraction
+          fs.unlinkSync(req.file.path);
+          
+          // Return the URLs of extracted images
+          res.status(200).json({ imageUrls });
+        } catch (execError) {
+          console.error("Error extracting ZIP with unzip command:", execError);
+          
+          // Fallback method if unzip command fails
+          res.status(500).json({ 
+            error: "Failed to process ZIP file",
+            message: "Extraction failed. Please ensure the ZIP file is valid."
           });
-        
-        // Generate URLs for each image
-        const imageUrls = imageFiles.map(file => 
-          `/uploads/chapter-images/${extractionId}/${file}`
-        );
-        
-        // Delete the ZIP file after extraction
-        fs.unlinkSync(req.file.path);
-        
-        // Return the URLs of extracted images
-        res.status(200).json({ imageUrls });
+        }
       } catch (error) {
         console.error("Error processing ZIP file:", error);
         res.status(500).json({ 

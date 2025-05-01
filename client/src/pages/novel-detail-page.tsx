@@ -371,7 +371,13 @@ export function NovelDetailPage({ id }: NovelDetailPageProps) {
 
               {/* Chapters tab */}
               <TabsContent value="chapters">
-                {chaptersData && chaptersData.length > 0 ? (
+                <ChapterList
+                  chapters={chaptersData}
+                  contentId={id}
+                  contentType="novel"
+                  userUnlockedChapters={unlockedChapters}
+                />
+                {/* {chaptersData && chaptersData.length > 0 ? (
                   <ChapterList
                     chapters={chaptersData}
                     contentId={id}
@@ -382,7 +388,7 @@ export function NovelDetailPage({ id }: NovelDetailPageProps) {
                   <div className="text-center py-8 text-muted-foreground">
                     Chưa có chương nào được thêm vào.
                   </div>
-                )}
+                )} */}
               </TabsContent>
 
               {/* Comments tab */}

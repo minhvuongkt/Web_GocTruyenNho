@@ -370,7 +370,13 @@ export function MangaDetailPage({ id }: MangaDetailPageProps) {
 
               {/* Chapters tab */}
               <TabsContent value="chapters">
-                {chapters && chapters.length > 0 ? (
+                <ChapterList
+                  chapters={chapters}
+                  contentId={id}
+                  contentType="manga"
+                  userUnlockedChapters={unlockedChapters}
+                />
+                {/* {chapters && chapters.length > 0 ? (
                   <ChapterList
                     chapters={chapters}
                     contentId={id}
@@ -381,7 +387,7 @@ export function MangaDetailPage({ id }: MangaDetailPageProps) {
                   <div className="text-center py-8 text-muted-foreground">
                     Chưa có chương nào được thêm vào.
                   </div>
-                )}
+                )} */}
               </TabsContent>
 
               {/* Comments tab */}

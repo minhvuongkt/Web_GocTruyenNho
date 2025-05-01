@@ -17,20 +17,26 @@ interface MangaReaderPageProps {
   chapterNumber: number;
 }
 
-export function MangaReaderPage({ contentId, chapterNumber }: MangaReaderPageProps) {
+export function MangaReaderPage({
+  contentId,
+  chapterNumber,
+}: MangaReaderPageProps) {
   const { user } = useAuth();
   const [showUnlockModal, setShowUnlockModal] = useState(false);
   const [showChapterList, setShowChapterList] = useState(false);
-  
+
   // Fetch chapter details using the new endpoint with contentId and chapterNumber
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: [`/api/content/${contentId}/chapter/${chapterNumber}`],
     queryFn: async () => {
-      const res = await apiRequest("GET", `/api/content/${contentId}/chapter/${chapterNumber}`);
+      const res = await apiRequest(
+        "GET",
+        `/api/content/${contentId}/chapter/${chapterNumber}`,
+      );
       return res.json();
-    }
+    },
   });
-  
+
   // Fetch manga details (for title and chapter list)
   const { data: mangaDetails } = useQuery({
     queryKey: [`/api/content/${contentId}`],
@@ -38,35 +44,35 @@ export function MangaReaderPage({ contentId, chapterNumber }: MangaReaderPagePro
       const res = await apiRequest("GET", `/api/content/${contentId}`);
       return res.json();
     },
-    enabled: !!contentId
+    enabled: !!contentId,
   });
-  
+
   // Handle chapter list toggle
   const handleChapterListToggle = () => {
     setShowChapterList(!showChapterList);
   };
-  
+
   // Get sorted chapters for navigation
   const getSortedChapters = () => {
     if (!mangaDetails?.chapters) return [];
     return [...mangaDetails.chapters].sort((a, b) => a.number - b.number);
   };
-  
+
   // We don't need to manually calculate previous and next chapter numbers
   // since they are now included in the API response in the navigation field
-  
+
   // Handle unlock success
   const handleUnlockSuccess = () => {
     refetch();
   };
-  
+
   // Show unlock modal when chapter is locked
   useEffect(() => {
     if (data && data.chapter.isLocked && !data.isUnlocked) {
       setShowUnlockModal(true);
     }
   }, [data]);
-  
+
   // Loading state
   if (isLoading) {
     return (
@@ -76,7 +82,7 @@ export function MangaReaderPage({ contentId, chapterNumber }: MangaReaderPagePro
       </div>
     );
   }
-  
+
   // Error state
   if (isError) {
     return (
@@ -94,7 +100,7 @@ export function MangaReaderPage({ contentId, chapterNumber }: MangaReaderPagePro
       </div>
     );
   }
-  
+
   // Check if chapter data exists
   if (!data || !data.chapter) {
     return (
@@ -112,10 +118,10 @@ export function MangaReaderPage({ contentId, chapterNumber }: MangaReaderPagePro
       </div>
     );
   }
-  
+
   const { chapter, content: chapterContent, isUnlocked } = data;
   const mangaTitle = mangaDetails?.content?.title || "Đang tải...";
-  
+
   // Chapter locked state
   if (chapter.isLocked && !isUnlocked) {
     return (
@@ -134,7 +140,7 @@ export function MangaReaderPage({ contentId, chapterNumber }: MangaReaderPagePro
               <Link href={`/truyen/${contentId}`}>Quay lại</Link>
             </Button>
           </div>
-          
+
           {/* Unlock Modal */}
           <UnlockModal
             isOpen={showUnlockModal}
@@ -146,19 +152,19 @@ export function MangaReaderPage({ contentId, chapterNumber }: MangaReaderPagePro
       </div>
     );
   }
-  
+
   // No content state
   if (!chapterContent || chapterContent.length === 0) {
     return (
       <ReaderLayout
         contentId={contentId}
-        chapterId={chapter.id}
+        chapterId={chapter.number}
         contentType="manga"
         title={mangaTitle}
         chapterTitle={chapter.title || `Chương ${chapter.number}`}
         chapterNumber={chapter.number}
-        prevChapterId={data.navigation?.prevChapter?.id}
-        nextChapterId={data.navigation?.nextChapter?.id}
+        prevChapterId={data.navigation?.prevChapter?.number}
+        nextChapterId={data.navigation?.nextChapter?.number}
         onChapterListToggle={handleChapterListToggle}
       >
         <div className="flex flex-col items-center justify-center py-16">
@@ -169,25 +175,29 @@ export function MangaReaderPage({ contentId, chapterNumber }: MangaReaderPagePro
             </AlertDescription>
           </Alert>
         </div>
-        
+
         {/* Chapter List Side Sheet */}
         <Sheet open={showChapterList} onOpenChange={setShowChapterList}>
           <SheetContent side="right">
             <div className="h-full flex flex-col">
               <h3 className="text-lg font-semibold mb-4">Danh sách chương</h3>
               <div className="flex-grow overflow-y-auto">
-                {getSortedChapters().map(ch => (
+                {getSortedChapters().map((ch) => (
                   <div key={ch.id} className="py-2 border-b border-border">
                     <Link
                       href={`/truyen/${contentId}/chapter/${ch.number}`}
-                      className={`block py-1 px-2 rounded hover:bg-muted ${ch.id === chapter.id ? 'bg-primary/10 text-primary font-medium' : ''}`}
+                      className={`block py-1 px-2 rounded hover:bg-muted ${ch.id === chapter.id ? "bg-primary/10 text-primary font-medium" : ""}`}
                       onClick={() => setShowChapterList(false)}
                     >
                       <div className="flex items-center justify-between">
                         <span>Chương {ch.number}</span>
                         {ch.isLocked && <LockIcon className="h-3 w-3" />}
                       </div>
-                      {ch.title && <span className="text-sm text-muted-foreground">{ch.title}</span>}
+                      {ch.title && (
+                        <span className="text-sm text-muted-foreground">
+                          {ch.title}
+                        </span>
+                      )}
                     </Link>
                   </div>
                 ))}
@@ -198,70 +208,72 @@ export function MangaReaderPage({ contentId, chapterNumber }: MangaReaderPagePro
       </ReaderLayout>
     );
   }
-  
+
   // Sorting and processing manga pages
   const [currentPage, setCurrentPage] = useState(1);
   const [zoom, setZoom] = useState(100);
-  const [viewMode, setViewMode] = useState<'vertical' | 'horizontal'>('vertical');
+  const [viewMode, setViewMode] = useState<"vertical" | "horizontal">(
+    "vertical",
+  );
   const [loadedImages, setLoadedImages] = useState<string[]>([]);
   const [isImageLoading, setIsImageLoading] = useState<boolean[]>([]);
-  
+
   // Sort manga pages by page order
   const sortedPages = [...chapterContent].sort((a, b) => {
     // If pageOrder is not available for some reason, maintain original order
     return (a.pageOrder || 0) - (b.pageOrder || 0);
   });
-  
+
   // Process image URLs from content
   const pageImages = useMemo(() => {
-    console.log('chapterContent:', chapterContent);
-    console.log('chapter:', chapter);
+    console.log("chapterContent:", chapterContent);
+    console.log("chapter:", chapter);
 
     // Kiểm tra nếu truyện tranh có cấu trúc JSON mới trong chapter.content
     if (chapter && chapter.content) {
       try {
         const jsonContent = JSON.parse(chapter.content);
-        console.log('Parsed JSON content from chapter:', jsonContent);
-        
-        if (jsonContent && typeof jsonContent === 'object') {
+        console.log("Parsed JSON content from chapter:", jsonContent);
+
+        if (jsonContent && typeof jsonContent === "object") {
           // Sắp xếp theo thứ tự số và trả về mảng URL
           const sortedImages = Object.entries(jsonContent)
             .sort(([keyA], [keyB]) => parseInt(keyA) - parseInt(keyB))
             .map(([_, url]) => url as string);
-          
-          console.log('Extracted images from JSON:', sortedImages);
+
+          console.log("Extracted images from JSON:", sortedImages);
           if (sortedImages.length > 0) {
             return sortedImages;
           }
         }
       } catch (e) {
-        console.error('Error parsing JSON from chapter.content:', e);
+        console.error("Error parsing JSON from chapter.content:", e);
         // Không phải JSON, tiếp tục kiểm tra các định dạng khác
       }
     }
-    
+
     // Phương pháp 1: Tìm kiếm ảnh trực tiếp trong chapterContent
     const directImages = sortedPages
-      .filter(page => page.imageUrl && page.imageUrl.trim() !== '')
-      .map(page => page.imageUrl);
-    
+      .filter((page) => page.imageUrl && page.imageUrl.trim() !== "")
+      .map((page) => page.imageUrl);
+
     if (directImages.length > 0) {
-      console.log('Found direct images:', directImages);
+      console.log("Found direct images:", directImages);
       return directImages;
     }
-    
+
     // Phương pháp 2: Tìm trong HTML của mỗi trang
     const extractedImages = [];
-    
+
     for (const page of sortedPages) {
       if (page.content) {
         // Kiểm tra xem nội dung có phải là JSON không
         try {
           const jsonContent = JSON.parse(page.content);
           // Nếu là JSON, thêm tất cả URL vào danh sách
-          if (jsonContent && typeof jsonContent === 'object') {
-            Object.values(jsonContent).forEach(url => {
-              if (typeof url === 'string' && url.trim() !== '') {
+          if (jsonContent && typeof jsonContent === "object") {
+            Object.values(jsonContent).forEach((url) => {
+              if (typeof url === "string" && url.trim() !== "") {
                 extractedImages.push(url);
               }
             });
@@ -270,86 +282,90 @@ export function MangaReaderPage({ contentId, chapterNumber }: MangaReaderPagePro
         } catch (e) {
           // Không phải JSON, tiếp tục kiểm tra HTML
         }
-        
+
         // Tìm các thẻ <img> trong HTML
         const imgRegex = /<img[^>]+src="([^">]+)"/gi;
         let match;
         while ((match = imgRegex.exec(page.content)) !== null) {
-          if (match[1] && match[1].trim() !== '') {
+          if (match[1] && match[1].trim() !== "") {
             extractedImages.push(match[1]);
           }
         }
       }
     }
-    
+
     if (extractedImages.length > 0) {
-      console.log('Found extracted images from HTML/JSON in pages:', extractedImages);
+      console.log(
+        "Found extracted images from HTML/JSON in pages:",
+        extractedImages,
+      );
       return extractedImages;
     }
-    
-    console.log('No images found, using fallback');
+
+    console.log("No images found, using fallback");
     return [];
   }, [chapterContent, chapter, sortedPages]);
-  
+
   // Fallback only if absolutely needed
-  const displayImages = pageImages.length > 0 ? pageImages : getMangaPageImages(5);
-  
+  const displayImages =
+    pageImages.length > 0 ? pageImages : getMangaPageImages(5);
+
   // Initialize loading state for all images
   useEffect(() => {
     setIsImageLoading(new Array(displayImages.length).fill(true));
   }, [displayImages.length]);
-  
+
   // Image loading handler
   const handleImageLoad = (index: number) => {
-    setIsImageLoading(prev => {
+    setIsImageLoading((prev) => {
       const newState = [...prev];
       newState[index] = false;
       return newState;
     });
-    
+
     // Add to loaded images
-    setLoadedImages(prev => {
+    setLoadedImages((prev) => {
       if (!prev.includes(displayImages[index])) {
         return [...prev, displayImages[index]];
       }
       return prev;
     });
   };
-  
+
   // Navigation in horizontal mode
   const goToNextPage = () => {
     if (currentPage < displayImages.length) {
-      setCurrentPage(prev => prev + 1);
+      setCurrentPage((prev) => prev + 1);
     }
   };
-  
+
   const goToPrevPage = () => {
     if (currentPage > 1) {
-      setCurrentPage(prev => prev - 1);
+      setCurrentPage((prev) => prev - 1);
     }
   };
-  
+
   // Handle keyboard navigation
   useEffect(() => {
-    if (viewMode === 'horizontal') {
+    if (viewMode === "horizontal") {
       const handleKeyDown = (e: KeyboardEvent) => {
-        if (e.key === 'ArrowRight') {
+        if (e.key === "ArrowRight") {
           goToNextPage();
-        } else if (e.key === 'ArrowLeft') {
+        } else if (e.key === "ArrowLeft") {
           goToPrevPage();
         }
       };
-      
-      document.addEventListener('keydown', handleKeyDown);
+
+      document.addEventListener("keydown", handleKeyDown);
       return () => {
-        document.removeEventListener('keydown', handleKeyDown);
+        document.removeEventListener("keydown", handleKeyDown);
       };
     }
   }, [viewMode, currentPage, displayImages.length]);
-  
+
   // Render content based on view mode
   const renderMangaContent = () => {
-    if (viewMode === 'vertical') {
+    if (viewMode === "vertical") {
       return (
         <div className="manga-reader space-y-6">
           {displayImages.map((imageUrl, index) => (
@@ -362,8 +378,11 @@ export function MangaReaderPage({ contentId, chapterNumber }: MangaReaderPagePro
               <img
                 src={imageUrl}
                 alt={`Trang ${index + 1}`}
-                className={`w-full max-w-4xl mx-auto shadow-md rounded transition-opacity duration-300 ${isImageLoading[index] ? 'opacity-40' : 'opacity-100'}`}
-                style={{ width: `${zoom}%`, maxWidth: `${Math.max(zoom, 100)}%` }}
+                className={`w-full max-w-4xl mx-auto shadow-md rounded transition-opacity duration-300 ${isImageLoading[index] ? "opacity-40" : "opacity-100"}`}
+                style={{
+                  width: `${zoom}%`,
+                  maxWidth: `${Math.max(zoom, 100)}%`,
+                }}
                 loading={index < 3 ? "eager" : "lazy"}
                 onLoad={() => handleImageLoad(index)}
               />
@@ -387,29 +406,29 @@ export function MangaReaderPage({ contentId, chapterNumber }: MangaReaderPagePro
             <img
               src={displayImages[currentPage - 1]}
               alt={`Trang ${currentPage}`}
-              className={`max-h-[70vh] mx-auto shadow-md rounded transition-opacity duration-300 ${isImageLoading[currentPage - 1] ? 'opacity-40' : 'opacity-100'}`}
+              className={`max-h-[70vh] mx-auto shadow-md rounded transition-opacity duration-300 ${isImageLoading[currentPage - 1] ? "opacity-40" : "opacity-100"}`}
               style={{ width: `${zoom}%`, maxWidth: `${Math.max(zoom, 100)}%` }}
               onLoad={() => handleImageLoad(currentPage - 1)}
             />
           </div>
-          
+
           <div className="flex items-center justify-between w-full max-w-lg mt-4">
-            <Button 
-              variant="outline" 
-              size="sm" 
+            <Button
+              variant="outline"
+              size="sm"
               onClick={goToPrevPage}
               disabled={currentPage === 1}
             >
               Trang trước
             </Button>
-            
+
             <div className="text-center text-sm">
               Trang {currentPage} / {displayImages.length}
             </div>
-            
-            <Button 
-              variant="outline" 
-              size="sm" 
+
+            <Button
+              variant="outline"
+              size="sm"
               onClick={goToNextPage}
               disabled={currentPage === displayImages.length}
             >
@@ -420,10 +439,10 @@ export function MangaReaderPage({ contentId, chapterNumber }: MangaReaderPagePro
       );
     }
   };
-  
+
   // Settings for manga reader
   const zoomOptions = [75, 85, 100, 115, 130, 150];
-  
+
   return (
     <ReaderLayout
       contentId={contentId}
@@ -439,58 +458,64 @@ export function MangaReaderPage({ contentId, chapterNumber }: MangaReaderPagePro
       <div className="sticky top-[72px] z-10 flex justify-between items-center mb-4 bg-background/80 backdrop-blur-sm p-2 rounded-lg shadow-sm">
         <div className="flex items-center space-x-2">
           <div className="text-sm font-medium">Chế độ xem:</div>
-          <Button 
-            variant={viewMode === 'vertical' ? "default" : "outline"} 
+          <Button
+            variant={viewMode === "vertical" ? "default" : "outline"}
             size="sm"
-            onClick={() => setViewMode('vertical')}
+            onClick={() => setViewMode("vertical")}
             className="h-8"
           >
             Cuộn dọc
           </Button>
-          <Button 
-            variant={viewMode === 'horizontal' ? "default" : "outline"} 
+          <Button
+            variant={viewMode === "horizontal" ? "default" : "outline"}
             size="sm"
-            onClick={() => setViewMode('horizontal')}
+            onClick={() => setViewMode("horizontal")}
             className="h-8"
           >
             Từng trang
           </Button>
         </div>
-        
+
         <div className="flex items-center space-x-2">
           <div className="text-sm font-medium">Zoom:</div>
-          <select 
-            value={zoom} 
+          <select
+            value={zoom}
             onChange={(e) => setZoom(Number(e.target.value))}
             className="h-8 rounded-md border border-input bg-background px-3 py-1 text-sm"
           >
-            {zoomOptions.map(option => (
-              <option key={option} value={option}>{option}%</option>
+            {zoomOptions.map((option) => (
+              <option key={option} value={option}>
+                {option}%
+              </option>
             ))}
           </select>
         </div>
       </div>
-      
+
       {renderMangaContent()}
-      
+
       {/* Chapter List Side Sheet */}
       <Sheet open={showChapterList} onOpenChange={setShowChapterList}>
         <SheetContent side="right">
           <div className="h-full flex flex-col">
             <h3 className="text-lg font-semibold mb-4">Danh sách chương</h3>
             <div className="flex-grow overflow-y-auto">
-              {getSortedChapters().map(ch => (
+              {getSortedChapters().map((ch) => (
                 <div key={ch.id} className="py-2 border-b border-border">
                   <Link
                     href={`/truyen/${contentId}/chapter/${ch.number}`}
-                    className={`block py-1 px-2 rounded hover:bg-muted ${ch.id === chapter.id ? 'bg-primary/10 text-primary font-medium' : ''}`}
+                    className={`block py-1 px-2 rounded hover:bg-muted ${ch.id === chapter.id ? "bg-primary/10 text-primary font-medium" : ""}`}
                     onClick={() => setShowChapterList(false)}
                   >
                     <div className="flex items-center justify-between">
                       <span>Chương {ch.number}</span>
                       {ch.isLocked && <LockIcon className="h-3 w-3" />}
                     </div>
-                    {ch.title && <span className="text-sm text-muted-foreground">{ch.title}</span>}
+                    {ch.title && (
+                      <span className="text-sm text-muted-foreground">
+                        {ch.title}
+                      </span>
+                    )}
                   </Link>
                 </div>
               ))}

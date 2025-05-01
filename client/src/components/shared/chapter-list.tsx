@@ -87,28 +87,30 @@ export function ChapterList({
               href={`/truyen/${contentId}/chapter/${chapter.number}`}
               className="flex items-center justify-between p-3 hover:bg-muted/50 rounded-lg transition-colors"
             >
-              <div className="flex-1 border-b border-border pb-3">
-                <div className="flex items-center gap-2">
-                  <span className="font-medium">Chương {chapter.number}</span>
-                  {chapter.isLocked &&
-                    !userUnlockedChapters.includes(chapter.id) && (
-                      <Badge
-                        variant="outline"
-                        className="bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400"
-                      >
-                        {/* <LockIcon className="h-3 w-3 mr-1" /> */}
-                        {chapter.unlockPrice} xu
-                      </Badge>
-                    )}
-                </div>
-                {chapter.title && (
-                  <div className="text-sm text-muted-foreground mt-0.5">
-                    {chapter.title}
+              <div className="flex items-center justify-between w-full pb-3 border-b border-border">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium">Chương {chapter.number}</span>
+                    {chapter.isLocked &&
+                      !userUnlockedChapters.includes(chapter.id) && (
+                        <Badge
+                          variant="outline"
+                          className="bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400"
+                        >
+                          {/* <LockIcon className="h-3 w-3 mr-1" /> */}
+                          {chapter.unlockPrice} xu
+                        </Badge>
+                      )}
                   </div>
-                )}
-              </div>
-              <div className="text-sm text-muted-foreground hidden md:block">
-                {formatDate(chapter.releaseDate)}
+                  {chapter.title && (
+                    <div className="text-sm text-muted-foreground mt-0.5">
+                      {chapter.title}
+                    </div>
+                  )}
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  {formatDate(chapter.releaseDate)}
+                </div>
               </div>
             </Link>
           ))

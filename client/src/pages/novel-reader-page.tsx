@@ -8,8 +8,21 @@ import { Chapter, ChapterContent } from "@shared/schema";
 import { ReaderLayout } from "@/components/layouts/reader-layout";
 import { UnlockModal } from "@/components/shared/unlock-modal";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
@@ -21,45 +34,51 @@ interface NovelReaderPageProps {
   chapterNumber: number;
 }
 
-export function NovelReaderPage({ contentId, chapterNumber }: NovelReaderPageProps) {
+export function NovelReaderPage({
+  contentId,
+  chapterNumber,
+}: NovelReaderPageProps) {
   // Đặt tất cả các Hooks lên đầu - quy tắc của React Hooks
   const { user } = useAuth();
   const { theme } = useTheme();
-  
+
   // State hooks
   const [showUnlockModal, setShowUnlockModal] = useState(false);
   const [showChapterList, setShowChapterList] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
-  
+
   // Reader settings
   const defaultSettings = {
     fontSize: 14,
-    fontFamily: 'Times New Roman',
+    fontFamily: "Times New Roman",
     lineHeight: 1.5,
-    textColor: '',
-    backgroundColor: '',
+    textColor: "",
+    backgroundColor: "",
   };
-  
+
   const [readerSettings, setReaderSettings] = useState(defaultSettings);
 
   // Data fetching with React Query
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: [`/api/content/${contentId}/chapter/${chapterNumber}`],
     queryFn: async () => {
-      const res = await apiRequest("GET", `/api/content/${contentId}/chapter/${chapterNumber}`);
+      const res = await apiRequest(
+        "GET",
+        `/api/content/${contentId}/chapter/${chapterNumber}`,
+      );
       return res.json();
-    }
+    },
   });
-  
+
   const { data: novelDetails } = useQuery({
     queryKey: [`/api/content/${contentId}`],
     queryFn: async () => {
       const res = await apiRequest("GET", `/api/content/${contentId}`);
       return res.json();
     },
-    enabled: !!contentId
+    enabled: !!contentId,
   });
-  
+
   // Query to fetch all chapters for this content
   const { data: chaptersData } = useQuery({
     queryKey: [`/api/content/${contentId}/chapters`],
@@ -67,77 +86,80 @@ export function NovelReaderPage({ contentId, chapterNumber }: NovelReaderPagePro
       const res = await apiRequest("GET", `/api/content/${contentId}/chapters`);
       return res.json();
     },
-    enabled: !!contentId
+    enabled: !!contentId,
   });
-  
+
   // Effects
   useEffect(() => {
     // Load reader settings from localStorage on mount
-    if (typeof window !== 'undefined') {
+    if (typeof window !== "undefined") {
       try {
-        const savedSettings = localStorage.getItem('novelReaderSettings');
+        const savedSettings = localStorage.getItem("novelReaderSettings");
         if (savedSettings) {
           setReaderSettings(JSON.parse(savedSettings));
         }
       } catch (e) {
-        console.error('Error loading reader settings:', e);
+        console.error("Error loading reader settings:", e);
       }
     }
   }, []);
-  
+
   // Show unlock modal when chapter is locked
   useEffect(() => {
     if (data && data.chapter && data.chapter.isLocked && !data.isUnlocked) {
       setShowUnlockModal(true);
     }
   }, [data]);
-  
+
   // Handlers and utilities
   const handleChapterListToggle = () => {
     setShowChapterList(!showChapterList);
   };
-  
+
   const updateSettings = (newSettings: any) => {
     const updatedSettings = { ...readerSettings, ...newSettings };
     setReaderSettings(updatedSettings);
     try {
-      localStorage.setItem('novelReaderSettings', JSON.stringify(updatedSettings));
+      localStorage.setItem(
+        "novelReaderSettings",
+        JSON.stringify(updatedSettings),
+      );
     } catch (e) {
-      console.error('Error saving reader settings:', e);
+      console.error("Error saving reader settings:", e);
     }
   };
-  
+
   const getSortedChapters = () => {
     if (!chaptersData) return [];
     return [...chaptersData].sort((a, b) => a.number - b.number);
   };
-  
+
   // Font options and sizes
   const fontOptions = [
-    { value: 'Times New Roman', label: 'Times New Roman' },
-    { value: 'Arial', label: 'Arial' },
-    { value: 'Roboto', label: 'Roboto' },
-    { value: 'Noto Sans', label: 'Noto Sans' },
-    { value: 'Noto Serif', label: 'Noto Serif' },
-    { value: 'Open Sans', label: 'Open Sans' },
-    { value: 'Montserrat', label: 'Montserrat' },
-    { value: 'Quicksand', label: 'Quicksand' },
-    { value: 'Be Vietnam Pro', label: 'Be Vietnam Pro' },
-    { value: 'Josefin Sans', label: 'Josefin Sans' },
+    { value: "Times New Roman", label: "Times New Roman" },
+    { value: "Arial", label: "Arial" },
+    { value: "Roboto", label: "Roboto" },
+    { value: "Noto Sans", label: "Noto Sans" },
+    { value: "Noto Serif", label: "Noto Serif" },
+    { value: "Open Sans", label: "Open Sans" },
+    { value: "Montserrat", label: "Montserrat" },
+    { value: "Quicksand", label: "Quicksand" },
+    { value: "Be Vietnam Pro", label: "Be Vietnam Pro" },
+    { value: "Josefin Sans", label: "Josefin Sans" },
   ];
-  
+
   const fontSizeOptions = [
-    { value: 12, label: 'Rất nhỏ' },
-    { value: 14, label: 'Nhỏ' },
-    { value: 16, label: 'Vừa' },
-    { value: 18, label: 'Lớn' },
-    { value: 20, label: 'Rất lớn' },
-    { value: 22, label: 'Cực lớn' },
+    { value: 12, label: "Rất nhỏ" },
+    { value: 14, label: "Nhỏ" },
+    { value: 16, label: "Vừa" },
+    { value: 18, label: "Lớn" },
+    { value: 20, label: "Rất lớn" },
+    { value: 24, label: "Cực lớn" },
   ];
-  
+
   // Calculated values
-  const defaultTextColor = theme === 'dark' ? 'white' : 'black';
-    
+  const defaultTextColor = theme === "dark" ? "white" : "black";
+
   // Loading state
   if (isLoading) {
     return (
@@ -177,7 +199,7 @@ export function NovelReaderPage({ contentId, chapterNumber }: NovelReaderPagePro
       </div>
     );
   }
-  
+
   // Check if chapter data exists
   if (!data || !data.chapter) {
     return (
@@ -195,24 +217,29 @@ export function NovelReaderPage({ contentId, chapterNumber }: NovelReaderPagePro
       </div>
     );
   }
-  
+
   // Extract data now that we know it exists
-  const { chapter, content: chapterContent, chapterContent: chapterContentList, isUnlocked } = data;
+  const {
+    chapter,
+    content: chapterContent,
+    chapterContent: chapterContentList,
+    isUnlocked,
+  } = data;
   const novelTitle = novelDetails?.content?.title || "Đang tải...";
   const novelContent = chapterContent || "";
-  
+
   // Parse HTML content safely
   const renderFormattedContent = () => {
     if (!novelContent) return null;
-    
+
     return (
-      <div 
-        dangerouslySetInnerHTML={{ __html: novelContent }} 
+      <div
+        dangerouslySetInnerHTML={{ __html: novelContent }}
         className="novel-content"
       />
     );
   };
-  
+
   // Chapter locked state
   if (chapter.isLocked && !isUnlocked) {
     return (
@@ -231,17 +258,18 @@ export function NovelReaderPage({ contentId, chapterNumber }: NovelReaderPagePro
               <Link href={`/truyen/${contentId}`}>Quay lại trang truyện</Link>
             </Button>
           </div>
-          
+
           <Alert className="mt-8" variant="destructive">
             <AlertTriangle className="h-4 w-4" />
             <AlertTitle>Thông báo</AlertTitle>
             <AlertDescription>
-              Cần đăng nhập để mở khóa chương này. Mỗi chương truyện mở khóa yêu cầu {chapter.unlockPrice} xu.
+              Cần đăng nhập để mở khóa chương này. Mỗi chương truyện mở khóa yêu
+              cầu {chapter.unlockPrice} xu.
             </AlertDescription>
           </Alert>
-          
-          <UnlockModal 
-            isOpen={showUnlockModal} 
+
+          <UnlockModal
+            isOpen={showUnlockModal}
             onClose={() => setShowUnlockModal(false)}
             chapter={chapter}
             onUnlockSuccess={refetch}
@@ -250,26 +278,26 @@ export function NovelReaderPage({ contentId, chapterNumber }: NovelReaderPagePro
       </div>
     );
   }
-  
+
   // Main content view
   return (
     <ReaderLayout
       contentId={contentId}
-      chapterId={chapter.id}
+      chapterId={chapter.number}
       contentType="novel"
       title={novelTitle}
       chapterTitle={chapter.title || `Chương ${chapter.number}`}
       chapterNumber={chapter.number}
-      prevChapterId={data.navigation?.prevChapter?.id}
-      nextChapterId={data.navigation?.nextChapter?.id}
+      prevChapterId={data.navigation?.prevChapter?.number}
+      nextChapterId={data.navigation?.nextChapter?.number}
       onChapterListToggle={handleChapterListToggle}
     >
       <div className="novel-reader relative">
         {/* Reader settings button */}
         <div className="absolute right-0 top-0">
-          <Button 
-            variant="ghost" 
-            size="sm" 
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={() => setShowSettings(true)}
             className="flex items-center gap-1"
           >
@@ -277,26 +305,26 @@ export function NovelReaderPage({ contentId, chapterNumber }: NovelReaderPagePro
             <span className="text-xs">Cài đặt</span>
           </Button>
         </div>
-        
+
         <h1 className="text-2xl font-semibold mb-6 pr-24">
-          Chương {chapter.number}: {chapter.title || ''}
+          Chương {chapter.number}: {chapter.title || ""}
         </h1>
-        
-        <div 
+
+        <div
           className="novel-content-container"
-          style={{ 
-            fontFamily: readerSettings.fontFamily, 
+          style={{
+            fontFamily: readerSettings.fontFamily,
             fontSize: `${readerSettings.fontSize}px`,
             color: readerSettings.textColor || defaultTextColor,
-            backgroundColor: readerSettings.backgroundColor || '',
-            padding: readerSettings.backgroundColor ? '1rem' : '0',
-            borderRadius: readerSettings.backgroundColor ? '0.5rem' : '0',
+            backgroundColor: readerSettings.backgroundColor || "",
+            padding: readerSettings.backgroundColor ? "1rem" : "0",
+            borderRadius: readerSettings.backgroundColor ? "0.5rem" : "0",
           }}
         >
           {renderFormattedContent()}
         </div>
       </div>
-      
+
       {/* Settings Dialog */}
       <Dialog open={showSettings} onOpenChange={setShowSettings}>
         <DialogContent className="sm:max-w-md">
@@ -306,19 +334,19 @@ export function NovelReaderPage({ contentId, chapterNumber }: NovelReaderPagePro
               Điều chỉnh giao diện đọc truyện theo ý thích của bạn
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="space-y-4 py-4">
             <div className="flex flex-col gap-2">
               <Label htmlFor="fontFamily">Phông chữ</Label>
-              <Select 
-                value={readerSettings.fontFamily} 
+              <Select
+                value={readerSettings.fontFamily}
                 onValueChange={(value) => updateSettings({ fontFamily: value })}
               >
                 <SelectTrigger id="fontFamily">
                   <SelectValue placeholder="Chọn phông chữ" />
                 </SelectTrigger>
                 <SelectContent>
-                  {fontOptions.map(font => (
+                  {fontOptions.map((font) => (
                     <SelectItem key={font.value} value={font.value}>
                       {font.label}
                     </SelectItem>
@@ -326,18 +354,20 @@ export function NovelReaderPage({ contentId, chapterNumber }: NovelReaderPagePro
                 </SelectContent>
               </Select>
             </div>
-            
+
             <div className="flex flex-col gap-2">
               <Label htmlFor="fontSize">Cỡ chữ</Label>
-              <Select 
-                value={readerSettings.fontSize.toString()} 
-                onValueChange={(value) => updateSettings({ fontSize: parseInt(value) })}
+              <Select
+                value={readerSettings.fontSize.toString()}
+                onValueChange={(value) =>
+                  updateSettings({ fontSize: parseInt(value) })
+                }
               >
                 <SelectTrigger id="fontSize">
                   <SelectValue placeholder="Chọn cỡ chữ" />
                 </SelectTrigger>
                 <SelectContent>
-                  {fontSizeOptions.map(size => (
+                  {fontSizeOptions.map((size) => (
                     <SelectItem key={size.value} value={size.value.toString()}>
                       {size.label} ({size.value}px)
                     </SelectItem>
@@ -345,7 +375,7 @@ export function NovelReaderPage({ contentId, chapterNumber }: NovelReaderPagePro
                 </SelectContent>
               </Select>
             </div>
-            
+
             <div className="flex flex-col gap-2">
               <Label htmlFor="textColor">Màu chữ</Label>
               <div className="flex items-center gap-2">
@@ -353,64 +383,75 @@ export function NovelReaderPage({ contentId, chapterNumber }: NovelReaderPagePro
                   id="textColor"
                   type="color"
                   value={readerSettings.textColor || defaultTextColor}
-                  onChange={(e) => updateSettings({ textColor: e.target.value })}
+                  onChange={(e) =>
+                    updateSettings({ textColor: e.target.value })
+                  }
                   className="w-12 h-8 p-1"
                 />
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   size="sm"
-                  onClick={() => updateSettings({ textColor: '' })}
+                  onClick={() => updateSettings({ textColor: "" })}
                 >
                   Mặc định
                 </Button>
               </div>
             </div>
-            
+
             <div className="flex flex-col gap-2">
               <Label htmlFor="backgroundColor">Màu nền</Label>
               <div className="flex items-center gap-2">
                 <Input
                   id="backgroundColor"
                   type="color"
-                  value={readerSettings.backgroundColor || (theme === 'dark' ? '#1e1e2e' : '#ffffff')}
-                  onChange={(e) => updateSettings({ backgroundColor: e.target.value })}
+                  value={
+                    readerSettings.backgroundColor ||
+                    (theme === "dark" ? "#1e1e2e" : "#ffffff")
+                  }
+                  onChange={(e) =>
+                    updateSettings({ backgroundColor: e.target.value })
+                  }
                   className="w-12 h-8 p-1"
                 />
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   size="sm"
-                  onClick={() => updateSettings({ backgroundColor: '' })}
+                  onClick={() => updateSettings({ backgroundColor: "" })}
                 >
                   Mặc định
                 </Button>
               </div>
             </div>
           </div>
-          
+
           <DialogFooter>
             <Button onClick={() => setShowSettings(false)}>Đóng</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      
+
       {/* Chapter List Side Sheet */}
       <Sheet open={showChapterList} onOpenChange={setShowChapterList}>
         <SheetContent side="right">
           <div className="h-full flex flex-col">
             <h3 className="text-lg font-semibold mb-4">Danh sách chương</h3>
             <div className="flex-grow overflow-y-auto">
-              {getSortedChapters().map(ch => (
+              {getSortedChapters().map((ch) => (
                 <div key={ch.id} className="py-2 border-b border-border">
                   <Link
                     href={`/truyen/${contentId}/chapter/${ch.number}`}
-                    className={`block py-1 px-2 rounded hover:bg-muted ${ch.id === chapter.id ? 'bg-primary/10 text-primary font-medium' : ''}`}
+                    className={`block py-1 px-2 rounded hover:bg-muted ${ch.id === chapter.id ? "bg-primary/10 text-primary font-medium" : ""}`}
                     onClick={() => setShowChapterList(false)}
                   >
                     <div className="flex items-center justify-between">
                       <span>Chương {ch.number}</span>
                       {ch.isLocked && <LockIcon className="h-3 w-3" />}
                     </div>
-                    {ch.title && <span className="text-sm text-muted-foreground">{ch.title}</span>}
+                    {ch.title && (
+                      <span className="text-sm text-muted-foreground">
+                        {ch.title}
+                      </span>
+                    )}
                   </Link>
                 </div>
               ))}

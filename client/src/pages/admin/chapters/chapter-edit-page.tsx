@@ -272,12 +272,17 @@ export default function ChapterEditPage({
         // Combine existing and new images
         const allImages = [...existingImages, ...data.imageUrls];
         
-        // Cấu trúc mới: Sử dụng cấu trúc dữ liệu đúng cho API
+        // Cấu trúc mới: Lưu ảnh dưới dạng JSON với key là số thứ tự
+        const imageJson = allImages.reduce((acc, url, index) => {
+          acc[index + 1] = url;
+          return acc;
+        }, {});
+        
+        console.log("Saving image data as JSON:", imageJson);
+        
         updateChapterMutation.mutate({
           ...chapter,
-          content: { 
-            pages: allImages 
-          }
+          content: JSON.stringify(imageJson)
         });
       }
     },
@@ -598,15 +603,18 @@ export default function ChapterEditPage({
       
     } else if (content?.type === "manga" && existingImages.length > 0) {
       // Format data for manga with existing images
-      // Cấu trúc mới: Gửi mảng URL ảnh trong pages[]
+      // Cấu trúc mới: Lưu ảnh dưới dạng JSON với key là số thứ tự
+      const imageJson = existingImages.reduce((acc, url, index) => {
+        acc[index + 1] = url;
+        return acc;
+      }, {});
+      
       const chapterUpdateData = {
         ...chapter,
-        content: { 
-          pages: existingImages
-        }
+        content: JSON.stringify(imageJson)
       };
       
-      console.log("Updating manga chapter with existing images:", chapterUpdateData);
+      console.log("Updating manga chapter with JSON image data:", imageJson);
       updateChapterMutation.mutate(chapterUpdateData);
       
     } else if (content?.type === "novel") {

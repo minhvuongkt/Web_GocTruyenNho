@@ -833,6 +833,77 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Endpoint to update a chapter by contentId and chapterNumber
+  app.patch("/api/content/:contentId/chapter/:chapterNumber", ensureAdmin, async (req, res) => {
+    try {
+      const contentId = parseInt(req.params.contentId);
+      const chapterNumber = parseInt(req.params.chapterNumber);
+
+      if (isNaN(contentId) || isNaN(chapterNumber)) {
+        return res.status(400).json({ error: "Invalid content ID or chapter number" });
+      }
+
+      const { title, content } = req.body;
+
+      // Find the chapter based on contentId and number
+      const chapters = await db
+        .select()
+        .from(schema.chapters)
+        .where(
+          and(
+            eq(schema.chapters.contentId, contentId),
+            eq(schema.chapters.number, chapterNumber),
+          ),
+        );
+
+      if (!chapters || chapters.length === 0) {
+        return res.status(404).json({ error: "Chapter not found" });
+      }
+
+      const chapter = chapters[0];
+
+      // Get content type
+      const contentInfo = await storage.getContent(contentId);
+      if (!contentInfo) {
+        return res.status(404).json({ error: "Content not found" });
+      }
+
+      // Update the chapter title
+      const [updatedChapter] = await db
+        .update(schema.chapters)
+        .set({ title })
+        .where(eq(schema.chapters.id, chapter.id))
+        .returning();
+
+      // Handle content update
+      if (content !== undefined) {
+        // Get existing chapter content
+        const existingContent = await db
+          .select()
+          .from(schema.chapterContent)
+          .where(eq(schema.chapterContent.chapterId, chapter.id));
+
+        if (existingContent && existingContent.length > 0) {
+          // Update existing content
+          await db
+            .update(schema.chapterContent)
+            .set({ content })
+            .where(eq(schema.chapterContent.id, existingContent[0].id));
+        } else {
+          // Create new content entry
+          await db
+            .insert(schema.chapterContent)
+            .values({ chapterId: chapter.id, content });
+        }
+      }
+
+      res.json(updatedChapter);
+    } catch (error) {
+      console.error("Error updating chapter:", error);
+      res.status(500).json({ error: "Failed to update chapter" });
+    }
+  });
+
   // Get chapter by contentId and chapterNumber
   app.get(
     "/api/content/:contentId/chapter/:chapterNumber",

@@ -25,6 +25,7 @@ import {
   BookOpen,
   ArrowUp,
   Home,
+  Settings,
 } from "lucide-react";
 
 interface MangaReaderPageProps {
@@ -312,8 +313,26 @@ export function MangaReaderPage({
     setShowChapterList(!showChapterList);
   };
 
-  // State to track only for top button scrolling
+  // State to track UI behavior
   const [isTopButtonVisible, setIsTopButtonVisible] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  
+  // Track click outside settings popup to close it
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (showSettings) {
+        const target = event.target as HTMLElement;
+        if (!target.closest('.settings-popup') && !target.closest('.settings-btn')) {
+          setShowSettings(false);
+        }
+      }
+    };
+    
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showSettings]);
 
   // Scroll to top function
   const scrollToTop = () => {
@@ -554,9 +573,7 @@ export function MangaReaderPage({
                     onLoad={() => handleImageLoad(index)}
                     onError={() => handleImageError(index)}
                   />
-                  <div className="text-center text-sm text-muted-foreground mt-1">
-                    Trang {index + 1} / {mangaImages.length}
-                  </div>
+                  {/* Không hiển thị số trang trong chế độ cuộn dọc để tối ưu trải nghiệm đọc */}
                 </div>
               </div>
             </div>
@@ -685,98 +702,108 @@ export function MangaReaderPage({
       nextChapterId={data.navigation?.nextChapter?.id}
       onChapterListToggle={handleChapterListToggle}
     >
-      {/* Reader controls - always visible, styled like in the screenshot */}
-      <div
-        className="sticky top-[72px] z-10 bg-gray-900/95 backdrop-blur-sm rounded-lg shadow-md mb-4"
-      >
-        {/* Button to show chapter list */}
-        <div className="flex items-center justify-center px-4 py-3 border-b border-gray-800">
+      {/* Simple chapter list button in header */}
+      <div className="flex justify-end items-center mb-4 gap-2">
+        {/* Settings button with popup */}
+        <div className="relative">
           <Button
             variant="outline"
             size="sm"
-            onClick={handleChapterListToggle}
-            className="rounded-full h-9 w-9 p-0 flex items-center justify-center"
-            title="Mục lục"
+            onClick={() => setShowSettings(!showSettings)}
+            className="rounded-full h-9 w-9 p-0 flex items-center justify-center bg-gray-900/90 border-gray-700 settings-btn"
+            title="Tùy chọn đọc"
           >
-            <BookOpen className="h-4 w-4" />
+            <Settings className="h-4 w-4 text-gray-300" />
           </Button>
-        </div>
-
-        <div className="flex flex-wrap gap-1 md:gap-4 justify-between p-3">
-          {/* Layout controls */}
-          <div className="flex items-center gap-1">
-            <div className="text-sm font-medium mr-1 text-gray-300">
-              Kiểu xem:
+          
+          {/* Settings popup */}
+          {showSettings && (
+            <div className="absolute right-0 top-10 z-50 w-[300px] bg-gray-900/95 border border-gray-700 rounded-lg shadow-lg p-4 settings-popup">
+              <div className="mb-4">
+                <h3 className="text-sm font-medium mb-2 text-white border-b border-gray-700 pb-2">Kiểu xem:</h3>
+                <div className="flex flex-wrap gap-1.5">
+                  <Button
+                    variant={layout === "vertical" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setLayout("vertical")}
+                    className={`h-8 ${layout === "vertical" ? "bg-primary text-primary-foreground" : "bg-gray-800 text-gray-300 border-gray-700 hover:bg-gray-700"}`}
+                    title="Cuộn dọc"
+                  >
+                    <BookOpen className="h-4 w-4 mr-1" />
+                    <span>Cuộn dọc</span>
+                  </Button>
+                  <Button
+                    variant={layout === "horizontal" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setLayout("horizontal")}
+                    className={`h-8 ${layout === "horizontal" ? "bg-primary text-primary-foreground" : "bg-gray-800 text-gray-300 border-gray-700 hover:bg-gray-700"}`}
+                    title="Từng trang"
+                  >
+                    <Maximize2 className="h-4 w-4 mr-1" />
+                    <span>Từng trang</span>
+                  </Button>
+                  <Button
+                    variant={layout === "grid" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setLayout("grid")}
+                    className={`h-8 ${layout === "grid" ? "bg-primary text-primary-foreground" : "bg-gray-800 text-gray-300 border-gray-700 hover:bg-gray-700"}`}
+                    title="Lưới ảnh"
+                  >
+                    <LayoutGrid className="h-4 w-4 mr-1" />
+                    <span>Lưới ảnh</span>
+                  </Button>
+                </div>
+              </div>
+              
+              <div>
+                <h3 className="text-sm font-medium mb-2 text-white border-b border-gray-700 pb-2">Kích thước:</h3>
+                <div className="flex flex-wrap gap-1.5">
+                  <Button
+                    variant={viewMode === "fit" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setViewMode("fit")}
+                    className={`h-8 ${viewMode === "fit" ? "bg-primary text-primary-foreground" : "bg-gray-800 text-gray-300 border-gray-700 hover:bg-gray-700"}`}
+                    title="Vừa màn hình"
+                  >
+                    <ZoomIn className="h-4 w-4 mr-1" />
+                    <span>Vừa màn hình</span>
+                  </Button>
+                  <Button
+                    variant={viewMode === "width-fit" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setViewMode("width-fit")}
+                    className={`h-8 ${viewMode === "width-fit" ? "bg-primary text-primary-foreground" : "bg-gray-800 text-gray-300 border-gray-700 hover:bg-gray-700"}`}
+                    title="Vừa chiều rộng"
+                  >
+                    <ZoomOut className="h-4 w-4 mr-1" />
+                    <span>Vừa chiều rộng</span>
+                  </Button>
+                  <Button
+                    variant={viewMode === "original" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setViewMode("original")}
+                    className={`h-8 ${viewMode === "original" ? "bg-primary text-primary-foreground" : "bg-gray-800 text-gray-300 border-gray-700 hover:bg-gray-700"}`}
+                    title="Kích thước gốc"
+                  >
+                    <Maximize2 className="h-4 w-4 mr-1" />
+                    <span>Kích thước gốc</span>
+                  </Button>
+                </div>
+              </div>
             </div>
-            <Button
-              variant={layout === "vertical" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setLayout("vertical")}
-              className={`h-8 ${layout === "vertical" ? "bg-primary text-primary-foreground" : "bg-gray-800 text-gray-300 border-gray-700 hover:bg-gray-700"}`}
-              title="Cuộn dọc"
-            >
-              <BookOpen className="h-4 w-4 mr-1" />
-              <span className="hidden sm:inline">Cuộn dọc</span>
-            </Button>
-            <Button
-              variant={layout === "horizontal" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setLayout("horizontal")}
-              className={`h-8 ${layout === "horizontal" ? "bg-primary text-primary-foreground" : "bg-gray-800 text-gray-300 border-gray-700 hover:bg-gray-700"}`}
-              title="Từng trang"
-            >
-              <Maximize2 className="h-4 w-4 mr-1" />
-              <span className="hidden sm:inline">Từng trang</span>
-            </Button>
-            <Button
-              variant={layout === "grid" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setLayout("grid")}
-              className={`h-8 ${layout === "grid" ? "bg-primary text-primary-foreground" : "bg-gray-800 text-gray-300 border-gray-700 hover:bg-gray-700"}`}
-              title="Lưới ảnh"
-            >
-              <LayoutGrid className="h-4 w-4 mr-1" />
-              <span className="hidden sm:inline">Lưới ảnh</span>
-            </Button>
-          </div>
-
-          {/* View mode controls */}
-          <div className="flex items-center gap-1">
-            <div className="text-sm font-medium mr-1 text-gray-300">
-              Kích thước:
-            </div>
-            <Button
-              variant={viewMode === "fit" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setViewMode("fit")}
-              className={`h-8 ${viewMode === "fit" ? "bg-primary text-primary-foreground" : "bg-gray-800 text-gray-300 border-gray-700 hover:bg-gray-700"}`}
-              title="Vừa màn hình"
-            >
-              <ZoomIn className="h-4 w-4 mr-1" />
-              <span className="hidden sm:inline">Vừa màn hình</span>
-            </Button>
-            <Button
-              variant={viewMode === "width-fit" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setViewMode("width-fit")}
-              className={`h-8 ${viewMode === "width-fit" ? "bg-primary text-primary-foreground" : "bg-gray-800 text-gray-300 border-gray-700 hover:bg-gray-700"}`}
-              title="Vừa chiều rộng"
-            >
-              <ZoomOut className="h-4 w-4 mr-1" />
-              <span className="hidden sm:inline">Vừa chiều rộng</span>
-            </Button>
-            <Button
-              variant={viewMode === "original" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setViewMode("original")}
-              className={`h-8 ${viewMode === "original" ? "bg-primary text-primary-foreground" : "bg-gray-800 text-gray-300 border-gray-700 hover:bg-gray-700"}`}
-              title="Kích thước gốc"
-            >
-              <Maximize2 className="h-4 w-4 mr-1" />
-              <span className="hidden sm:inline">Kích thước gốc</span>
-            </Button>
-          </div>
+          )}
         </div>
+        
+        {/* Chapter list button */}
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleChapterListToggle}
+          className="rounded-full h-9 w-9 p-0 flex items-center justify-center bg-gray-900/90 border-gray-700"
+          title="Mục lục"
+        >
+          <BookOpen className="h-4 w-4 text-gray-300" />
+        </Button>
       </div>
 
       {/* Scroll to top button */}

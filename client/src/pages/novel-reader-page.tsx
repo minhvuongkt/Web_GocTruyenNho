@@ -143,6 +143,7 @@ export function NovelReaderPage({ contentId, chapterNumber }: NovelReaderPagePro
     return (
       <ReaderLayout
         contentId={contentId}
+        chapterId={0} // Placeholder ID during loading
         contentType="novel"
         title="Đang tải..."
         chapterTitle="Đang tải..."
@@ -240,11 +241,9 @@ export function NovelReaderPage({ contentId, chapterNumber }: NovelReaderPagePro
           </Alert>
           
           <UnlockModal 
-            show={showUnlockModal} 
+            isOpen={showUnlockModal} 
             onClose={() => setShowUnlockModal(false)}
-            contentId={contentId}
-            chapterId={chapter.id}
-            price={chapter.unlockPrice || 0}
+            chapter={chapter}
             onUnlockSuccess={refetch}
           />
         </div>

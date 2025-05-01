@@ -60,6 +60,16 @@ export function NovelReaderPage({ contentId, chapterNumber }: NovelReaderPagePro
     enabled: !!contentId
   });
   
+  // Query to fetch all chapters for this content
+  const { data: chaptersData } = useQuery({
+    queryKey: [`/api/content/${contentId}/chapters`],
+    queryFn: async () => {
+      const res = await apiRequest("GET", `/api/content/${contentId}/chapters`);
+      return res.json();
+    },
+    enabled: !!contentId
+  });
+  
   // Effects
   useEffect(() => {
     // Load reader settings from localStorage on mount
@@ -98,8 +108,8 @@ export function NovelReaderPage({ contentId, chapterNumber }: NovelReaderPagePro
   };
   
   const getSortedChapters = () => {
-    if (!novelDetails?.chapters) return [];
-    return [...novelDetails.chapters].sort((a, b) => a.number - b.number);
+    if (!chaptersData) return [];
+    return [...chaptersData].sort((a, b) => a.number - b.number);
   };
   
   // Font options and sizes

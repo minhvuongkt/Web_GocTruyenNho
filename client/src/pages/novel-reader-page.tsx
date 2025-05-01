@@ -38,6 +38,7 @@ import {
   BookOpen,
   ArrowUp,
   ChevronRight,
+  Edit2,
 } from "lucide-react";
 
 interface NovelReaderPageProps {
@@ -307,6 +308,23 @@ export function NovelReaderPage({
       <div className="novel-reader relative">
         {/* Reader settings button - now using a popup similar to manga reader */}
         <div className="flex justify-end items-center mb-4 gap-2">
+          {/* Edit button for admin users */}
+          {user?.role === 'admin' && (
+            <Link 
+              href={`/truyen/${contentId}/chapter/${chapter.number}/edit`}
+              className="inline-block"
+            >
+              <Button
+                variant="outline"
+                size="sm"
+                className="rounded-full h-9 w-9 p-0 flex items-center justify-center bg-primary/90 border-primary-foreground settings-btn"
+                title="Chỉnh sửa chương này"
+              >
+                <Edit2 className="h-4 w-4 text-white" />
+              </Button>
+            </Link>
+          )}
+          
           <div className="relative">
             <Button
               variant="outline"

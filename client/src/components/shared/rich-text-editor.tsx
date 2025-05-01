@@ -60,19 +60,27 @@ const fontOptions = [
 ];
 
 interface RichTextEditorProps {
+  id?: string;
   initialValue?: string;
-  onSave: (content: string, title: string) => void;
+  onChange?: (content: string) => void;
+  onSave?: (content: string, title: string) => void;
   title?: string;
   autosaveInterval?: number; // in milliseconds
   readOnly?: boolean;
+  placeholder?: string;
+  showSubmitButton?: boolean;
 }
 
 export function RichTextEditor({
+  id,
   initialValue = '',
+  onChange,
   onSave,
   title = '',
   autosaveInterval = 30000, // 30 seconds default
-  readOnly = false
+  readOnly = false,
+  placeholder = "Bắt đầu soạn thảo nội dung chương...",
+  showSubmitButton = true
 }: RichTextEditorProps) {
   const [editorValue, setEditorValue] = useState(initialValue);
   const [chapterTitle, setChapterTitle] = useState(title);
@@ -100,7 +108,12 @@ export function RichTextEditor({
     if (readOnly) return;
     
     setIsSaving(true);
-    onSave(editorValue, chapterTitle);
+    
+    // Call onSave if provided
+    if (onSave) {
+      onSave(editorValue, chapterTitle);
+    }
+    
     setLastSaved(new Date());
     
     setTimeout(() => {
@@ -193,10 +206,15 @@ export function RichTextEditor({
                 ref={quillRef}
                 theme="snow"
                 value={editorValue}
-                onChange={setEditorValue}
+                onChange={(content) => {
+                  setEditorValue(content);
+                  if (onChange) {
+                    onChange(content);
+                  }
+                }}
                 modules={modules}
                 formats={formats}
-                placeholder="Bắt đầu soạn thảo nội dung chương..."
+                placeholder={placeholder}
               />
             </div>
           </TabsContent>

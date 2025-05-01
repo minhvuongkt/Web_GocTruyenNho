@@ -149,12 +149,12 @@ export function NovelReaderPage({
   ];
 
   const fontSizeOptions = [
-    { value: 12, label: "Rất nhỏ" },
-    { value: 14, label: "Nhỏ" },
-    { value: 16, label: "Vừa" },
-    { value: 18, label: "Lớn" },
-    { value: 20, label: "Rất lớn" },
-    { value: 24, label: "Cực lớn" },
+    { value: 14, label: "Rất Nhỏ" },
+    { value: 18, label: "Nhỏ" },
+    { value: 20, label: "Vừa" },
+    { value: 22, label: "Lớn" },
+    { value: 26, label: "Rất lớn" },
+    { value: 30, label: "Cực lớn" },
   ];
 
   // Calculated values

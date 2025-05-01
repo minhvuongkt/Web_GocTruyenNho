@@ -617,14 +617,14 @@ export default function ChapterEditPage({
         return acc;
       }, {});
       
-      // Tạo bản sao của chapter và cập nhật content
-      const { releaseDate, ...chapterWithoutDate } = chapter;
-      
+      // Chuẩn bị dữ liệu cập nhật 
       const chapterUpdateData = {
-        ...chapterWithoutDate,
+        ...chapter,
         content: JSON.stringify(imageJson),
-        // Nếu releaseDate là string, chuyển thành Date hoặc bỏ qua
-        releaseDate: releaseDate instanceof Date ? releaseDate : undefined
+        // Xử lý releaseDate đúng cách để backend có thể xử lý
+        releaseDate: chapter.releaseDate 
+          ? new Date(chapter.releaseDate).toISOString().split('T')[0] // Chỉ lấy phần ngày YYYY-MM-DD
+          : null
       };
       
       console.log("Updating manga chapter with JSON image data:", imageJson);
@@ -632,26 +632,26 @@ export default function ChapterEditPage({
       
     } else if (content?.type === "novel") {
       // Format data for novel
-      // Tạo bản sao của chapter và cập nhật content
-      const { releaseDate, ...chapterWithoutDate } = chapter;
-      
+      // Chuẩn bị dữ liệu cập nhật
       const chapterUpdateData = {
-        ...chapterWithoutDate,
-        // Nếu releaseDate là string, chuyển thành Date hoặc bỏ qua
-        releaseDate: releaseDate instanceof Date ? releaseDate : undefined
+        ...chapter,
+        // Xử lý releaseDate đúng cách để backend có thể xử lý
+        releaseDate: chapter.releaseDate 
+          ? new Date(chapter.releaseDate).toISOString().split('T')[0] // Chỉ lấy phần ngày YYYY-MM-DD
+          : null
       };
       
       console.log("Updating novel chapter with content:", chapterUpdateData);
       updateChapterMutation.mutate(chapterUpdateData);
     } else {
-      // Fallback
-      // Tạo bản sao của chapter và cập nhật lựa chọn trường
-      const { releaseDate, ...chapterWithoutDate } = chapter;
-      
+      // Fallback for other content types
+      // Chuẩn bị dữ liệu cập nhật với xử lý đồng nhất cho releaseDate
       const chapterUpdateData = {
-        ...chapterWithoutDate,
-        // Nếu releaseDate là string, chuyển thành Date hoặc bỏ qua
-        releaseDate: releaseDate instanceof Date ? releaseDate : undefined
+        ...chapter,
+        // Xử lý releaseDate đúng cách để backend có thể xử lý
+        releaseDate: chapter.releaseDate 
+          ? new Date(chapter.releaseDate).toISOString().split('T')[0] // Chỉ lấy phần ngày YYYY-MM-DD
+          : null
       };
       
       console.log("Updating chapter with basic data");

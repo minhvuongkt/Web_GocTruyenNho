@@ -233,42 +233,58 @@ export function MangaReaderPage({
   console.log("Chapter content data:", sortedPages);
   
   const pageImages = useMemo(() => {
-    if (sortedPages && sortedPages.length > 0) {
-      for (const contentItem of sortedPages) {
-        try {
-          if (contentItem.content) {
-            // Xử lý chuỗi JSON để loại bỏ dấu phẩy thừa ở cuối
+    // Log để debug dữ liệu nhận được từ server
+    console.log("ChapterData loaded:", data);
+    
+    // Kiểm tra trước khi xử lý
+    if (!sortedPages || sortedPages.length === 0) {
+      return [];
+    }
+
+    // Lặp qua từng phần tử nội dung để tìm JSON
+    for (const contentItem of sortedPages) {
+      try {
+        if (contentItem.content) {
+          let jsonData: Record<string, string> = {};
+          
+          try {
+            // Thử parse chuỗi JSON trực tiếp
+            jsonData = JSON.parse(contentItem.content);
+          } catch (parseError) {
+            // Nếu không parse được trực tiếp, thử xử lý chuỗi trước
             const contentStr = contentItem.content.trim();
+            // Loại bỏ dấu phẩy thừa ở cuối
             const cleanedContent = contentStr.replace(/,\s*}$/, "}");
+            // Thử parse lại
+            jsonData = JSON.parse(cleanedContent);
+          }
+          
+          // Kiểm tra xem có các key là số hay không (định dạng manga)
+          const hasNumericKeys = Object.keys(jsonData).some(key => !isNaN(parseInt(key)));
+          
+          if (hasNumericKeys) {
+            // Sắp xếp theo thứ tự trang và trích xuất URL
+            const sortedImages = Object.entries(jsonData)
+              .sort(([keyA], [keyB]) => parseInt(keyA) - parseInt(keyB))
+              .map(([_, url]) => url as string)
+              .filter((url) => url && typeof url === 'string' && url.trim() !== "");
             
-            // Parse JSON
-            const jsonContent = JSON.parse(cleanedContent);
+            console.log("Parsed image URLs from JSON:", sortedImages);
             
-            // Check if it has the expected format (numeric keys)
-            const hasNumericKeys = Object.keys(jsonContent).some(key => !isNaN(parseInt(key)));
-            
-            if (hasNumericKeys) {
-              // Sort by numeric keys and extract URLs
-              const sortedImages = Object.entries(jsonContent)
-                .sort(([keyA], [keyB]) => parseInt(keyA) - parseInt(keyB))
-                .map(([_, url]) => url as string)
-                .filter((url) => url && typeof url === 'string' && url.trim() !== "");
-              
-              console.log("Successfully parsed manga pages:", sortedImages);
-              
-              if (sortedImages.length > 0) {
-                return sortedImages;
-              }
+            if (sortedImages.length > 0) {
+              return sortedImages;
             }
           }
-        } catch (e) {
-          console.error("Error parsing JSON from chapter content:", e, contentItem.content);
         }
+      } catch (e) {
+        console.error("Error processing chapter content:", e);
       }
-      
-      // Fallback to extracting image URLs from HTML content
-      for (const contentItem of sortedPages) {
-        if (contentItem.content) {
+    }
+    
+    // Thử phân tích nội dung HTML nếu không phân tích được JSON
+    for (const contentItem of sortedPages) {
+      if (contentItem.content) {
+        try {
           const imgRegex = /<img[^>]+src="([^"'>]+)"/g;
           const images: string[] = [];
           let match;
@@ -278,16 +294,19 @@ export function MangaReaderPage({
           }
           
           if (images.length > 0) {
-            console.log("Extracted images from HTML content:", images);
+            console.log("Extracted image URLs from HTML:", images);
             return images;
           }
+        } catch (htmlError) {
+          console.error("Error extracting images from HTML:", htmlError);
         }
       }
     }
 
-    // If no images found, return empty array
+    // Không tìm thấy hình ảnh nào
+    console.warn("No images found in chapter content");
     return [];
-  }, [chapterContent]);
+  }, [chapterContent, data]);
   
   // Use actual images or empty array, avoid using fallback synthetic data
   const displayImages = pageImages.length > 0 ? pageImages : [];

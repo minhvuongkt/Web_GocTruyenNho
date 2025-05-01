@@ -4,6 +4,10 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
 import { apiRequest } from "@/lib/queryClient";
 
+// Rich text editor
+import { RichTextEditor } from "@/components/shared/rich-text-editor";
+import 'react-quill/dist/quill.snow.css';
+
 // UI Components
 import AdminLayout from "@/components/layouts/admin-layout";
 import {
@@ -876,84 +880,37 @@ export default function ChapterEditPage({
             <CardContent>
               {content.type === "novel" ? (
                 <div className="space-y-4">
-                  <div className="border rounded-md p-2">
-                    <div className="flex flex-wrap gap-2 mb-2">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => formatText("bold")}
-                      >
-                        <Bold className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => formatText("italic")}
-                      >
-                        <Italic className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => formatText("underline")}
-                      >
-                        <Underline className="h-4 w-4" />
-                      </Button>
-                      <Separator orientation="vertical" className="h-8" />
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => formatText("h1")}
-                      >
-                        H1
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => formatText("h2")}
-                      >
-                        H2
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => formatText("h3")}
-                      >
-                        H3
-                      </Button>
-                      <div className="flex-grow"></div>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => textFileInputRef.current?.click()}
-                      >
-                        <FileUp className="h-4 w-4 mr-2" />
-                        Upload từ file
-                      </Button>
-                      <input
-                        type="file"
-                        ref={textFileInputRef}
-                        className="hidden"
-                        accept=".txt,.doc,.docx"
-                        onChange={handleTextFileUpload}
-                      />
-                    </div>
+                  <div className="flex justify-end">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => textFileInputRef.current?.click()}
+                    >
+                      <FileUp className="h-4 w-4 mr-2" />
+                      Upload từ file văn bản
+                    </Button>
+                    <input
+                      type="file"
+                      ref={textFileInputRef}
+                      className="hidden"
+                      accept=".txt,.doc,.docx"
+                      onChange={handleTextFileUpload}
+                    />
                   </div>
 
-                  <Textarea
+                  <RichTextEditor
                     id="chapter-content"
-                    name="content"
-                    value={chapter.content}
-                    onChange={handleInputChange}
-                    placeholder="Nhập nội dung chương..."
-                    className="min-h-[400px]"
+                    initialValue={chapter.content}
+                    onChange={(content) => {
+                      setChapter((prev) => ({
+                        ...prev,
+                        content: content
+                      }));
+                    }}
+                    placeholder="Nhập nội dung chương truyện..."
+                    showSubmitButton={false}
+                    autoSaveInterval={30}
                   />
                 </div>
               ) : (

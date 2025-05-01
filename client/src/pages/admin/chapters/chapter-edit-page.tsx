@@ -6,7 +6,7 @@ import { apiRequest } from "@/lib/queryClient";
 
 // Rich text editor
 import { RichTextEditor } from "@/components/shared/rich-text-editor";
-import 'react-quill/dist/quill.snow.css';
+import "react-quill/dist/quill.snow.css";
 
 // UI Components
 import AdminLayout from "@/components/layouts/admin-layout";
@@ -105,48 +105,45 @@ export default function ChapterEditPage({
   // Initialize chapter data when chapter is loaded
   useEffect(() => {
     if (chapterData) {
-      console.log("ChapterData loaded:", chapterData);
-      
-      // Cập nhật dữ liệu chapter từ API response
       setChapter({
         ...chapterData.chapter,
         releaseDate: chapterData.chapter?.releaseDate
-          ? new Date(chapterData.chapter.releaseDate).toISOString().split("T")[0]
+          ? new Date(chapterData.chapter.releaseDate)
+              .toISOString()
+              .split("T")[0]
           : new Date().toISOString().split("T")[0],
-        content: chapterData.content || ""
+        content: chapterData.content || "",
       });
 
-      // Extract existing image URLs if content type is manga
       if (content?.type === "manga") {
-        // Trường hợp 1: Kiểm tra nếu có dữ liệu JSON trong chapterContent
-        if (chapterData.chapterContent && chapterData.chapterContent.length > 0) {
+        if (
+          chapterData.chapterContent &&
+          chapterData.chapterContent.length > 0
+        ) {
           try {
-            console.log("ChapterData loaded:", chapterData);
-            
             for (const contentItem of chapterData.chapterContent) {
               if (contentItem.content) {
                 try {
-                  // Đảm bảo rằng chuỗi JSON không có dấu phẩy thừa ở cuối
                   const contentStr = contentItem.content.trim();
                   const cleanedContent = contentStr.replace(/,\s*}$/, "}");
-                  
-                  // Parse JSON
+
                   const jsonContent = JSON.parse(cleanedContent);
-                  
-                  // Lấy URL ảnh từ JSON và sắp xếp theo key (số thứ tự)
+
                   const sortedPages = Object.entries(jsonContent)
                     .sort(([a], [b]) => parseInt(a) - parseInt(b))
                     .map(([_, url]) => url as string)
-                    .filter(url => url && typeof url === 'string');
-                  
-                  console.log("Parsed image URLs from JSON:", sortedPages);
-                  
+                    .filter((url) => url && typeof url === "string");
+
                   if (sortedPages.length > 0) {
                     setExistingImages(sortedPages);
-                    break; // Nếu đã tìm thấy ảnh từ một mục nội dung, không cần tìm thêm
+                    break;
                   }
                 } catch (jsonError) {
-                  console.error("Error parsing JSON content:", jsonError, contentItem.content);
+                  console.error(
+                    "Error parsing JSON content:",
+                    jsonError,
+                    contentItem.content,
+                  );
                 }
               }
             }
@@ -154,7 +151,7 @@ export default function ChapterEditPage({
             console.error("Error processing chapter content:", error);
           }
         }
-        
+
         // Trường hợp 2: Nếu không tìm thấy ảnh từ JSON, thử tìm trong content HTML
         if (existingImages.length === 0 && chapterData.content) {
           const imgRegex = /<img[^>]+src="([^"'>]+)"/g;
@@ -169,11 +166,16 @@ export default function ChapterEditPage({
             setExistingImages(images);
           }
         }
-      } else if (content?.type === "novel" && chapterData.chapterContent && chapterData.chapterContent.length > 0) {
+      } else if (
+        content?.type === "novel" &&
+        chapterData.chapterContent &&
+        chapterData.chapterContent.length > 0
+      ) {
         // Novel content từ cấu trúc mới
-        setChapter(prev => ({
+        setChapter((prev) => ({
           ...prev,
-          content: chapterData.chapterContent[0]?.content || chapterData.content || ""
+          content:
+            chapterData.chapterContent[0]?.content || chapterData.content || "",
         }));
       }
     }
@@ -237,18 +239,18 @@ export default function ChapterEditPage({
       if (data.imageUrls && data.imageUrls.length > 0) {
         // Combine existing and new images
         const allImages = [...existingImages, ...data.imageUrls];
-        
+
         // Cấu trúc mới: Lưu ảnh dưới dạng JSON với key là số thứ tự
         const imageJson = allImages.reduce((acc, url, index) => {
           acc[index + 1] = url;
           return acc;
         }, {});
-        
+
         console.log("Saving image data as JSON:", imageJson);
-        
+
         updateChapterMutation.mutate({
           ...chapter,
-          content: JSON.stringify(imageJson)
+          content: JSON.stringify(imageJson),
         });
       }
     },
@@ -283,18 +285,18 @@ export default function ChapterEditPage({
       if (data.imageUrls && data.imageUrls.length > 0) {
         // Combine existing and new images
         const allImages = [...existingImages, ...data.imageUrls];
-        
+
         // Cấu trúc mới: Lưu ảnh dưới dạng JSON với key là số thứ tự
         const imageJson = allImages.reduce((acc, url, index) => {
           acc[index + 1] = url;
           return acc;
         }, {});
-        
+
         console.log("Saving image data as JSON:", imageJson);
-        
+
         updateChapterMutation.mutate({
           ...chapter,
-          content: JSON.stringify(imageJson)
+          content: JSON.stringify(imageJson),
         });
       }
     },
@@ -391,7 +393,7 @@ export default function ChapterEditPage({
         "application/zip",
         "application/x-zip-compressed",
       ].includes(file.type);
-      const isValidSize = file.size <= 50 * 1024 * 1024; // 50MB limit
+      const isValidSize = file.size <= 100 * 1024 * 1024; // 100MB limit
 
       if (!isValidType) {
         toast({
@@ -405,7 +407,7 @@ export default function ChapterEditPage({
       if (!isValidSize) {
         toast({
           title: "File quá lớn",
-          description: `${file.name} vượt quá giới hạn 50MB`,
+          description: `${file.name} vượt quá giới hạn 100MB`,
           variant: "destructive",
         });
         return;
@@ -432,7 +434,7 @@ export default function ChapterEditPage({
         "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         "application/msword",
       ].includes(file.type);
-      const isValidSize = file.size <= 10 * 1024 * 1024; // 10MB limit
+      const isValidSize = file.size <= 100 * 1024 * 1024; // 10MB limit
 
       if (!isValidType) {
         toast({
@@ -446,7 +448,7 @@ export default function ChapterEditPage({
       if (!isValidSize) {
         toast({
           title: "File quá lớn",
-          description: `${file.name} vượt quá giới hạn 10MB`,
+          description: `${file.name} vượt quá giới hạn 100MB`,
           variant: "destructive",
         });
         return;
@@ -540,15 +542,14 @@ export default function ChapterEditPage({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Validate basic fields
-    if (!chapter.title.trim()) {
-      toast({
-        title: "Thiếu thông tin",
-        description: "Vui lòng nhập tiêu đề chương",
-        variant: "destructive",
-      });
-      return;
-    }
+    // if (!chapter.title.trim()) {
+    //   toast({
+    //     title: "Thiếu thông tin",
+    //     description: "Vui lòng nhập tiêu đề chương",
+    //     variant: "destructive",
+    //   });
+    //   return;
+    // }
 
     if (chapter.number < 1) {
       toast({
@@ -612,7 +613,6 @@ export default function ChapterEditPage({
 
       // Upload new images then update chapter
       uploadImagesMutation.mutate(formData);
-      
     } else if (content?.type === "manga" && existingImages.length > 0) {
       // Format data for manga with existing images
       // Cấu trúc mới: Lưu ảnh dưới dạng JSON với key là số thứ tự
@@ -620,31 +620,30 @@ export default function ChapterEditPage({
         acc[index + 1] = url;
         return acc;
       }, {});
-      
-      // Chuẩn bị dữ liệu cập nhật 
+
+      // Chuẩn bị dữ liệu cập nhật
       const chapterUpdateData = {
         ...chapter,
         content: JSON.stringify(imageJson),
         // Xử lý releaseDate đúng cách để backend có thể xử lý
-        releaseDate: chapter.releaseDate 
-          ? new Date(chapter.releaseDate).toISOString().split('T')[0] // Chỉ lấy phần ngày YYYY-MM-DD
-          : null
+        releaseDate: chapter.releaseDate
+          ? new Date(chapter.releaseDate).toISOString().split("T")[0] // Chỉ lấy phần ngày YYYY-MM-DD
+          : null,
       };
-      
+
       console.log("Updating manga chapter with JSON image data:", imageJson);
       updateChapterMutation.mutate(chapterUpdateData);
-      
     } else if (content?.type === "novel") {
       // Format data for novel
       // Chuẩn bị dữ liệu cập nhật
       const chapterUpdateData = {
         ...chapter,
         // Xử lý releaseDate đúng cách để backend có thể xử lý
-        releaseDate: chapter.releaseDate 
-          ? new Date(chapter.releaseDate).toISOString().split('T')[0] // Chỉ lấy phần ngày YYYY-MM-DD
-          : null
+        releaseDate: chapter.releaseDate
+          ? new Date(chapter.releaseDate).toISOString().split("T")[0] // Chỉ lấy phần ngày YYYY-MM-DD
+          : null,
       };
-      
+
       console.log("Updating novel chapter with content:", chapterUpdateData);
       updateChapterMutation.mutate(chapterUpdateData);
     } else {
@@ -653,11 +652,11 @@ export default function ChapterEditPage({
       const chapterUpdateData = {
         ...chapter,
         // Xử lý releaseDate đúng cách để backend có thể xử lý
-        releaseDate: chapter.releaseDate 
-          ? new Date(chapter.releaseDate).toISOString().split('T')[0] // Chỉ lấy phần ngày YYYY-MM-DD
-          : null
+        releaseDate: chapter.releaseDate
+          ? new Date(chapter.releaseDate).toISOString().split("T")[0] // Chỉ lấy phần ngày YYYY-MM-DD
+          : null,
       };
-      
+
       console.log("Updating chapter with basic data");
       updateChapterMutation.mutate(chapterUpdateData);
     }
@@ -858,8 +857,8 @@ export default function ChapterEditPage({
                         className="mt-1"
                       />
                       <p className="text-xs text-muted-foreground mt-1">
-                        Giá đề xuất: 10-30 xu cho chương thường, 30-50 xu cho
-                        chương đặc biệt.
+                        Giá đề xuất: 100-400 xu cho chương thường, 500-1000 xu
+                        cho chương đặc biệt.
                       </p>
                     </div>
                   )}
@@ -905,7 +904,7 @@ export default function ChapterEditPage({
                     onChange={(content) => {
                       setChapter((prev) => ({
                         ...prev,
-                        content: content
+                        content: content,
                       }));
                     }}
                     placeholder="Nhập nội dung chương truyện..."

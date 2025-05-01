@@ -10,6 +10,7 @@ import * as schema from "@shared/schema";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { generateVietQRURL } from "./payment-utils";
+import { JSZip } from "jszip";
 import {
   createPayOSPaymentLink,
   checkPayOSPaymentStatus,
@@ -717,11 +718,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Handle the releaseDate properly - ensure it's a valid Date object or null
       if (chapterData.releaseDate !== undefined) {
         try {
-          if (typeof chapterData.releaseDate === 'string') {
+          if (typeof chapterData.releaseDate === "string") {
             // Only keep the date part for ISO strings to avoid timezone issues
             if (chapterData.releaseDate.match(/^\d{4}-\d{2}-\d{2}$/)) {
               // Format is YYYY-MM-DD, convert to Date object
-              chapterData.releaseDate = new Date(chapterData.releaseDate + 'T00:00:00.000Z');
+              chapterData.releaseDate = new Date(
+                chapterData.releaseDate + "T00:00:00.000Z",
+              );
             } else {
               // Try to parse as a full date
               const testDate = new Date(chapterData.releaseDate);
@@ -834,75 +837,81 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Endpoint to update a chapter by contentId and chapterNumber
-  app.patch("/api/content/:contentId/chapter/:chapterNumber", ensureAdmin, async (req, res) => {
-    try {
-      const contentId = parseInt(req.params.contentId);
-      const chapterNumber = parseInt(req.params.chapterNumber);
+  app.patch(
+    "/api/content/:contentId/chapter/:chapterNumber",
+    ensureAdmin,
+    async (req, res) => {
+      try {
+        const contentId = parseInt(req.params.contentId);
+        const chapterNumber = parseInt(req.params.chapterNumber);
 
-      if (isNaN(contentId) || isNaN(chapterNumber)) {
-        return res.status(400).json({ error: "Invalid content ID or chapter number" });
-      }
-
-      const { title, content } = req.body;
-
-      // Find the chapter based on contentId and number
-      const chapters = await db
-        .select()
-        .from(schema.chapters)
-        .where(
-          and(
-            eq(schema.chapters.contentId, contentId),
-            eq(schema.chapters.number, chapterNumber),
-          ),
-        );
-
-      if (!chapters || chapters.length === 0) {
-        return res.status(404).json({ error: "Chapter not found" });
-      }
-
-      const chapter = chapters[0];
-
-      // Get content type
-      const contentInfo = await storage.getContent(contentId);
-      if (!contentInfo) {
-        return res.status(404).json({ error: "Content not found" });
-      }
-
-      // Update the chapter title
-      const [updatedChapter] = await db
-        .update(schema.chapters)
-        .set({ title })
-        .where(eq(schema.chapters.id, chapter.id))
-        .returning();
-
-      // Handle content update
-      if (content !== undefined) {
-        // Get existing chapter content
-        const existingContent = await db
-          .select()
-          .from(schema.chapterContent)
-          .where(eq(schema.chapterContent.chapterId, chapter.id));
-
-        if (existingContent && existingContent.length > 0) {
-          // Update existing content
-          await db
-            .update(schema.chapterContent)
-            .set({ content })
-            .where(eq(schema.chapterContent.id, existingContent[0].id));
-        } else {
-          // Create new content entry
-          await db
-            .insert(schema.chapterContent)
-            .values({ chapterId: chapter.id, content });
+        if (isNaN(contentId) || isNaN(chapterNumber)) {
+          return res
+            .status(400)
+            .json({ error: "Invalid content ID or chapter number" });
         }
-      }
 
-      res.json(updatedChapter);
-    } catch (error) {
-      console.error("Error updating chapter:", error);
-      res.status(500).json({ error: "Failed to update chapter" });
-    }
-  });
+        const { title, content } = req.body;
+
+        // Find the chapter based on contentId and number
+        const chapters = await db
+          .select()
+          .from(schema.chapters)
+          .where(
+            and(
+              eq(schema.chapters.contentId, contentId),
+              eq(schema.chapters.number, chapterNumber),
+            ),
+          );
+
+        if (!chapters || chapters.length === 0) {
+          return res.status(404).json({ error: "Chapter not found" });
+        }
+
+        const chapter = chapters[0];
+
+        // Get content type
+        const contentInfo = await storage.getContent(contentId);
+        if (!contentInfo) {
+          return res.status(404).json({ error: "Content not found" });
+        }
+
+        // Update the chapter title
+        const [updatedChapter] = await db
+          .update(schema.chapters)
+          .set({ title })
+          .where(eq(schema.chapters.id, chapter.id))
+          .returning();
+
+        // Handle content update
+        if (content !== undefined) {
+          // Get existing chapter content
+          const existingContent = await db
+            .select()
+            .from(schema.chapterContent)
+            .where(eq(schema.chapterContent.chapterId, chapter.id));
+
+          if (existingContent && existingContent.length > 0) {
+            // Update existing content
+            await db
+              .update(schema.chapterContent)
+              .set({ content })
+              .where(eq(schema.chapterContent.id, existingContent[0].id));
+          } else {
+            // Create new content entry
+            await db
+              .insert(schema.chapterContent)
+              .values({ chapterId: chapter.id, content });
+          }
+        }
+
+        res.json(updatedChapter);
+      } catch (error) {
+        console.error("Error updating chapter:", error);
+        res.status(500).json({ error: "Failed to update chapter" });
+      }
+    },
+  );
 
   // Get chapter by contentId and chapterNumber
   app.get(
@@ -1214,28 +1223,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
     async (req, res) => {
       try {
         // Get image names from query parameter or use original filenames
-        const imageNames = req.body.imageNames ? 
-          (Array.isArray(req.body.imageNames) ? req.body.imageNames : [req.body.imageNames]) : 
-          null;
-        
+        const imageNames = req.body.imageNames
+          ? Array.isArray(req.body.imageNames)
+            ? req.body.imageNames
+            : [req.body.imageNames]
+          : null;
+
         // Map uploaded files to their URLs
         const imageUrls = (req.files as Express.Multer.File[]).map(
           (file, index) => `/uploads/chapter-images/${file.filename}`,
         );
-        
+
         // If chapterId is provided, also create JSON structure for direct chapter content update
-        const contentId = req.body.contentId ? parseInt(req.body.contentId) : null;
-        
+        const contentId = req.body.contentId
+          ? parseInt(req.body.contentId)
+          : null;
+
         // Log the uploaded files info
-        console.log(`Uploaded ${imageUrls.length} images for content ID: ${contentId || 'N/A'}`);
+        console.log(
+          `Uploaded ${imageUrls.length} images for content ID: ${contentId || "N/A"}`,
+        );
         console.log("Image URLs:", imageUrls);
 
         res.status(200).json({ imageUrls });
       } catch (error) {
         console.error("Image upload error:", error);
-        res.status(500).json({ 
+        res.status(500).json({
           error: "Failed to process image upload",
-          message: error instanceof Error ? error.message : "Unknown error" 
+          message: error instanceof Error ? error.message : "Unknown error",
         });
       }
     },
@@ -1323,7 +1338,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         cb(null, true);
       },
       limits: {
-        fileSize: 50 * 1024 * 1024, // 50MB
+        fileSize: 100 * 1024 * 1024, // 100MB
       },
     }).single("zipFile"),
     async (req, res) => {
@@ -1332,79 +1347,72 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(400).json({ error: "No ZIP file uploaded" });
         }
 
-        // Use a manual approach to extract the zip file instead of the library
-        // since we can't use require in ESM context
         const extractionId = Date.now();
         const extractDir = path.join(
           process.cwd(),
           "public/uploads/chapter-images",
-          extractionId.toString()
+          extractionId.toString(),
         );
-        
-        // Create the directory if it doesn't exist
+
         if (!fs.existsSync(extractDir)) {
           fs.mkdirSync(extractDir, { recursive: true });
         }
-        
+
         try {
-          // Process the ZIP file using JSZip (available through 'jszip' import)
-          const { createReadStream, createWriteStream } = await import('fs');
-          const { pipeline } = await import('stream/promises');
-          const { createUnzip } = await import('zlib');
-          
-          // Since we can't use external libraries easily, let's use a simpler approach:
-          // We'll just treat it as individual image uploads and use placeholders for now,
-          // but in production we'd integrate JSZip or another ZIP handling library
-          
-          // Create some sample image URLs for testing (simulating successful extraction)
-          const imageUrls = [
-            `/uploads/chapter-images/${extractionId}/page-1.jpg`,
-            `/uploads/chapter-images/${extractionId}/page-2.jpg`,
-            `/uploads/chapter-images/${extractionId}/page-3.jpg`,
-          ];
-          
-          // Create sample files to match the URLs
-          imageUrls.forEach((url, index) => {
-            const fullPath = path.join(process.cwd(), 'public', url);
-            // Create directories for the file if they don't exist
-            const dirPath = path.dirname(fullPath);
-            if (!fs.existsSync(dirPath)) {
-              fs.mkdirSync(dirPath, { recursive: true });
-            }
-            
-            // Create a simple HTML file as a placeholder for the image
-            const imgContent = `
-              <html>
-                <body style="display: flex; justify-content: center; align-items: center; height: 100vh; background: #f0f0f0;">
-                  <div style="text-align: center; font-family: Arial, sans-serif;">
-                    <h2>Chapter Image ${index + 1}</h2>
-                    <p>This is a placeholder for the actual manga page image</p>
-                  </div>
-                </body>
-              </html>
-            `;
-            fs.writeFileSync(fullPath, imgContent);
+          // Import modules cần thiết
+          const { exec } = await import("child_process");
+          const { promisify } = await import("util");
+          const execPromise = promisify(exec);
+
+          // Sử dụng unzip command line để giải nén
+          await execPromise(`unzip "${req.file.path}" -d "${extractDir}"`);
+
+          // Đọc các file đã giải nén
+          const files = fs.readdirSync(extractDir);
+
+          // Lọc chỉ giữ lại các file ảnh
+          const imageRegex = /\.(jpg|jpeg|png|gif|webp)$/i;
+          const imageFiles = files.filter((file) => imageRegex.test(file));
+
+          // Tạo danh sách URLs
+          const imageUrls = imageFiles.map(
+            (file) => `/uploads/chapter-images/${extractionId}/${file}`,
+          );
+
+          // Sắp xếp URLs theo tên file để đảm bảo thứ tự đúng
+          imageUrls.sort((a, b) => {
+            // Extract number from filename
+            const numA = parseInt(a.match(/\d+/) || ["0"]);
+            const numB = parseInt(b.match(/\d+/) || ["0"]);
+            return numA - numB;
           });
-          
-          // Delete the ZIP file after processing
+
+          // Xóa file ZIP sau khi đã xử lý
           fs.unlinkSync(req.file.path);
-          
-          // Return the URLs of extracted images
+
+          // Lưu URLs vào database (nếu cần)
+          // Ví dụ:
+          // await db.chapterImages.create({
+          //   chapterId: req.body.chapterId,
+          //   images: imageUrls
+          // });
+
+          // Trả về URLs của các ảnh đã giải nén
           res.status(200).json({ imageUrls });
         } catch (processError) {
           console.error("Error processing ZIP file:", processError);
-          
-          // Return error response
-          res.status(500).json({ 
+
+          // Trả về thông báo lỗi
+          res.status(500).json({
             error: "Failed to process ZIP file",
-            message: "Processing failed. Please ensure the ZIP file is valid."
+            message: "Processing failed. Please ensure the ZIP file is valid.",
           });
         }
       } catch (error) {
         console.error("Error processing ZIP file:", error);
-        res.status(500).json({ 
+        res.status(500).json({
           error: "Failed to process ZIP file",
-          message: error instanceof Error ? error.message : "Unknown error" 
+          message: error instanceof Error ? error.message : "Unknown error",
         });
       }
     },
@@ -1431,7 +1439,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         cb(null, true);
       },
       limits: {
-        fileSize: 10 * 1024 * 1024, // 10MB
+        fileSize: 100 * 1024 * 1024, // 10MB
       },
     }).single("textFile"),
     async (req, res) => {
@@ -3782,17 +3790,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const chapterId = parseInt(req.params.id);
       const { timeSpent } = req.body;
-      
+
       // Validate chapter exists
       const chapter = await storage.getChapter(chapterId);
       if (!chapter) {
         return res.status(404).json({ error: "Chapter not found" });
       }
-      
+
       // Only count view if user spent at least 60 seconds on the page
       if (timeSpent && timeSpent >= 60) {
         const success = await storage.incrementChapterViews(chapterId);
-        
+
         if (success) {
           return res.status(200).json({ message: "View counted successfully" });
         } else {
@@ -3800,16 +3808,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       } else {
         // View not counted because user didn't spend enough time
-        return res.status(200).json({ 
+        return res.status(200).json({
           message: "View not counted - insufficient time spent",
-          timeSpent
+          timeSpent,
         });
       }
     } catch (error) {
       console.error("Error tracking chapter view:", error);
-      res.status(500).json({ 
+      res.status(500).json({
         error: "Failed to track view",
-        message: error instanceof Error ? error.message : "Unknown error" 
+        message: error instanceof Error ? error.message : "Unknown error",
       });
     }
   });

@@ -1,62 +1,130 @@
-import { useState, useEffect, useRef } from 'react';
-import ReactQuill from 'react-quill';
-import 'react-quill/dist/quill.snow.css';
-import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
-import { 
+import { useState, useEffect, useRef } from "react";
+import ReactQuill from "react-quill";
+import "react-quill/dist/quill.snow.css";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue
-} from '@/components/ui/select';
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Card,
   CardContent,
   CardFooter,
   CardHeader,
-  CardTitle
-} from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Separator } from '@/components/ui/separator';
-import { Save, Eye } from 'lucide-react';
+  CardTitle,
+} from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Separator } from "@/components/ui/separator";
+import { Save, Eye } from "lucide-react";
+import hljs from 'highlight.js';
+import 'highlight.js/styles/github.css'; // hoặc style khác bạn thích
 
-// Quill modules và formats 
+// Đăng ký highlight.js cho Quill
+if (typeof window !== 'undefined') {
+  window.hljs = hljs;
+}
+// Quill modules và formats
 const modules = {
   toolbar: [
-    [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
-    ['bold', 'italic', 'underline', 'strike'],
+    // Dropdown để chọn loại heading/paragraph
+    [{ header: [1, 2, 3, 4, 5, 6, false] }],
+
+    // Dropdown cho font family
+    [{ font: ['Arial', 'Times New Roman', 'Courier New', 'Georgia', 'Verdana', 'Tahoma', 'Trebuchet MS'] }],
+
+    // Dropdown cho font size
+    [{ size: ['8px', '9px', '10px', '11px', '12px', '14px', '16px', '18px', '20px', '24px', '30px', '36px', '48px', '60px', '72px', '96px'] }],
+
+    // Định dạng text
+    ['bold', 'italic', 'underline', 'strike', 'blockquote', 'code-block'],
+
+    // Superscript/subscript
+    [{ 'script': 'sub'}, { 'script': 'super' }],
+
+    // Màu sắc và highlight
     [{ 'color': [] }, { 'background': [] }],
-    [{ 'align': [] }],
-    [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+
+    // Căn chỉnh
+    [{ 'align': ['', 'center', 'right', 'justify'] }],
+
+    // Danh sách
+    [{ 'list': 'ordered'}, { 'list': 'bullet' }, { 'list': 'check' }],
+
+    // Thụt đầu dòng
     [{ 'indent': '-1'}, { 'indent': '+1' }],
-    ['link', 'image'],
+
+    // Hướng văn bản (LTR, RTL)
+    [{ 'direction': 'rtl' }],
+
+    // Khoảng cách dòng
+    [{ 'lineHeight': ['1.0', '1.15', '1.5', '2.0', '2.5', '3.0'] }],
+
+    // Các tùy chọn liên kết và phương tiện
+    ['link', 'image', 'video', 'formula'],
+
+    // Khoảng cách giữa các đoạn
+    [{ 'spacing': ['0px', '4px', '8px', '12px', '16px', '20px', '24px'] }],
+
+    // Xóa định dạng
     ['clean'],
-    [{ 'font': [] }],
-    [{ 'size': ['small', false, 'large', 'huge'] }]
+
+    // Đường viền và bảng
+    ['table'],
+
+    // Chèn ngày và thời gian
+    ['date', 'time'],
+
+    // Chèn emoji
+    ['emoji'],
   ],
+
+  // Thêm các module khác
+  table: true,      // Cho phép tạo và chỉnh sửa bảng
+  imageResize: {    // Cho phép thay đổi kích thước hình ảnh
+    displaySize: true
+  },
+  imageDropAndPaste: true,  // Cho phép kéo và thả hình ảnh
+  syntax: true,     // Highlight cú pháp cho code blocks
+  clipboard: {      // Tùy chỉnh clipboard
+    matchVisual: false
+  },
+  keyboard: {       // Tùy chỉnh phím tắt
+    bindings: {
+      // Thêm phím tắt tùy chỉnh ở đây
+    }
+  }
 };
 
 const formats = [
-  'header',
-  'bold', 'italic', 'underline', 'strike',
+  'header', 'font', 'size',
+  'bold', 'italic', 'underline', 'strike', 'blockquote', 'code-block',
+  'script',
   'color', 'background',
-  'align',
-  'list', 'bullet', 'indent',
-  'link', 'image',
-  'font', 'size'
+  'align', 'direction',
+  'list', 'bullet', 'check',
+  'indent',
+  'link', 'image', 'video', 'formula',
+  'table', 'tableRow', 'tableCell',
+  'lineHeight', 'spacing',
+  'clean',
+  'date', 'time',
+  'emoji'
 ];
 
 // Font options cho dropdown
 const fontOptions = [
-  { value: 'Arial', label: 'Arial' },
-  { value: 'Times New Roman', label: 'Times New Roman' },
-  { value: 'Roboto', label: 'Roboto' },
-  { value: 'Be Vietnam Pro', label: 'Be Vietnam Pro' },
-  { value: 'Open Sans', label: 'Open Sans' },
-  { value: 'Montserrat', label: 'Montserrat' },
-  { value: 'Quicksand', label: 'Quicksand' }
+  { value: "Arial", label: "Arial" },
+  { value: "Times New Roman", label: "Times New Roman" },
+  { value: "Roboto", label: "Roboto" },
+  { value: "Be Vietnam Pro", label: "Be Vietnam Pro" },
+  { value: "Open Sans", label: "Open Sans" },
+  { value: "Montserrat", label: "Montserrat" },
+  { value: "Quicksand", label: "Quicksand" },
 ];
 
 interface RichTextEditorProps {
@@ -73,19 +141,19 @@ interface RichTextEditorProps {
 
 export function RichTextEditor({
   id,
-  initialValue = '',
+  initialValue = "",
   onChange,
   onSave,
-  title = '',
+  title = "",
   autosaveInterval = 30000, // 30 seconds default
   readOnly = false,
   placeholder = "Bắt đầu soạn thảo nội dung chương...",
-  showSubmitButton = true
+  showSubmitButton = true,
 }: RichTextEditorProps) {
   const [editorValue, setEditorValue] = useState(initialValue);
   const [chapterTitle, setChapterTitle] = useState(title);
-  const [activeTab, setActiveTab] = useState('edit');
-  const [fontFamily, setFontFamily] = useState('Arial');
+  const [activeTab, setActiveTab] = useState("edit");
+  const [fontFamily, setFontFamily] = useState("Arial");
   const [isSaving, setIsSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const quillRef = useRef<ReactQuill>(null);
@@ -93,7 +161,7 @@ export function RichTextEditor({
   // Auto-save timer
   useEffect(() => {
     if (readOnly) return;
-    
+
     const timer = setInterval(() => {
       if (editorValue !== initialValue) {
         handleSave();
@@ -106,16 +174,16 @@ export function RichTextEditor({
   // Handle manual save
   const handleSave = () => {
     if (readOnly) return;
-    
+
     setIsSaving(true);
-    
+
     // Call onSave if provided
     if (onSave) {
       onSave(editorValue, chapterTitle);
     }
-    
+
     setLastSaved(new Date());
-    
+
     setTimeout(() => {
       setIsSaving(false);
     }, 1000);
@@ -135,8 +203,8 @@ export function RichTextEditor({
     return (
       <div className="rich-text-view">
         <h2 className="text-2xl font-semibold mb-6">{chapterTitle}</h2>
-        <div 
-          className="ql-editor" 
+        <div
+          className="ql-editor"
           style={{ fontFamily }}
           dangerouslySetInnerHTML={{ __html: editorValue }}
         />
@@ -147,7 +215,7 @@ export function RichTextEditor({
   return (
     <Card className="w-full">
       <CardHeader>
-        <CardTitle className="flex items-center justify-between">
+        <CardTitle className="border rounded-md flex items-center justify-between p-2">
           <div className="flex-1">
             <Input
               placeholder="Nhập tiêu đề chương"
@@ -156,34 +224,34 @@ export function RichTextEditor({
               className="text-xl font-bold border-none focus-visible:ring-0 px-0 h-auto text-2xl"
             />
           </div>
+        </CardTitle>
+        <CardTitle className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Select value={fontFamily} onValueChange={setFontFamily}>
               <SelectTrigger className="w-[180px]">
                 <SelectValue placeholder="Chọn font chữ" />
               </SelectTrigger>
               <SelectContent>
-                {fontOptions.map(font => (
+                {fontOptions.map((font) => (
                   <SelectItem key={font.value} value={font.value}>
                     <span style={{ fontFamily: font.value }}>{font.label}</span>
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={() => setActiveTab(activeTab === 'edit' ? 'preview' : 'edit')}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() =>
+                setActiveTab(activeTab === "edit" ? "preview" : "edit")
+              }
             >
               <Eye className="h-4 w-4 mr-1" />
-              {activeTab === 'edit' ? 'Xem trước' : 'Chỉnh sửa'}
+              {activeTab === "edit" ? "Xem trước" : "Chỉnh sửa"}
             </Button>
-            <Button 
-              onClick={handleSave} 
-              size="sm"
-              disabled={isSaving}
-            >
+            <Button onClick={handleSave} size="sm" disabled={isSaving}>
               <Save className="h-4 w-4 mr-1" />
-              {isSaving ? 'Đang lưu...' : 'Lưu lại'}
+              {isSaving ? "Đang lưu..." : "Lưu lại"}
             </Button>
           </div>
         </CardTitle>
@@ -219,10 +287,10 @@ export function RichTextEditor({
             </div>
           </TabsContent>
           <TabsContent value="preview" className="p-4">
-            <div 
-              className="ql-editor preview-content" 
+            <div
+              className="ql-editor preview-content"
               style={{ fontFamily }}
-              dangerouslySetInnerHTML={{ __html: editorValue }} 
+              dangerouslySetInnerHTML={{ __html: editorValue }}
             />
           </TabsContent>
         </Tabs>
@@ -234,7 +302,7 @@ export function RichTextEditor({
           </div>
           <Button onClick={handleSave} disabled={isSaving}>
             <Save className="h-4 w-4 mr-1" />
-            {isSaving ? 'Đang lưu...' : 'Lưu lại'}
+            {isSaving ? "Đang lưu..." : "Lưu lại"}
           </Button>
         </CardFooter>
       )}

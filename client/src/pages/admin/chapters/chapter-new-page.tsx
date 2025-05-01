@@ -4,6 +4,8 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
 import { apiRequest } from "@/lib/queryClient";
 
+import { RichTextEditor } from "@/components/shared/rich-text-editor";
+import "react-quill/dist/quill.snow.css";
 // UI Components
 import AdminLayout from "@/components/layouts/admin-layout";
 import {
@@ -62,11 +64,11 @@ export default function ChapterNewPage({ contentId }: { contentId: number }) {
     isLocked: false,
     unlockPrice: 0,
   });
-  
+
   // Update contentId when the prop changes (without causing infinite updates)
   useEffect(() => {
     if (contentId && contentId !== chapter.contentId) {
-      setChapter(prev => ({...prev, contentId}));
+      setChapter((prev) => ({ ...prev, contentId }));
     }
   }, [contentId]);
 
@@ -94,6 +96,56 @@ export default function ChapterNewPage({ contentId }: { contentId: number }) {
     },
     enabled: !!contentId,
   });
+  // const formatText = (format: string) => {
+  //   const textarea = document.getElementById(
+  //     "chapter-content",
+  //   ) as HTMLTextAreaElement;
+  //   if (!textarea) return;
+
+  //   const start = textarea.selectionStart;
+  //   const end = textarea.selectionEnd;
+  //   const selectedText = textarea.value.substring(start, end);
+  //   let formattedText = "";
+
+  //   switch (format) {
+  //     case "bold":
+  //       formattedText = `<b>${selectedText}</b>`;
+  //       break;
+  //     case "italic":
+  //       formattedText = `<i>${selectedText}</i>`;
+  //       break;
+  //     case "underline":
+  //       formattedText = `<u>${selectedText}</u>`;
+  //       break;
+  //     case "h1":
+  //       formattedText = `<h1>${selectedText}</h1>`;
+  //       break;
+  //     case "h2":
+  //       formattedText = `<h2>${selectedText}</h2>`;
+  //       break;
+  //     case "h3":
+  //       formattedText = `<h3>${selectedText}</h3>`;
+  //       break;
+  //     default:
+  //       formattedText = selectedText;
+  //   }
+
+  //   const newContent =
+  //     textarea.value.substring(0, start) +
+  //     formattedText +
+  //     textarea.value.substring(end);
+
+  //   setChapter((prev) => ({ ...prev, content: newContent }));
+
+  //   // Focus back to textarea and set cursor position
+  //   setTimeout(() => {
+  //     textarea.focus();
+  //     textarea.setSelectionRange(
+  //       start + formattedText.length,
+  //       start + formattedText.length,
+  //     );
+  //   }, 0);
+  // };
 
   // Query to fetch chapters for reference
   const { data: chaptersData, isLoading: chaptersLoading } = useQuery({
@@ -192,13 +244,16 @@ export default function ChapterNewPage({ contentId }: { contentId: number }) {
       // Create image content from uploaded URLs
       if (data.imageUrls && data.imageUrls.length > 0) {
         // Cấu trúc mới: Lưu ảnh dưới dạng JSON với key là số thứ tự
-        const imageJson = data.imageUrls.reduce((acc: Record<string, string>, url: string, index: number) => {
-          acc[index + 1] = url;
-          return acc;
-        }, {});
-        
+        const imageJson = data.imageUrls.reduce(
+          (acc: Record<string, string>, url: string, index: number) => {
+            acc[index + 1] = url;
+            return acc;
+          },
+          {},
+        );
+
         console.log("Saving image data as JSON:", imageJson);
-        
+
         // Create chapter with image content as JSON
         createChapterMutation.mutate({
           ...chapter,
@@ -241,13 +296,16 @@ export default function ChapterNewPage({ contentId }: { contentId: number }) {
       // Create image content from extracted images
       if (data.imageUrls && data.imageUrls.length > 0) {
         // Cấu trúc mới: Lưu ảnh dưới dạng JSON với key là số thứ tự
-        const imageJson = data.imageUrls.reduce((acc: Record<string, string>, url: string, index: number) => {
-          acc[index + 1] = url;
-          return acc;
-        }, {});
-        
+        const imageJson = data.imageUrls.reduce(
+          (acc: Record<string, string>, url: string, index: number) => {
+            acc[index + 1] = url;
+            return acc;
+          },
+          {},
+        );
+
         console.log("Saving image data as JSON:", imageJson);
-        
+
         // Create chapter with image content as JSON
         createChapterMutation.mutate({
           ...chapter,
@@ -394,7 +452,7 @@ export default function ChapterNewPage({ contentId }: { contentId: number }) {
         "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         "application/msword",
       ].includes(file.type);
-      const isValidSize = file.size <= 10 * 1024 * 1024; // 10MB limit
+      const isValidSize = file.size <= 100 * 1024 * 1024; // 10MB limit
 
       if (!isValidType) {
         toast({
@@ -408,7 +466,7 @@ export default function ChapterNewPage({ contentId }: { contentId: number }) {
       if (!isValidSize) {
         toast({
           title: "File quá lớn",
-          description: `${file.name} vượt quá giới hạn 10MB`,
+          description: `${file.name} vượt quá giới hạn 100MB`,
           variant: "destructive",
         });
         return;
@@ -422,7 +480,6 @@ export default function ChapterNewPage({ contentId }: { contentId: number }) {
       processTextFileMutation.mutate(formData);
     }
   };
-
   // Remove selected image
   const removeImage = (index: number) => {
     setChapterImages((prev) => prev.filter((_, i) => i !== index));
@@ -498,14 +555,14 @@ export default function ChapterNewPage({ contentId }: { contentId: number }) {
     e.preventDefault();
 
     // Validate basic fields
-    if (!chapter.title.trim()) {
-      toast({
-        title: "Thiếu thông tin",
-        description: "Vui lòng nhập tiêu đề chương",
-        variant: "destructive",
-      });
-      return;
-    }
+    // if (!chapter.title.trim()) {
+    //   toast({
+    //     title: "Thiếu thông tin",
+    //     description: "Vui lòng nhập tiêu đề chương",
+    //     variant: "destructive",
+    //   });
+    //   return;
+    // }
 
     if (chapter.number < 1) {
       toast({
@@ -717,7 +774,7 @@ export default function ChapterNewPage({ contentId }: { contentId: number }) {
                   </div>
 
                   <div>
-                    <Label htmlFor="number">Số chương</Label>
+                    <Label htmlFor="number">Chapter</Label>
                     <Input
                       id="number"
                       name="number"
@@ -859,8 +916,8 @@ export default function ChapterNewPage({ contentId }: { contentId: number }) {
                           className="mt-1"
                         />
                         <p className="text-xs text-muted-foreground mt-1">
-                          Giá đề xuất: 10-30 xu cho chương thường, 30-50 xu cho
-                          chương đặc biệt.
+                          Giá đề xuất: 100-400 xu cho chương thường, 500-1000 xu
+                          cho chương đặc biệt.
                         </p>
                       </div>
                     )}
@@ -882,84 +939,37 @@ export default function ChapterNewPage({ contentId }: { contentId: number }) {
             <CardContent>
               {content.type === "novel" ? (
                 <div className="space-y-4">
-                  <div className="border rounded-md p-2">
-                    <div className="flex flex-wrap gap-2 mb-2">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => formatText("bold")}
-                      >
-                        <Bold className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => formatText("italic")}
-                      >
-                        <Italic className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => formatText("underline")}
-                      >
-                        <Underline className="h-4 w-4" />
-                      </Button>
-                      <Separator orientation="vertical" className="h-8" />
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => formatText("h1")}
-                      >
-                        H1
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => formatText("h2")}
-                      >
-                        H2
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => formatText("h3")}
-                      >
-                        H3
-                      </Button>
-                      <div className="flex-grow"></div>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => textFileInputRef.current?.click()}
-                      >
-                        <FileUp className="h-4 w-4 mr-2" />
-                        Upload từ file
-                      </Button>
-                      <input
-                        type="file"
-                        ref={textFileInputRef}
-                        className="hidden"
-                        accept=".txt,.doc,.docx"
-                        onChange={handleTextFileUpload}
-                      />
-                    </div>
+                  <div className="flex justify-end">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => textFileInputRef.current?.click()}
+                    >
+                      <FileUp className="h-4 w-4 mr-2" />
+                      Upload từ file văn bản
+                    </Button>
+                    <input
+                      type="file"
+                      ref={textFileInputRef}
+                      className="hidden"
+                      accept=".txt,.doc,.docx"
+                      onChange={handleTextFileUpload}
+                    />
                   </div>
 
-                  <Textarea
+                  <RichTextEditor
                     id="chapter-content"
-                    name="content"
-                    value={chapter.content}
-                    onChange={handleInputChange}
-                    placeholder="Nhập nội dung chương..."
-                    className="min-h-[400px]"
+                    initialValue={chapter.content}
+                    onChange={(content) => {
+                      setChapter((prev) => ({
+                        ...prev,
+                        content: content,
+                      }));
+                    }}
+                    placeholder="Nhập nội dung chương truyện..."
+                    showSubmitButton={false}
+                    autoSaveInterval={30}
                   />
                 </div>
               ) : (

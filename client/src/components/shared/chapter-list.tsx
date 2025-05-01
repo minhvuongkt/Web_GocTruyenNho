@@ -85,9 +85,9 @@ export function ChapterList({
             <Link
               key={chapter.id}
               href={`/truyen/${contentId}/chapter/${chapter.number}`}
-              className="border rounded-md flex items-center justify-between p-3 hover:bg-muted/50 rounded-lg transition-colors"
+              className="flex items-center justify-between p-3 hover:bg-muted/50 rounded-lg transition-colors"
             >
-              <div className="flex-1">
+              <div className="flex-1 border-b border-border pb-3">
                 <div className="flex items-center gap-2">
                   <span className="font-medium">Chương {chapter.number}</span>
                   {chapter.isLocked &&

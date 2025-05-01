@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { Link, useRoute } from "wouter";
@@ -213,22 +213,83 @@ export function MangaReaderPage({ contentId, chapterNumber }: MangaReaderPagePro
   });
   
   // Process image URLs from content
-  const pageImages = sortedPages.map(page => {
-    // Try to get direct image URL first
-    if (page.imageUrl && page.imageUrl.trim() !== '') {
-      return page.imageUrl;
-    }
-    
-    // Otherwise, try to extract from content HTML
-    if (page.content) {
-      const imgMatch = page.content.match(/<img[^>]+src="([^">]+)"/i);
-      if (imgMatch && imgMatch[1]) {
-        return imgMatch[1];
+  const pageImages = useMemo(() => {
+    console.log('chapterContent:', chapterContent);
+    console.log('chapter:', chapter);
+
+    // Kiểm tra nếu truyện tranh có cấu trúc JSON mới trong chapter.content
+    if (chapter && chapter.content) {
+      try {
+        const jsonContent = JSON.parse(chapter.content);
+        console.log('Parsed JSON content from chapter:', jsonContent);
+        
+        if (jsonContent && typeof jsonContent === 'object') {
+          // Sắp xếp theo thứ tự số và trả về mảng URL
+          const sortedImages = Object.entries(jsonContent)
+            .sort(([keyA], [keyB]) => parseInt(keyA) - parseInt(keyB))
+            .map(([_, url]) => url as string);
+          
+          console.log('Extracted images from JSON:', sortedImages);
+          if (sortedImages.length > 0) {
+            return sortedImages;
+          }
+        }
+      } catch (e) {
+        console.error('Error parsing JSON from chapter.content:', e);
+        // Không phải JSON, tiếp tục kiểm tra các định dạng khác
       }
     }
     
-    return '';
-  }).filter(Boolean);
+    // Phương pháp 1: Tìm kiếm ảnh trực tiếp trong chapterContent
+    const directImages = sortedPages
+      .filter(page => page.imageUrl && page.imageUrl.trim() !== '')
+      .map(page => page.imageUrl);
+    
+    if (directImages.length > 0) {
+      console.log('Found direct images:', directImages);
+      return directImages;
+    }
+    
+    // Phương pháp 2: Tìm trong HTML của mỗi trang
+    const extractedImages = [];
+    
+    for (const page of sortedPages) {
+      if (page.content) {
+        // Kiểm tra xem nội dung có phải là JSON không
+        try {
+          const jsonContent = JSON.parse(page.content);
+          // Nếu là JSON, thêm tất cả URL vào danh sách
+          if (jsonContent && typeof jsonContent === 'object') {
+            Object.values(jsonContent).forEach(url => {
+              if (typeof url === 'string' && url.trim() !== '') {
+                extractedImages.push(url);
+              }
+            });
+            continue; // Đã xử lý JSON, bỏ qua các kiểm tra khác
+          }
+        } catch (e) {
+          // Không phải JSON, tiếp tục kiểm tra HTML
+        }
+        
+        // Tìm các thẻ <img> trong HTML
+        const imgRegex = /<img[^>]+src="([^">]+)"/gi;
+        let match;
+        while ((match = imgRegex.exec(page.content)) !== null) {
+          if (match[1] && match[1].trim() !== '') {
+            extractedImages.push(match[1]);
+          }
+        }
+      }
+    }
+    
+    if (extractedImages.length > 0) {
+      console.log('Found extracted images from HTML/JSON in pages:', extractedImages);
+      return extractedImages;
+    }
+    
+    console.log('No images found, using fallback');
+    return [];
+  }, [chapterContent, chapter, sortedPages]);
   
   // Fallback only if absolutely needed
   const displayImages = pageImages.length > 0 ? pageImages : getMangaPageImages(5);

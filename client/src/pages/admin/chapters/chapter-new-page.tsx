@@ -962,14 +962,14 @@ export default function ChapterNewPage({ contentId }: { contentId: number }) {
                     id="chapter-content"
                     initialValue={chapter.content}
                     onChange={(content) => {
-                      setChapter((prev) => ({
+                      setChapter((prev: any) => ({
                         ...prev,
                         content: content,
                       }));
                     }}
                     placeholder="Nhập nội dung chương truyện..."
                     showSubmitButton={false}
-                    autoSaveInterval={30}
+                    autosaveInterval={30}
                   />
                 </div>
               ) : (

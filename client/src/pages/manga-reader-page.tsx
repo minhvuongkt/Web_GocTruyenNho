@@ -678,9 +678,7 @@ export function MangaReaderPage({
                 onLoad={() => handleImageLoad(index)}
                 onError={() => handleImageError(index)}
               />
-              <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-xs p-1 text-center rounded-b-md">
-                {index + 1}
-              </div>
+              {/* Số trang đã được ẩn để tối ưu trải nghiệm đọc */}
             </div>
           ))}
         </div>

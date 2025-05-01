@@ -27,7 +27,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Loader2, LockIcon, AlertTriangle, Settings } from "lucide-react";
+import { Loader2, LockIcon, AlertTriangle, Settings, BookOpen, ArrowUp, ChevronRight } from "lucide-react";
 
 interface NovelReaderPageProps {
   contentId: number;
@@ -293,16 +293,29 @@ export function NovelReaderPage({
       onChapterListToggle={handleChapterListToggle}
     >
       <div className="novel-reader relative">
-        {/* Reader settings button */}
-        <div className="absolute right-0 top-0">
+        {/* Reader settings button - now using a popup similar to manga reader */}
+        <div className="flex justify-end items-center mb-4 gap-2">
+          <div className="relative">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowSettings(!showSettings)}
+              className="rounded-full h-9 w-9 p-0 flex items-center justify-center bg-gray-900/90 border-gray-700 settings-btn"
+              title="Tùy chọn đọc"
+            >
+              <Settings className="h-4 w-4 text-gray-300" />
+            </Button>
+          </div>
+          
+          {/* Chapter list button */}
           <Button
-            variant="ghost"
+            variant="outline"
             size="sm"
-            onClick={() => setShowSettings(true)}
-            className="flex items-center gap-1"
+            onClick={handleChapterListToggle}
+            className="rounded-full h-9 w-9 p-0 flex items-center justify-center bg-gray-900/90 border-gray-700"
+            title="Mục lục"
           >
-            <Settings className="h-4 w-4" />
-            <span className="text-xs">Cài đặt</span>
+            <BookOpen className="h-4 w-4 text-gray-300" />
           </Button>
         </div>
 
@@ -322,6 +335,63 @@ export function NovelReaderPage({
           }}
         >
           {renderFormattedContent()}
+        </div>
+        
+        {/* Chapter navigation at bottom */}
+        <div className="flex items-center justify-between px-8 py-6 mt-8 bg-gray-900/95 backdrop-blur-sm rounded-lg shadow-md mb-4">
+          <Button
+            variant="outline"
+            size="lg"
+            disabled={!data.navigation?.prevChapter?.number}
+            asChild
+            className="text-gray-300 hover:text-white"
+          >
+            {data.navigation?.prevChapter?.number ? (
+              <Link
+                href={`/truyen/${contentId}/chapter/${data.navigation.prevChapter.number}`}
+              >
+                <ChevronRight className="h-5 w-5 mr-2 rotate-180" />
+                Chương trước
+              </Link>
+            ) : (
+              <span>
+                <ChevronRight className="h-5 w-5 mr-2 rotate-180" />
+                Chương trước
+              </span>
+            )}
+          </Button>
+
+          <Button
+            variant="outline"
+            size="lg"
+            onClick={handleChapterListToggle}
+            className="rounded-full h-12 w-12 p-0 flex items-center justify-center"
+            title="Mục lục"
+          >
+            <BookOpen className="h-5 w-5" />
+          </Button>
+
+          <Button
+            variant="outline"
+            size="lg"
+            disabled={!data.navigation?.nextChapter?.number}
+            asChild
+            className="text-gray-300 hover:text-white"
+          >
+            {data.navigation?.nextChapter?.number ? (
+              <Link
+                href={`/truyen/${contentId}/chapter/${data.navigation.nextChapter.number}`}
+              >
+                Chương tiếp
+                <ChevronRight className="h-5 w-5 ml-2" />
+              </Link>
+            ) : (
+              <span>
+                Chương tiếp
+                <ChevronRight className="h-5 w-5 ml-2" />
+              </span>
+            )}
+          </Button>
         </div>
       </div>
 

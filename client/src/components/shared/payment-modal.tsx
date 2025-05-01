@@ -37,7 +37,7 @@ interface PaymentModalProps {
 export function PaymentModal({
   isOpen,
   onClose,
-  defaultAmount = 50000,
+  defaultAmount = 5000,
 }: PaymentModalProps) {
   const [, navigate] = useLocation();
   const { user } = useAuth();

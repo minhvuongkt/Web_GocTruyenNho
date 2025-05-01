@@ -251,7 +251,7 @@ export class DatabaseStorage implements IStorage {
     // Initialize PostgreSQL session store
     this.sessionStore = new PostgresSessionStore({
       pool,
-      tableName: 'session', // Table to store sessions
+      tableName: "session", // Table to store sessions
       createTableIfMissing: true, // Auto-create session table if it doesn't exist
       pruneSessionInterval: 60 * 60, // Prune old sessions hourly
     });
@@ -578,7 +578,10 @@ export class DatabaseStorage implements IStorage {
       })
       .from(content)
       .leftJoin(authors, eq(content.authorId, authors.id))
-      .leftJoin(translationGroups, eq(content.translationGroupId, translationGroups.id));
+      .leftJoin(
+        translationGroups,
+        eq(content.translationGroupId, translationGroups.id),
+      );
 
     // Build the count query
     let countQuery = db
@@ -632,7 +635,7 @@ export class DatabaseStorage implements IStorage {
           translationGroup: item.translationGroup,
           genres: genresList,
         };
-      })
+      }),
     );
 
     return {
@@ -1054,8 +1057,8 @@ export class DatabaseStorage implements IStorage {
         user: {
           id: users.id,
           username: users.username,
-          role: users.role
-        }
+          role: users.role,
+        },
       })
       .from(comments)
       .leftJoin(users, eq(comments.userId, users.id))
@@ -1075,8 +1078,8 @@ export class DatabaseStorage implements IStorage {
         user: {
           id: users.id,
           username: users.username,
-          role: users.role
-        }
+          role: users.role,
+        },
       })
       .from(comments)
       .leftJoin(users, eq(comments.userId, users.id))
@@ -1233,7 +1236,7 @@ export class DatabaseStorage implements IStorage {
         .select()
         .from(readingHistory)
         .where(eq(readingHistory.userId, userId))
-        .orderBy(desc(readingHistory.lastReadAt));  // Use the correct column name
+        .orderBy(desc(readingHistory.lastReadAt)); // Use the correct column name
 
       const result: { content: Content; chapter: Chapter }[] = [];
 
@@ -1255,7 +1258,7 @@ export class DatabaseStorage implements IStorage {
           });
         }
       }
-      
+
       return result;
     } catch (error) {
       console.error("Error fetching reading history:", error);
@@ -1356,10 +1359,10 @@ export class DatabaseStorage implements IStorage {
       .update(payments)
       .set({ status })
       .where(eq(payments.id, id));
-    
+
     return result.rowCount !== null && result.rowCount > 0;
   }
-  
+
   async updatePayment(
     id: number,
     paymentData: Partial<InsertPayment>,
@@ -1369,7 +1372,7 @@ export class DatabaseStorage implements IStorage {
       .set(paymentData)
       .where(eq(payments.id, id))
       .returning();
-      
+
     return updatedPayment;
   }
 
@@ -1423,7 +1426,7 @@ export class DatabaseStorage implements IStorage {
     const [countResult] = await db
       .select({ count: count() })
       .from(advertisements);
-    
+
     const total = Number(countResult?.count || 0);
 
     return {
@@ -1483,49 +1486,52 @@ export class DatabaseStorage implements IStorage {
   async createDefaultPaymentSettings(): Promise<PaymentSettings> {
     const defaultSettings: InsertPaymentSettings = {
       bankConfig: {
-        enabled: true,
-        accountNumber: "0123456789",
-        accountName: "CONG TY TNHH GOC TRUYEN NHO",
-        bankName: "Vietcombank",
-        bankBranch: "Ho Chi Minh",
-        transferContent: "NAP_{username}"
+        enabled: false,
+        accountNumber: "0862713897",
+        accountName: "Mèo Đi Dịch Truyện",
+        bankName: "MB Bank",
+        bankBranch: "None",
+        transferContent: "NAP {username}",
       },
       vietQRConfig: {
         enabled: true,
-        accountNumber: "0123456789",
-        accountName: "CONG TY TNHH GOC TRUYEN NHO",
-        bankId: "VCB",
-        template: "compact2"
+        accountNumber: "0862713897",
+        accountName: "Mèo Đi Dịch Truyện",
+        bankId: "970422",
+        template: "NAP {username}",
       },
       payosConfig: {
-        enabled: false,
-        clientId: "",
-        apiKey: "",
-        checksumKey: "",
-        baseUrl: "https://api-merchant.payos.vn"
+        enabled: true,
+        apiKey: "76c46446-fd4b-4cab-a2b4-7330b4ea1086",
+        clientId: "0e1f0f43-3be6-41b0-860c-b2866f1b635b",
+        checksumKey:
+          "1e1357c5f332d8af06b66a6a8e084940f06cc8076c38c236adbed0393a24a7a5",
+        baseUrl: "https://api-merchant.payos.vn",
       },
       priceConfig: {
-        coinConversionRate: 1000,
-        minimumDeposit: 10000,
-        chapterUnlockPrice: 5,
+        coinConversionRate: 1,
+        minimumDeposit: 5000,
+        chapterUnlockPrice: 500,
         discountTiers: [
-          { amount: 50000, discountPercent: 5 },
-          { amount: 100000, discountPercent: 10 },
-          { amount: 200000, discountPercent: 15 },
-        ]
+          { amount: 20000, discountPercent: 5 },
+          { amount: 50000, discountPercent: 10 },
+          { amount: 100000, discountPercent: 15 },
+          { amount: 300000, discountPercent: 20 },
+          { amount: 500000, discountPercent: 25 },
+        ],
       },
       emailConfig: {
         smtpHost: "smtp.gmail.com",
+        smtpPass: "woduauqbdzilecsx",
         smtpPort: 587,
-        smtpUser: "",
-        smtpPass: "",
-        senderEmail: "",
-        adminEmail: "hlmvuong123@gmail.com"
+        smtpUser: "miu2k3a@gmail.com",
+        adminEmail: "hlmvuong123@gmail.com",
+        senderEmail: "noreply@miu2k3.com",
       },
       expiryConfig: {
         bankTransfer: 10, // 10 phút cho chuyển khoản ngân hàng
         payos: 15, // 15 phút cho PayOS
-      }
+      },
     };
 
     const [newSettings] = await db

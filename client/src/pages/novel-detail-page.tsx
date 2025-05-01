@@ -54,6 +54,16 @@ export function NovelDetailPage({ id }: NovelDetailPageProps) {
     }
   });
   
+  // Fetch chapters list separately
+  const { data: chaptersData } = useQuery({
+    queryKey: [`/api/content/${id}/chapters`],
+    queryFn: async () => {
+      const res = await apiRequest("GET", `/api/content/${id}/chapters`);
+      return res.json();
+    },
+    enabled: !!id
+  });
+  
   // Fetch comments
   const { data: comments, isLoading: isLoadingComments } = useQuery({
     queryKey: [`/api/content/${id}/comments`],
@@ -325,9 +335,9 @@ export function NovelDetailPage({ id }: NovelDetailPageProps) {
               
               {/* Chapters tab */}
               <TabsContent value="chapters">
-                {chapters && chapters.length > 0 ? (
+                {chaptersData && chaptersData.length > 0 ? (
                   <ChapterList 
-                    chapters={chapters} 
+                    chapters={chaptersData} 
                     contentId={id} 
                     contentType="novel"
                     userUnlockedChapters={unlockedChapters}

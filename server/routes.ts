@@ -3645,6 +3645,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Track chapter view after reading for 60+ seconds
+  app.post("/api/chapters/:id/view", ensureAuthenticated, async (req, res) => {
+    try {
+      const chapterId = parseInt(req.params.id);
+      const { timeSpent } = req.body;
+      
+      // Validate chapter exists
+      const chapter = await storage.getChapter(chapterId);
+      if (!chapter) {
+        return res.status(404).json({ error: "Chapter not found" });
+      }
+      
+      // Only count view if user spent at least 60 seconds on the page
+      if (timeSpent && timeSpent >= 60) {
+        const success = await storage.incrementChapterViews(chapterId);
+        
+        if (success) {
+          return res.status(200).json({ message: "View counted successfully" });
+        } else {
+          return res.status(500).json({ error: "Failed to count view" });
+        }
+      } else {
+        // View not counted because user didn't spend enough time
+        return res.status(200).json({ 
+          message: "View not counted - insufficient time spent",
+          timeSpent
+        });
+      }
+    } catch (error) {
+      console.error("Error tracking chapter view:", error);
+      res.status(500).json({ 
+        error: "Failed to track view",
+        message: error instanceof Error ? error.message : "Unknown error" 
+      });
+    }
+  });
+
   // Create HTTP server without starting it
   return new Server(app);
 }

@@ -736,12 +736,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
               await storage.createChapterContent({
                 chapterId: id,
                 pageOrder: i + 1,
-                content: `<img src="${content[i]}" alt="Page ${i + 1}">`,
                 imageUrl: content[i]
               });
             }
+          } else if (typeof content === "object" && content !== null && Array.isArray(content.pages)) {
+            // Nếu là object với mảng pages
+            for (let i = 0; i < content.pages.length; i++) {
+              await storage.createChapterContent({
+                chapterId: id,
+                pageOrder: i + 1,
+                imageUrl: content.pages[i]
+              });
+            }
           } else if (typeof content === "string") {
-            // Nếu là chuỗi HTML
+            // Nếu là chuỗi HTML (hoặc URL duy nhất)
             await storage.createChapterContent({
               chapterId: id,
               content: content,

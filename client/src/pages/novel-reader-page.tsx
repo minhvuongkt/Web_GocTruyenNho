@@ -222,24 +222,26 @@ export function NovelReaderPage({ contentId, chapterNumber }: NovelReaderPagePro
     );
   }
   
+  // Default settings - define outside the component for stability
+  const defaultSettings = {
+    fontSize: 14,
+    fontFamily: 'Times New Roman',
+    textColor: '',
+    backgroundColor: '',
+  };
+  
   // Novel reader settings with localStorage
   const [readerSettings, setReaderSettings] = useState(() => {
-    // Default settings
-    const defaultSettings = {
-      fontSize: 14,
-      fontFamily: 'Times New Roman',
-      textColor: '',
-      backgroundColor: '',
-    };
-    
-    // Try to get settings from localStorage
-    try {
-      const savedSettings = localStorage.getItem('novelReaderSettings');
-      return savedSettings ? JSON.parse(savedSettings) : defaultSettings;
-    } catch (e) {
-      console.error('Error loading reader settings:', e);
-      return defaultSettings;
+    // Try to get settings from localStorage if available
+    if (typeof window !== 'undefined') {
+      try {
+        const savedSettings = localStorage.getItem('novelReaderSettings');
+        return savedSettings ? JSON.parse(savedSettings) : defaultSettings;
+      } catch (e) {
+        console.error('Error loading reader settings:', e);
+      }
     }
+    return defaultSettings;
   });
   
   // Handle settings change and save to localStorage

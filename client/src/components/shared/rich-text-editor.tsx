@@ -21,99 +21,156 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { Save, Eye } from "lucide-react";
-import hljs from 'highlight.js';
-import 'highlight.js/styles/github.css'; // hoặc style khác bạn thích
+import hljs from "highlight.js";
+import "highlight.js/styles/github.css"; // hoặc style khác bạn thích
 
 // Đăng ký highlight.js cho Quill
-if (typeof window !== 'undefined') {
+if (typeof window !== "undefined") {
   window.hljs = hljs;
 }
 // Quill modules và formats
 const modules = {
+  syntax: {
+    highlight: (text) => hljs.highlightAuto(text).value,
+  },
   toolbar: [
     // Dropdown để chọn loại heading/paragraph
     [{ header: [1, 2, 3, 4, 5, 6, false] }],
 
     // Dropdown cho font family
-    [{ font: ['Arial', 'Times New Roman', 'Courier New', 'Georgia', 'Verdana', 'Tahoma', 'Trebuchet MS'] }],
+    [
+      {
+        font: [
+          "Arial",
+          "Times New Roman",
+          "Courier New",
+          "Georgia",
+          "Verdana",
+          "Tahoma",
+          "Trebuchet MS",
+        ],
+      },
+    ],
 
     // Dropdown cho font size
-    [{ size: ['8px', '9px', '10px', '11px', '12px', '14px', '16px', '18px', '20px', '24px', '30px', '36px', '48px', '60px', '72px', '96px'] }],
+    [
+      {
+        size: [
+          "8px",
+          "9px",
+          "10px",
+          "11px",
+          "12px",
+          "14px",
+          "16px",
+          "18px",
+          "20px",
+          "24px",
+          "30px",
+          "36px",
+          "48px",
+          "60px",
+          "72px",
+          "96px",
+        ],
+      },
+    ],
 
     // Định dạng text
-    ['bold', 'italic', 'underline', 'strike', 'blockquote', 'code-block'],
+    ["bold", "italic", "underline", "strike", "blockquote", "code-block"],
 
     // Superscript/subscript
-    [{ 'script': 'sub'}, { 'script': 'super' }],
+    [{ script: "sub" }, { script: "super" }],
 
     // Màu sắc và highlight
-    [{ 'color': [] }, { 'background': [] }],
+    [{ color: [] }, { background: [] }],
 
     // Căn chỉnh
-    [{ 'align': ['', 'center', 'right', 'justify'] }],
+    [{ align: ["", "center", "right", "justify"] }],
 
     // Danh sách
-    [{ 'list': 'ordered'}, { 'list': 'bullet' }, { 'list': 'check' }],
+    [{ list: "ordered" }, { list: "bullet" }, { list: "check" }],
 
     // Thụt đầu dòng
-    [{ 'indent': '-1'}, { 'indent': '+1' }],
+    [{ indent: "-1" }, { indent: "+1" }],
 
     // Hướng văn bản (LTR, RTL)
-    [{ 'direction': 'rtl' }],
+    [{ direction: "rtl" }],
 
     // Khoảng cách dòng
-    [{ 'lineHeight': ['1.0', '1.15', '1.5', '2.0', '2.5', '3.0'] }],
+    [{ lineHeight: ["1.0", "1.15", "1.5", "2.0", "2.5", "3.0"] }],
 
     // Các tùy chọn liên kết và phương tiện
-    ['link', 'image', 'video', 'formula'],
+    ["link", "image", "video", "formula"],
 
     // Khoảng cách giữa các đoạn
-    [{ 'spacing': ['0px', '4px', '8px', '12px', '16px', '20px', '24px'] }],
+    [{ spacing: ["0px", "4px", "8px", "12px", "16px", "20px", "24px"] }],
 
     // Xóa định dạng
-    ['clean'],
+    ["clean"],
 
     // Đường viền và bảng
-    ['table'],
+    ["table"],
 
     // Chèn ngày và thời gian
-    ['date', 'time'],
+    ["date", "time"],
 
     // Chèn emoji
-    ['emoji'],
+    ["emoji"],
   ],
 
   // Thêm các module khác
-  table: true,      // Cho phép tạo và chỉnh sửa bảng
-  imageResize: {    // Cho phép thay đổi kích thước hình ảnh
-    displaySize: true
+  table: true, // Cho phép tạo và chỉnh sửa bảng
+  imageResize: {
+    // Cho phép thay đổi kích thước hình ảnh
+    displaySize: true,
   },
-  imageDropAndPaste: true,  // Cho phép kéo và thả hình ảnh
-  syntax: true,     // Highlight cú pháp cho code blocks
-  clipboard: {      // Tùy chỉnh clipboard
-    matchVisual: false
+  imageDropAndPaste: true, // Cho phép kéo và thả hình ảnh
+  syntax: true, // Highlight cú pháp cho code blocks
+  clipboard: {
+    // Tùy chỉnh clipboard
+    matchVisual: false,
   },
-  keyboard: {       // Tùy chỉnh phím tắt
+  keyboard: {
+    // Tùy chỉnh phím tắt
     bindings: {
       // Thêm phím tắt tùy chỉnh ở đây
-    }
-  }
+    },
+  },
 };
 
 const formats = [
-  'header', 'font', 'size',
-  'bold', 'italic', 'underline', 'strike', 'blockquote', 'code-block',
-  'script',
-  'color', 'background',
-  'align', 'direction',
-  'list', 'bullet', 'check',
-  'indent',
-  'link', 'image', 'video', 'formula',
-  'table', 'tableRow', 'tableCell',
-  'lineHeight', 'spacing',
-  'clean',
-  'date', 'time',
-  'emoji'
+  "header",
+  "font",
+  "size",
+  "bold",
+  "italic",
+  "underline",
+  "strike",
+  "blockquote",
+  "code-block",
+  "script",
+  "color",
+  "background",
+  "align",
+  "direction",
+  "list",
+  "bullet",
+  "check",
+  "indent",
+  "link",
+  "image",
+  "video",
+  "formula",
+  "table",
+  "tableRow",
+  "tableCell",
+  "lineHeight",
+  "spacing",
+  "clean",
+  "date",
+  "time",
+  "emoji",
 ];
 
 // Font options cho dropdown

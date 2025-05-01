@@ -609,9 +609,14 @@ export default function ChapterEditPage({
         return acc;
       }, {});
       
+      // Tạo bản sao của chapter và cập nhật content
+      const { releaseDate, ...chapterWithoutDate } = chapter;
+      
       const chapterUpdateData = {
-        ...chapter,
-        content: JSON.stringify(imageJson)
+        ...chapterWithoutDate,
+        content: JSON.stringify(imageJson),
+        // Nếu releaseDate là string, chuyển thành Date hoặc bỏ qua
+        releaseDate: releaseDate instanceof Date ? releaseDate : undefined
       };
       
       console.log("Updating manga chapter with JSON image data:", imageJson);
@@ -619,16 +624,30 @@ export default function ChapterEditPage({
       
     } else if (content?.type === "novel") {
       // Format data for novel
+      // Tạo bản sao của chapter và cập nhật content
+      const { releaseDate, ...chapterWithoutDate } = chapter;
+      
       const chapterUpdateData = {
-        ...chapter
+        ...chapterWithoutDate,
+        // Nếu releaseDate là string, chuyển thành Date hoặc bỏ qua
+        releaseDate: releaseDate instanceof Date ? releaseDate : undefined
       };
       
       console.log("Updating novel chapter with content:", chapterUpdateData);
       updateChapterMutation.mutate(chapterUpdateData);
     } else {
       // Fallback
+      // Tạo bản sao của chapter và cập nhật lựa chọn trường
+      const { releaseDate, ...chapterWithoutDate } = chapter;
+      
+      const chapterUpdateData = {
+        ...chapterWithoutDate,
+        // Nếu releaseDate là string, chuyển thành Date hoặc bỏ qua
+        releaseDate: releaseDate instanceof Date ? releaseDate : undefined
+      };
+      
       console.log("Updating chapter with basic data");
-      updateChapterMutation.mutate(chapter);
+      updateChapterMutation.mutate(chapterUpdateData);
     }
   };
 

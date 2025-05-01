@@ -18,6 +18,7 @@ import MangaReaderPage from "@/pages/manga-reader-page";
 import NovelReaderPage from "@/pages/novel-reader-page";
 import ContentDetailPage from "@/pages/content-detail-page";
 import ChapterReaderPage from "@/pages/chapter-reader-page";
+import { default as UserChapterEditPage } from "@/pages/chapter-edit-page";
 import ProfilePage from "@/pages/profile-page";
 import PaymentPage from "@/pages/payment-page";
 import SearchPage from "@/pages/search-page";
@@ -39,7 +40,7 @@ import TranslationGroupManagementPage from "@/pages/admin/translation-group-mana
 // Admin Chapter Pages
 import ChapterListPage from "./pages/admin/chapters/chapter-list-page";
 import ChapterNewPage from "./pages/admin/chapters/chapter-new-page";
-import ChapterEditPage from "./pages/admin/chapters/chapter-edit-page";
+import AdminChapterEditPage from "./pages/admin/chapters/chapter-edit-page";
 
 function Router() {
   return (

@@ -191,7 +191,6 @@ export function ReaderLayout({
               <Home className="h-4 w-4" />
             </Link>
           </Button>
-
           <Button
             variant="default"
             className="flex-1 max-w-[120px]"

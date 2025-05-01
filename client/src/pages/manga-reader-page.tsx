@@ -233,57 +233,64 @@ export function MangaReaderPage({
   console.log("Chapter content data:", sortedPages);
   
   const pageImages = useMemo(() => {
-    // Log để debug dữ liệu nhận được từ server
-    console.log("ChapterData loaded:", data);
+    // Bắt đầu bằng cách log dữ liệu từ server để debug
+    console.log("ChapterData:", data);
+    console.log("ChapterContent:", sortedPages);
     
-    // Kiểm tra trước khi xử lý
+    // Nếu không có dữ liệu, trả về mảng rỗng
     if (!sortedPages || sortedPages.length === 0) {
+      console.warn("No chapter content available");
       return [];
     }
 
-    // Lặp qua từng phần tử nội dung để tìm JSON
-    for (const contentItem of sortedPages) {
-      try {
-        if (contentItem.content) {
-          let jsonData: Record<string, string> = {};
+    // Thử phân tích dữ liệu JSON từ chapterContent
+    for (let i = 0; i < sortedPages.length; i++) {
+      const contentItem = sortedPages[i];
+      console.log(`Processing content item ${i}:`, contentItem);
+      
+      if (contentItem && contentItem.content) {
+        try {
+          // Lấy chuỗi JSON từ content và xử lý
+          const contentString = contentItem.content.trim();
+          console.log("Content string:", contentString);
           
+          // Thử parse JSON
+          let jsonData: Record<string, string>;
           try {
-            // Thử parse chuỗi JSON trực tiếp
-            jsonData = JSON.parse(contentItem.content);
-          } catch (parseError) {
-            // Nếu không parse được trực tiếp, thử xử lý chuỗi trước
-            const contentStr = contentItem.content.trim();
-            // Loại bỏ dấu phẩy thừa ở cuối
-            const cleanedContent = contentStr.replace(/,\s*}$/, "}");
-            // Thử parse lại
+            jsonData = JSON.parse(contentString);
+            console.log("Successfully parsed JSON:", jsonData);
+          } catch (error) {
+            console.error("Failed to parse JSON directly, trying to clean up:", error);
+            // Nếu parse lỗi, thử xử lý thêm chuỗi
+            const cleanedContent = contentString
+              .replace(/,\s*}$/, "}") // Loại bỏ dấu phẩy thừa ở cuối
+              .replace(/\\"/g, '"'); // Xử lý dấu ngoặc kép bị escape
+            
             jsonData = JSON.parse(cleanedContent);
+            console.log("Parsed JSON after cleanup:", jsonData);
           }
           
-          // Kiểm tra xem có các key là số hay không (định dạng manga)
-          const hasNumericKeys = Object.keys(jsonData).some(key => !isNaN(parseInt(key)));
-          
-          if (hasNumericKeys) {
-            // Sắp xếp theo thứ tự trang và trích xuất URL
-            const sortedImages = Object.entries(jsonData)
-              .sort(([keyA], [keyB]) => parseInt(keyA) - parseInt(keyB))
-              .map(([_, url]) => url as string)
-              .filter((url) => url && typeof url === 'string' && url.trim() !== "");
-            
-            console.log("Parsed image URLs from JSON:", sortedImages);
-            
-            if (sortedImages.length > 0) {
-              return sortedImages;
+          // Kiểm tra định dạng JSON, phải có các key là số
+          if (jsonData) {
+            const numericKeys = Object.keys(jsonData).filter(key => !isNaN(parseInt(key)));
+            if (numericKeys.length > 0) {
+              // Sắp xếp theo số trang và lấy URL
+              const sortedImages = numericKeys
+                .sort((a, b) => parseInt(a) - parseInt(b))
+                .map(key => jsonData[key])
+                .filter(url => url && typeof url === 'string' && url.trim() !== "");
+              
+              if (sortedImages.length > 0) {
+                console.log(`Found ${sortedImages.length} manga pages:`, sortedImages);
+                return sortedImages;
+              }
             }
           }
+        } catch (error) {
+          console.error("Error processing JSON content:", error);
         }
-      } catch (e) {
-        console.error("Error processing chapter content:", e);
-      }
-    }
-    
-    // Thử phân tích nội dung HTML nếu không phân tích được JSON
-    for (const contentItem of sortedPages) {
-      if (contentItem.content) {
+        
+        // Thử tìm ảnh từ nội dung HTML nếu không parse được JSON
         try {
           const imgRegex = /<img[^>]+src="([^"'>]+)"/g;
           const images: string[] = [];
@@ -294,11 +301,11 @@ export function MangaReaderPage({
           }
           
           if (images.length > 0) {
-            console.log("Extracted image URLs from HTML:", images);
+            console.log(`Found ${images.length} images in HTML content:`, images);
             return images;
           }
-        } catch (htmlError) {
-          console.error("Error extracting images from HTML:", htmlError);
+        } catch (error) {
+          console.error("Error extracting images from HTML:", error);
         }
       }
     }

@@ -22,7 +22,9 @@ import {
   ZoomOut,
   Maximize2,
   LayoutGrid,
-  BookOpen
+  BookOpen,
+  ArrowUp,
+  Home
 } from "lucide-react";
 
 interface MangaReaderPageProps {
@@ -79,8 +81,18 @@ export function MangaReaderPage({
       : mangaData.content.title)
     : "";
 
-  // Get chapter list
-  const chapterList = mangaData?.chapters || [];
+  // Fetch chapter list
+  const { data: chaptersData } = useQuery({
+    queryKey: [`/api/content/${contentId}/chapters`],
+    queryFn: async () => {
+      const res = await apiRequest("GET", `/api/content/${contentId}/chapters`);
+      return res.json();
+    },
+    enabled: !!contentId
+  });
+
+  // Get chapter list from dedicated endpoint
+  const chapterList = chaptersData || mangaData?.chapters || [];
 
   // Sort chapters by number
   const getSortedChapters = () => {
@@ -288,14 +300,33 @@ export function MangaReaderPage({
 
   // State to track scroll direction and settings visibility
   const [isSettingVisible, setIsSettingVisible] = useState(true);
+  const [isTopButtonVisible, setIsTopButtonVisible] = useState(false);
   const [lastScrollTop, setLastScrollTop] = useState(0);
+  const [isAtPageStart, setIsAtPageStart] = useState(true);
 
-  // Handle scroll to hide/show settings bar
+  // Scroll to top function
+  const scrollToTop = () => {
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth'
+    });
+  };
+
+  // Handle scroll to hide/show settings bar and top button
   useEffect(() => {
     const handleScroll = () => {
       const currentScrollTop = window.scrollY;
+      const documentHeight = document.documentElement.scrollHeight;
+      const windowHeight = window.innerHeight;
+      const scrollPercentage = (currentScrollTop / (documentHeight - windowHeight)) * 100;
       
-      // Determine scroll direction
+      // Check if we're at the beginning of the page
+      setIsAtPageStart(currentScrollTop < 100);
+      
+      // Show top button only when user has scrolled down a bit (20% of page)
+      setIsTopButtonVisible(scrollPercentage > 20 && !isAtPageStart);
+      
+      // Determine scroll direction for settings bar
       if (currentScrollTop > lastScrollTop + 20) {
         // Scrolling down - hide settings
         setIsSettingVisible(false);
@@ -313,7 +344,7 @@ export function MangaReaderPage({
     return () => {
       window.removeEventListener('scroll', handleScroll);
     };
-  }, [lastScrollTop]);
+  }, [lastScrollTop, isAtPageStart]);
 
   // Handle keyboard navigation in horizontal mode
   useEffect(() => {
@@ -655,23 +686,70 @@ export function MangaReaderPage({
       nextChapterId={data.navigation?.nextChapter?.id}
       onChapterListToggle={handleChapterListToggle}
     >
-      {/* Reader controls - with animation for show/hide on scroll */}
+      {/* Reader controls - styled like in the screenshot */}
       <div 
-        className={`sticky top-[72px] z-10 bg-background/80 backdrop-blur-sm p-3 rounded-lg shadow-sm mb-4 transition-all duration-300 ${
+        className={`sticky top-[72px] z-10 bg-gray-900/95 backdrop-blur-sm rounded-lg shadow-md mb-4 transition-all duration-300 ${
           isSettingVisible 
             ? 'opacity-100 translate-y-0' 
             : 'opacity-0 -translate-y-20 pointer-events-none'
         }`}
       >
-        <div className="flex flex-wrap gap-4 justify-between">
+        {/* Top navigation for prev/next chapter - visible only at top of page */}
+        {isAtPageStart && (
+          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-800">
+            <Button 
+              variant="ghost" 
+              size="sm"
+              disabled={!data.navigation?.prevChapter?.id}
+              asChild
+              className="text-gray-300 hover:text-white"
+            >
+              {data.navigation?.prevChapter?.id ? (
+                <Link href={`/truyen/${contentId}/chapter/${data.navigation.prevChapter.number}`}>
+                  Chương trước
+                </Link>
+              ) : (
+                <span>Chương trước</span>
+              )}
+            </Button>
+            
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleChapterListToggle}
+              className="rounded-full h-9 w-9 p-0 flex items-center justify-center"
+              title="Mục lục"
+            >
+              <BookOpen className="h-4 w-4" />
+            </Button>
+            
+            <Button 
+              variant="ghost" 
+              size="sm"
+              disabled={!data.navigation?.nextChapter?.id}
+              asChild
+              className="text-gray-300 hover:text-white"
+            >
+              {data.navigation?.nextChapter?.id ? (
+                <Link href={`/truyen/${contentId}/chapter/${data.navigation.nextChapter.number}`}>
+                  Chương tiếp
+                </Link>
+              ) : (
+                <span>Chương tiếp</span>
+              )}
+            </Button>
+          </div>
+        )}
+        
+        <div className="flex flex-wrap gap-1 md:gap-4 justify-between p-3">
           {/* Layout controls */}
-          <div className="flex items-center gap-2">
-            <div className="text-sm font-medium mr-1">Kiểu xem:</div>
+          <div className="flex items-center gap-1">
+            <div className="text-sm font-medium mr-1 text-gray-300">Kiểu xem:</div>
             <Button
               variant={layout === "vertical" ? "default" : "outline"}
               size="sm"
               onClick={() => setLayout("vertical")}
-              className="h-8"
+              className={`h-8 ${layout === "vertical" ? "bg-primary text-primary-foreground" : "bg-gray-800 text-gray-300 border-gray-700 hover:bg-gray-700"}`}
               title="Cuộn dọc"
             >
               <BookOpen className="h-4 w-4 mr-1" />
@@ -681,7 +759,7 @@ export function MangaReaderPage({
               variant={layout === "horizontal" ? "default" : "outline"}
               size="sm"
               onClick={() => setLayout("horizontal")}
-              className="h-8"
+              className={`h-8 ${layout === "horizontal" ? "bg-primary text-primary-foreground" : "bg-gray-800 text-gray-300 border-gray-700 hover:bg-gray-700"}`}
               title="Từng trang"
             >
               <Maximize2 className="h-4 w-4 mr-1" />
@@ -691,7 +769,7 @@ export function MangaReaderPage({
               variant={layout === "grid" ? "default" : "outline"}
               size="sm"
               onClick={() => setLayout("grid")}
-              className="h-8"
+              className={`h-8 ${layout === "grid" ? "bg-primary text-primary-foreground" : "bg-gray-800 text-gray-300 border-gray-700 hover:bg-gray-700"}`}
               title="Lưới ảnh"
             >
               <LayoutGrid className="h-4 w-4 mr-1" />
@@ -700,13 +778,13 @@ export function MangaReaderPage({
           </div>
 
           {/* View mode controls */}
-          <div className="flex items-center gap-2">
-            <div className="text-sm font-medium mr-1">Kích thước:</div>
+          <div className="flex items-center gap-1">
+            <div className="text-sm font-medium mr-1 text-gray-300">Kích thước:</div>
             <Button
               variant={viewMode === "fit" ? "default" : "outline"}
               size="sm"
               onClick={() => setViewMode("fit")}
-              className="h-8"
+              className={`h-8 ${viewMode === "fit" ? "bg-primary text-primary-foreground" : "bg-gray-800 text-gray-300 border-gray-700 hover:bg-gray-700"}`}
               title="Vừa màn hình"
             >
               <ZoomIn className="h-4 w-4 mr-1" />
@@ -716,7 +794,7 @@ export function MangaReaderPage({
               variant={viewMode === "width-fit" ? "default" : "outline"}
               size="sm"
               onClick={() => setViewMode("width-fit")}
-              className="h-8"
+              className={`h-8 ${viewMode === "width-fit" ? "bg-primary text-primary-foreground" : "bg-gray-800 text-gray-300 border-gray-700 hover:bg-gray-700"}`}
               title="Vừa chiều rộng"
             >
               <ZoomOut className="h-4 w-4 mr-1" />
@@ -726,7 +804,7 @@ export function MangaReaderPage({
               variant={viewMode === "original" ? "default" : "outline"}
               size="sm"
               onClick={() => setViewMode("original")}
-              className="h-8"
+              className={`h-8 ${viewMode === "original" ? "bg-primary text-primary-foreground" : "bg-gray-800 text-gray-300 border-gray-700 hover:bg-gray-700"}`}
               title="Kích thước gốc"
             >
               <Maximize2 className="h-4 w-4 mr-1" />
@@ -735,6 +813,21 @@ export function MangaReaderPage({
           </div>
         </div>
       </div>
+      
+      {/* Scroll to top button */}
+      <Button
+        variant="secondary"
+        size="icon"
+        className={`fixed bottom-6 right-6 z-50 rounded-full h-12 w-12 shadow-lg transition-all duration-300 ${
+          isTopButtonVisible 
+            ? 'opacity-80 translate-y-0 hover:opacity-100' 
+            : 'opacity-0 translate-y-16 pointer-events-none'
+        }`}
+        onClick={scrollToTop}
+        title="Lên đầu trang"
+      >
+        <ArrowUp className="h-5 w-5" />
+      </Button>
 
       {/* Manga content */}
       {renderMangaContent()}
@@ -771,24 +864,34 @@ function ChapterListSidebar({
   currentChapterId: number;
   contentId: number;
 }) {
+  // Filter chapters based on search
+  const filteredChapters = getSortedChapters().filter(ch => 
+    searchChapter === '' || 
+    (ch.title && ch.title.toLowerCase().includes(searchChapter.toLowerCase())) ||
+    `chương ${ch.number}`.toLowerCase().includes(searchChapter.toLowerCase())
+  );
+
+  // Check if there are no matching chapters
+  const noResults = filteredChapters.length === 0;
+
   return (
     <Sheet open={showChapterList} onOpenChange={setShowChapterList}>
-      <SheetContent side="right" className="w-[300px] sm:w-[350px] md:w-[400px]">
+      <SheetContent side="right" className="w-[300px] sm:w-[350px] md:w-[400px] bg-gray-900 border-l-gray-800">
         <div className="h-full flex flex-col">
-          <div className="flex justify-between items-center mb-2">
-            <h3 className="text-lg font-semibold">Danh sách chương</h3>
-            <Button variant="ghost" size="sm" onClick={() => setShowChapterList(false)}>
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-lg font-semibold text-white">Danh sách chương</h3>
+            <Button variant="ghost" size="sm" onClick={() => setShowChapterList(false)} className="text-gray-400 hover:text-white hover:bg-gray-800">
               <X className="h-4 w-4" />
             </Button>
           </div>
           
           <div className="mb-4">
             <div className="relative">
-              <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
               <Input 
                 type="text"
                 placeholder="Tìm chương..." 
-                className="pl-8"
+                className="pl-8 bg-gray-800 border-gray-700 text-gray-100 placeholder:text-gray-500 focus-visible:ring-gray-700"
                 value={searchChapter}
                 onChange={(e) => setSearchChapter(e.target.value)}
               />
@@ -796,50 +899,43 @@ function ChapterListSidebar({
           </div>
           
           <div className="flex-grow overflow-y-auto">
-            {getSortedChapters()
-              .filter(ch => 
-                searchChapter === '' || 
-                ch.title?.toLowerCase().includes(searchChapter.toLowerCase()) ||
-                `chương ${ch.number}`.includes(searchChapter.toLowerCase())
-              )
-              .map((ch) => (
-              <div key={ch.id} className="py-1 border-b border-border">
-                <Link
-                  href={`/truyen/${contentId}/chapter/${ch.number}`}
-                  className={`block py-2 px-3 rounded-md hover:bg-muted transition-colors duration-200 ${
-                    ch.id === currentChapterId 
-                      ? "bg-primary/10 text-primary font-medium border-l-4 border-primary pl-2" 
-                      : ""
-                  }`}
-                  onClick={() => setShowChapterList(false)}
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center">
-                      {ch.id === currentChapterId && <ChevronRight className="h-3 w-3 mr-1 text-primary" />}
-                      <span>Chương {ch.number}</span>
+            {!noResults ? (
+              filteredChapters.map((ch) => (
+                <div key={ch.id} className="py-1 border-b border-gray-800">
+                  <Link
+                    href={`/truyen/${contentId}/chapter/${ch.number}`}
+                    className={`block py-2 px-3 rounded-md hover:bg-gray-800 transition-colors duration-200 ${
+                      ch.id === currentChapterId 
+                        ? "bg-primary/10 text-primary font-medium border-l-4 border-primary pl-2" 
+                        : "text-gray-300"
+                    }`}
+                    onClick={() => setShowChapterList(false)}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center">
+                        {ch.id === currentChapterId && <ChevronRight className="h-3 w-3 mr-1 text-primary" />}
+                        <span>Chương {ch.number}</span>
+                      </div>
+                      <div className="flex items-center space-x-1">
+                        {ch.views > 0 && <EyeIcon className="h-3 w-3 text-gray-500" />}
+                        {ch.isLocked && <LockIcon className="h-3 w-3 text-amber-500" />}
+                      </div>
                     </div>
-                    <div className="flex items-center space-x-1">
-                      {ch.views > 0 && <EyeIcon className="h-3 w-3 text-muted-foreground" />}
-                      {ch.isLocked && <LockIcon className="h-3 w-3 text-amber-500" />}
-                    </div>
-                  </div>
-                  {ch.title && (
-                    <div className="text-xs text-muted-foreground mt-1 truncate">
-                      {ch.title}
-                    </div>
-                  )}
-                </Link>
-              </div>
-            ))}
-            
-            {getSortedChapters().filter(ch => 
-              searchChapter === '' || 
-              ch.title?.toLowerCase().includes(searchChapter.toLowerCase()) ||
-              `chương ${ch.number}`.includes(searchChapter.toLowerCase())
-            ).length === 0 && (
-              <div className="py-8 text-center">
-                <SearchX className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
-                <p className="text-muted-foreground">Không tìm thấy chương phù hợp</p>
+                    {ch.title && (
+                      <div className="text-xs text-gray-500 mt-1 truncate">
+                        {ch.title}
+                      </div>
+                    )}
+                  </Link>
+                </div>
+              ))
+            ) : (
+              // Empty state design from screenshot
+              <div className="py-12 flex flex-col items-center justify-center text-center">
+                <div className="rounded-full bg-gray-800 p-6 mb-4">
+                  <SearchX className="h-8 w-8 text-gray-500" />
+                </div>
+                <p className="text-gray-400 font-medium">Không tìm thấy chương phù hợp</p>
               </div>
             )}
           </div>

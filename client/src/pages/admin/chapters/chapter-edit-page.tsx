@@ -130,13 +130,31 @@ export default function ChapterEditPage({
         } 
         // Trường hợp 2: Nếu có chapterContent (cấu trúc mới)
         if (chapterData.chapterContent && chapterData.chapterContent.length > 0) {
-          const images = chapterData.chapterContent
+          // Phương pháp 1: Lấy URL ảnh từ trường imageUrl
+          const imagesFromImageUrl = chapterData.chapterContent
             .sort((a, b) => a.pageOrder - b.pageOrder)
             .map(item => item.imageUrl)
             .filter(Boolean);
           
-          if (images.length > 0) {
-            setExistingImages(images);
+          // Phương pháp 2: Tích xuất URL ảnh từ nội dung HTML 
+          const imagesFromContent = [];
+          for (const contentItem of chapterData.chapterContent) {
+            if (contentItem.content) {
+              const imgRegex = /<img[^>]+src="([^"'>]+)"/g;
+              let match;
+              while ((match = imgRegex.exec(contentItem.content)) !== null) {
+                imagesFromContent.push(match[1]);
+              }
+            }
+          }
+          
+          // Kết hợp cả hai phương pháp
+          const allImages = [...imagesFromImageUrl, ...imagesFromContent].filter((v, i, a) => a.indexOf(v) === i);
+          
+          console.log("Extracted images from chapterContent:", allImages);
+          
+          if (allImages.length > 0) {
+            setExistingImages(allImages);
           }
         }
       } else if (content?.type === "novel" && chapterData.chapterContent && chapterData.chapterContent.length > 0) {
@@ -208,12 +226,17 @@ export default function ChapterEditPage({
         // Combine existing and new images
         const allImages = [...existingImages, ...data.imageUrls];
         
-        // Cấu trúc mới: Sử dụng cấu trúc dữ liệu đúng cho API
+        // Cấu trúc mới: Lưu ảnh dưới dạng JSON với key là số thứ tự
+        const imageJson = allImages.reduce((acc, url, index) => {
+          acc[index + 1] = url;
+          return acc;
+        }, {});
+        
+        console.log("Saving image data as JSON:", imageJson);
+        
         updateChapterMutation.mutate({
           ...chapter,
-          content: { 
-            pages: allImages 
-          }
+          content: JSON.stringify(imageJson)
         });
       }
     },

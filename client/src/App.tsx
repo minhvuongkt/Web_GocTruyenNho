@@ -88,11 +88,13 @@ function Router() {
         {(params) => {
           const contentId = parseInt(params.contentId);
           const chapterNumber = parseInt(params.chapterNumber);
+          console.log("In App.tsx, params for edit page:", params);
           
           return (
             <UserChapterEditPage 
               contentId={contentId} 
-              chapterNumber={chapterNumber} 
+              chapterNumber={chapterNumber}
+              params={params} 
             />
           );
         }}

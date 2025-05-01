@@ -193,24 +193,45 @@ export function ChapterEditPage({ contentId, chapterNumber }: ChapterEditPagePro
   );
 }
 
-export default function DefaultChapterEditPage() {
-  // Using destructuring to get the matched params from the current location
-  const [, params] = useLocation();
-  console.log('URL Params:', params);
-
-  // Check if we have valid params from the route matching
-  if (!params) {
-    console.error('No params available');
-    return <div>Không tìm thấy thông tin chương</div>;
+// Nhận params trực tiếp từ component cha
+export default function DefaultChapterEditPage(props: { 
+  contentId?: number; 
+  chapterNumber?: number; 
+  params?: { contentId: string; chapterNumber: string; } 
+}) {
+  let contentId: number;
+  let chapterNumber: number;
+  
+  // Khởi tạo với props nếu được cung cấp từ ProtectedRoute
+  if (props.contentId && props.chapterNumber) {
+    contentId = props.contentId;
+    chapterNumber = props.chapterNumber;
+    console.log('Using passed props:', { contentId, chapterNumber });
+  } 
+  // Khởi tạo với params từ ProtectedRoute.params nếu có
+  else if (props.params) {
+    contentId = parseInt(props.params.contentId);
+    chapterNumber = parseInt(props.params.chapterNumber);
+    console.log('Using passed params:', { contentId, chapterNumber });
   }
-
-  // Parse parameters from the URL
-  const contentId = parseInt(params.contentId);
-  const chapterNumber = parseInt(params.chapterNumber);
-  console.log('Parsed IDs:', { contentId, chapterNumber });
-
+  // Tự lấy params từ useLocation nếu không có props
+  else {
+    const [, urlParams] = useLocation();
+    console.log('URL Params from useLocation:', urlParams);
+    
+    if (!urlParams) {
+      console.error('No params available from any source');
+      return <div>Không tìm thấy thông tin chương</div>;
+    }
+    
+    contentId = parseInt(urlParams.contentId);
+    chapterNumber = parseInt(urlParams.chapterNumber);
+  }
+  
+  console.log('Final IDs:', { contentId, chapterNumber });
+  
   if (isNaN(contentId) || isNaN(chapterNumber)) {
-    console.error('Invalid IDs:', { contentId, chapterNumber });
+    console.error('Invalid IDs after all attempts:', { contentId, chapterNumber });
     return <div>ID nội dung hoặc số chương không hợp lệ</div>;
   }
 

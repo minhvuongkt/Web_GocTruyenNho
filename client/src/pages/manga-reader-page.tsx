@@ -220,33 +220,67 @@ export function MangaReaderPage({
 
   // Sort manga pages by page order
   const sortedPages = [...chapterContent];
-  console.log(sortedPages);
-  console.log(chapterContent);
+  console.log("Chapter content data:", sortedPages);
+  
   const pageImages = useMemo(() => {
     if (sortedPages && sortedPages.length > 0) {
-      try {
-        // Parse JSON from the first chapterContent item
-        const jsonContent = JSON.parse(sortedPages[0].content);
-
-        // Sort by numeric keys and extract URLs
-        const sortedImages = Object.entries(jsonContent)
-          .sort(([keyA], [keyB]) => parseInt(keyA) - parseInt(keyB))
-          .map(([_, url]) => url as string)
-          .filter((url) => url && url.trim() !== "");
-
-        if (sortedImages.length > 0) {
-          return sortedImages;
+      for (const contentItem of sortedPages) {
+        try {
+          if (contentItem.content) {
+            // Xử lý chuỗi JSON để loại bỏ dấu phẩy thừa ở cuối
+            const contentStr = contentItem.content.trim();
+            const cleanedContent = contentStr.replace(/,\s*}$/, "}");
+            
+            // Parse JSON
+            const jsonContent = JSON.parse(cleanedContent);
+            
+            // Check if it has the expected format (numeric keys)
+            const hasNumericKeys = Object.keys(jsonContent).some(key => !isNaN(parseInt(key)));
+            
+            if (hasNumericKeys) {
+              // Sort by numeric keys and extract URLs
+              const sortedImages = Object.entries(jsonContent)
+                .sort(([keyA], [keyB]) => parseInt(keyA) - parseInt(keyB))
+                .map(([_, url]) => url as string)
+                .filter((url) => url && typeof url === 'string' && url.trim() !== "");
+              
+              console.log("Successfully parsed manga pages:", sortedImages);
+              
+              if (sortedImages.length > 0) {
+                return sortedImages;
+              }
+            }
+          }
+        } catch (e) {
+          console.error("Error parsing JSON from chapter content:", e, contentItem.content);
         }
-      } catch (e) {
-        console.error("Error parsing JSON from chapter content:", e);
+      }
+      
+      // Fallback to extracting image URLs from HTML content
+      for (const contentItem of sortedPages) {
+        if (contentItem.content) {
+          const imgRegex = /<img[^>]+src="([^"'>]+)"/g;
+          const images: string[] = [];
+          let match;
+          
+          while ((match = imgRegex.exec(contentItem.content)) !== null) {
+            images.push(match[1]);
+          }
+          
+          if (images.length > 0) {
+            console.log("Extracted images from HTML content:", images);
+            return images;
+          }
+        }
       }
     }
 
+    // If no images found, return empty array
     return [];
   }, [chapterContent]);
-  // Fallback only if absolutely needed
-  const displayImages =
-    pageImages.length > 0 ? pageImages : getMangaPageImages(5);
+  
+  // Use actual images or empty array, avoid using fallback synthetic data
+  const displayImages = pageImages.length > 0 ? pageImages : [];
 
   // Initialize loading state for all images
   useEffect(() => {
@@ -434,29 +468,75 @@ export function MangaReaderPage({
 
       {/* Chapter List Side Sheet */}
       <Sheet open={showChapterList} onOpenChange={setShowChapterList}>
-        <SheetContent side="right">
+        <SheetContent side="right" className="w-[300px] sm:w-[350px] md:w-[400px]">
           <div className="h-full flex flex-col">
-            <h3 className="text-lg font-semibold mb-4">Danh sách chương</h3>
+            <div className="flex justify-between items-center mb-2">
+              <h3 className="text-lg font-semibold">Danh sách chương</h3>
+              <Button variant="ghost" size="sm" onClick={() => setShowChapterList(false)}>
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+            
+            <div className="mb-4">
+              <div className="relative">
+                <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input 
+                  type="text"
+                  placeholder="Tìm chương..." 
+                  className="pl-8"
+                  value={searchChapter}
+                  onChange={(e) => setSearchChapter(e.target.value)}
+                />
+              </div>
+            </div>
+            
             <div className="flex-grow overflow-y-auto">
-              {getSortedChapters().map((ch) => (
-                <div key={ch.id} className="py-2 border-b border-border">
+              {getSortedChapters()
+                .filter(ch => 
+                  searchChapter === '' || 
+                  ch.title?.toLowerCase().includes(searchChapter.toLowerCase()) ||
+                  `chương ${ch.number}`.includes(searchChapter.toLowerCase())
+                )
+                .map((ch) => (
+                <div key={ch.id} className="py-1 border-b border-border">
                   <Link
                     href={`/truyen/${contentId}/chapter/${ch.number}`}
-                    className={`block py-1 px-2 rounded hover:bg-muted ${ch.id === chapter.id ? "bg-primary/10 text-primary font-medium" : ""}`}
+                    className={`block py-2 px-3 rounded-md hover:bg-muted transition-colors duration-200 ${
+                      ch.id === chapter.id 
+                        ? "bg-primary/10 text-primary font-medium border-l-4 border-primary pl-2" 
+                        : ""
+                    }`}
                     onClick={() => setShowChapterList(false)}
                   >
                     <div className="flex items-center justify-between">
-                      <span>Chương {ch.number}</span>
-                      {ch.isLocked && <LockIcon className="h-3 w-3" />}
+                      <div className="flex items-center">
+                        {ch.id === chapter.id && <ChevronRight className="h-3 w-3 mr-1 text-primary" />}
+                        <span>Chương {ch.number}</span>
+                      </div>
+                      <div className="flex items-center space-x-1">
+                        {ch.views > 0 && <EyeIcon className="h-3 w-3 text-muted-foreground" />}
+                        {ch.isLocked && <LockIcon className="h-3 w-3 text-amber-500" />}
+                      </div>
                     </div>
                     {ch.title && (
-                      <span className="text-sm text-muted-foreground">
+                      <span className="text-sm text-muted-foreground block mt-1 truncate">
                         {ch.title}
                       </span>
                     )}
                   </Link>
                 </div>
               ))}
+              
+              {getSortedChapters().filter(ch => 
+                searchChapter === '' || 
+                ch.title?.toLowerCase().includes(searchChapter.toLowerCase()) || 
+                `chương ${ch.number}`.includes(searchChapter.toLowerCase())
+              ).length === 0 && (
+                <div className="py-8 text-center text-muted-foreground">
+                  <SearchX className="h-8 w-8 mx-auto mb-2" />
+                  <p>Không tìm thấy chương</p>
+                </div>
+              )}
             </div>
           </div>
         </SheetContent>

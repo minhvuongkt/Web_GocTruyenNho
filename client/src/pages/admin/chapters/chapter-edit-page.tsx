@@ -114,8 +114,45 @@ export default function ChapterEditPage({
 
       // Extract existing image URLs if content type is manga
       if (content?.type === "manga") {
-        // Trường hợp 1: Nếu có content HTML có chứa ảnh
-        if (chapterData.content) {
+        // Trường hợp 1: Kiểm tra nếu có dữ liệu JSON trong chapterContent
+        if (chapterData.chapterContent && chapterData.chapterContent.length > 0) {
+          try {
+            console.log("ChapterData loaded:", chapterData);
+            
+            for (const contentItem of chapterData.chapterContent) {
+              if (contentItem.content) {
+                try {
+                  // Đảm bảo rằng chuỗi JSON không có dấu phẩy thừa ở cuối
+                  const contentStr = contentItem.content.trim();
+                  const cleanedContent = contentStr.replace(/,\s*}$/, "}");
+                  
+                  // Parse JSON
+                  const jsonContent = JSON.parse(cleanedContent);
+                  
+                  // Lấy URL ảnh từ JSON và sắp xếp theo key (số thứ tự)
+                  const sortedPages = Object.entries(jsonContent)
+                    .sort(([a], [b]) => parseInt(a) - parseInt(b))
+                    .map(([_, url]) => url as string)
+                    .filter(url => url && typeof url === 'string');
+                  
+                  console.log("Parsed image URLs from JSON:", sortedPages);
+                  
+                  if (sortedPages.length > 0) {
+                    setExistingImages(sortedPages);
+                    break; // Nếu đã tìm thấy ảnh từ một mục nội dung, không cần tìm thêm
+                  }
+                } catch (jsonError) {
+                  console.error("Error parsing JSON content:", jsonError, contentItem.content);
+                }
+              }
+            }
+          } catch (error) {
+            console.error("Error processing chapter content:", error);
+          }
+        }
+        
+        // Trường hợp 2: Nếu không tìm thấy ảnh từ JSON, thử tìm trong content HTML
+        if (existingImages.length === 0 && chapterData.content) {
           const imgRegex = /<img[^>]+src="([^"'>]+)"/g;
           const images: string[] = [];
           let match;
@@ -126,35 +163,6 @@ export default function ChapterEditPage({
 
           if (images.length > 0) {
             setExistingImages(images);
-          }
-        } 
-        // Trường hợp 2: Nếu có chapterContent (cấu trúc mới)
-        if (chapterData.chapterContent && chapterData.chapterContent.length > 0) {
-          // Phương pháp 1: Lấy URL ảnh từ trường imageUrl
-          const imagesFromImageUrl = chapterData.chapterContent
-            .sort((a, b) => a.pageOrder - b.pageOrder)
-            .map(item => item.imageUrl)
-            .filter(Boolean);
-          
-          // Phương pháp 2: Tích xuất URL ảnh từ nội dung HTML 
-          const imagesFromContent = [];
-          for (const contentItem of chapterData.chapterContent) {
-            if (contentItem.content) {
-              const imgRegex = /<img[^>]+src="([^"'>]+)"/g;
-              let match;
-              while ((match = imgRegex.exec(contentItem.content)) !== null) {
-                imagesFromContent.push(match[1]);
-              }
-            }
-          }
-          
-          // Kết hợp cả hai phương pháp
-          const allImages = [...imagesFromImageUrl, ...imagesFromContent].filter((v, i, a) => a.indexOf(v) === i);
-          
-          console.log("Extracted images from chapterContent:", allImages);
-          
-          if (allImages.length > 0) {
-            setExistingImages(allImages);
           }
         }
       } else if (content?.type === "novel" && chapterData.chapterContent && chapterData.chapterContent.length > 0) {

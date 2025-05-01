@@ -1,13 +1,13 @@
 import { useState } from "react";
 import { Link } from "wouter";
 import { Chapter } from "@shared/schema";
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,50 +18,48 @@ import { formatDate } from "@/lib/utils";
 interface ChapterListProps {
   chapters: Chapter[];
   contentId: number;
-  contentType: 'manga' | 'novel';
+  contentType: "manga" | "novel";
   userUnlockedChapters?: number[]; // List of chapter IDs that the user has unlocked
 }
 
-export function ChapterList({ 
-  chapters, 
-  contentId, 
+export function ChapterList({
+  chapters,
+  contentId,
   contentType,
-  userUnlockedChapters = []
+  userUnlockedChapters = [],
 }: ChapterListProps) {
   const [sortAscending, setSortAscending] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  
+
   // Sort chapters
   const sortedChapters = [...chapters].sort((a, b) => {
-    return sortAscending 
-      ? a.number - b.number 
-      : b.number - a.number;
+    return sortAscending ? a.number - b.number : b.number - a.number;
   });
-  
+
   // Filter chapters based on search term
-  const filteredChapters = sortedChapters.filter(chapter => {
+  const filteredChapters = sortedChapters.filter((chapter) => {
     const searchLower = searchTerm.toLowerCase();
     const titleMatches = chapter.title?.toLowerCase().includes(searchLower);
     const numberMatches = chapter.number.toString().includes(searchTerm);
     return titleMatches || numberMatches;
   });
-  
+
   const toggleSort = () => {
     setSortAscending(!sortAscending);
   };
-  
+
   // Check if a chapter is unlocked
   const isChapterUnlocked = (chapter: Chapter) => {
     return !chapter.isLocked || userUnlockedChapters.includes(chapter.id);
   };
-  
+
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-semibold">Danh sách chương</h3>
-        <Button 
-          variant="outline" 
-          size="sm" 
+        <Button
+          variant="outline"
+          size="sm"
           onClick={toggleSort}
           className="flex items-center"
         >
@@ -88,53 +86,60 @@ export function ChapterList({
           className="pl-9"
         />
       </div>
-      
+
       <div className="border rounded-md chapter-list">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-16">Chương</TableHead>
+              <TableHead className="w-16">Chapter</TableHead>
               <TableHead>Tiêu đề</TableHead>
-              <TableHead className="hidden md:table-cell">Ngày đăng</TableHead>
+              <TableHead className="hidden md:table-cell">Thời gian</TableHead>
               <TableHead className="w-16 text-right"></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {filteredChapters.length > 0 ? (
               filteredChapters.map((chapter) => (
-                <TableRow 
-                  key={chapter.id} 
+                <TableRow
+                  key={chapter.id}
                   className="chapter-item hover:bg-muted/50 transition-opacity"
                 >
-                  <TableCell>{chapter.number}</TableCell>
-                  <TableCell>
-                    {chapter.title || `Chương ${chapter.number}`}
-                    {chapter.isLocked && !userUnlockedChapters.includes(chapter.id) && (
-                      <Badge variant="outline" className="ml-2 bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400">
-                        <LockIcon className="h-3 w-3 mr-1" />
-                        Khóa
-                      </Badge>
-                    )}
-                  </TableCell>
-                  <TableCell className="hidden md:table-cell">
-                    {formatDate(chapter.releaseDate)}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      asChild
-                    >
-                      <Link href={`/truyen/${contentId}/chapter/${chapter.number}`}>
-                        Đọc
-                      </Link>
-                    </Button>
-                  </TableCell>
+                  <Link href={`/truyen/${contentId}/chapter/${chapter.number}`}>
+                    <TableCell>{chapter.number}</TableCell>
+                    <TableCell>
+                      {chapter.title || `Chương ${chapter.number}`}
+                      {chapter.isLocked &&
+                        !userUnlockedChapters.includes(chapter.id) && (
+                          <Badge
+                            variant="outline"
+                            className="ml-2 bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400"
+                          >
+                            <LockIcon className="h-3 w-3 mr-1" />
+                            Khóa
+                          </Badge>
+                        )}
+                    </TableCell>
+                    <TableCell className="hidden md:table-cell">
+                      {formatDate(chapter.releaseDate)}
+                    </TableCell>
+                    {/* <TableCell className="text-right">
+                      <Button variant="ghost" size="sm" asChild>
+                        <Link
+                          href={`/truyen/${contentId}/chapter/${chapter.number}`}
+                        >
+                          Đọc
+                        </Link>
+                      </Button>
+                    </TableCell> */}
+                  </Link>
                 </TableRow>
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={4} className="text-center text-muted-foreground py-6">
+                <TableCell
+                  colSpan={4}
+                  className="text-center text-muted-foreground py-6"
+                >
                   Không tìm thấy chương phù hợp
                 </TableCell>
               </TableRow>

@@ -1,14 +1,6 @@
 import { useState } from "react";
 import { Link } from "wouter";
 import { Chapter } from "@shared/schema";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -88,65 +80,43 @@ export function ChapterList({
       </div>
 
       <div className="border rounded-md chapter-list">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-16">Chapter</TableHead>
-              <TableHead>Tiêu đề</TableHead>
-              <TableHead className="hidden md:table-cell">Thời gian</TableHead>
-              <TableHead className="w-16 text-right"></TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredChapters.length > 0 ? (
-              filteredChapters.map((chapter) => (
-                <TableRow
-                  key={chapter.id}
-                  className="chapter-item hover:bg-muted/50 transition-opacity cursor-pointer"
-                  onClick={() =>
-                    (window.location.href = `/truyen/${contentId}/chapter/${chapter.number}`)
-                  }
-                >
-                  <TableCell>{chapter.number}</TableCell>
-                  <TableCell>
-                    {chapter.title || `Chương ${chapter.number}`}
-                    {chapter.isLocked &&
-                      !userUnlockedChapters.includes(chapter.id) && (
-                        <Badge
-                          variant="outline"
-                          className="ml-2 bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400"
-                        >
-                          <LockIcon className="h-3 w-3 mr-1" />
-                          Khóa
-                        </Badge>
-                      )}
-                  </TableCell>
-                  <TableCell className="hidden md:table-cell">
-                    {formatDate(chapter.releaseDate)}
-                  </TableCell>
-                  {/* <TableCell className="text-right">
-              <Button variant="ghost" size="sm" asChild>
-                <Link
-                  href={`/truyen/${contentId}/chapter/${chapter.number}`}
-                >
-                  Đọc
-                </Link>
-              </Button>
-            </TableCell> */}
-                </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell
-                  colSpan={4}
-                  className="text-center text-muted-foreground py-6"
-                >
-                  Không tìm thấy chương phù hợp
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
+        {filteredChapters.length > 0 ? (
+          filteredChapters.map((chapter) => (
+            <Link
+              key={chapter.id}
+              href={`/truyen/${contentId}/chapter/${chapter.number}`}
+              className="border rounded-md flex items-center justify-between p-3 hover:bg-muted/50 rounded-lg transition-colors"
+            >
+              <div className="flex-1">
+                <div className="flex items-center gap-2">
+                  <span className="font-medium">Chương {chapter.number}</span>
+                  {chapter.isLocked &&
+                    !userUnlockedChapters.includes(chapter.id) && (
+                      <Badge
+                        variant="outline"
+                        className="bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400"
+                      >
+                        {/* <LockIcon className="h-3 w-3 mr-1" /> */}
+                        {chapter.unlockPrice} xu
+                      </Badge>
+                    )}
+                </div>
+                {chapter.title && (
+                  <div className="text-sm text-muted-foreground mt-0.5">
+                    {chapter.title}
+                  </div>
+                )}
+              </div>
+              <div className="text-sm text-muted-foreground hidden md:block">
+                {formatDate(chapter.releaseDate)}
+              </div>
+            </Link>
+          ))
+        ) : (
+          <div className="text-center py-8 text-muted-foreground">
+            Chưa có chương nào cả. Bạn thử qua truyện khác xem nhé
+          </div>
+        )}
       </div>
     </div>
   );

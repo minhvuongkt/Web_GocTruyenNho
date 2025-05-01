@@ -714,6 +714,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const id = parseInt(req.params.id);
       const { content, ...chapterData } = req.body;
 
+      // Handle the releaseDate properly - remove if it's a string that can't be converted to a valid date
+      if (chapterData.releaseDate && typeof chapterData.releaseDate === 'string') {
+        try {
+          // Try to parse it as a valid date
+          const testDate = new Date(chapterData.releaseDate);
+          // If the date is invalid, remove it from the object
+          if (isNaN(testDate.getTime())) {
+            delete chapterData.releaseDate;
+          }
+        } catch (e) {
+          // If there's any error in parsing the date, remove it
+          delete chapterData.releaseDate;
+        }
+      }
+
       // Lấy thông tin chapter để kiểm tra
       const chapter = await storage.getChapter(id);
       if (!chapter) {
@@ -725,6 +740,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!contentInfo) {
         return res.status(404).json({ error: "Content not found" });
       }
+
+      // Log chapterData before update to debug
+      console.log("Updating chapter with data:", JSON.stringify(chapterData));
 
       // Cập nhật thông tin chapter (không bao gồm nội dung)
       const updatedChapter = await storage.updateChapter(id, chapterData);
@@ -743,7 +761,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         // Lưu nội dung mới
         if (contentInfo.type === "manga") {
-          // Nếu là chuỗi HTML (hoặc URL duy nhất)
+          // For manga, store either JSON string directly or HTML content
           await storage.createChapterContent({
             chapterId: id,
             content: content,
@@ -1111,13 +1129,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }).array("images", 50), // Allow up to 50 images
     async (req, res) => {
       try {
+        // Get image names from query parameter or use original filenames
+        const imageNames = req.body.imageNames ? 
+          (Array.isArray(req.body.imageNames) ? req.body.imageNames : [req.body.imageNames]) : 
+          null;
+        
+        // Map uploaded files to their URLs
         const imageUrls = (req.files as Express.Multer.File[]).map(
-          (file) => `/uploads/chapter-images/${file.filename}`,
+          (file, index) => `/uploads/chapter-images/${file.filename}`,
         );
+        
+        // If chapterId is provided, also create JSON structure for direct chapter content update
+        const contentId = req.body.contentId ? parseInt(req.body.contentId) : null;
+        
+        // Log the uploaded files info
+        console.log(`Uploaded ${imageUrls.length} images for content ID: ${contentId || 'N/A'}`);
+        console.log("Image URLs:", imageUrls);
 
         res.status(200).json({ imageUrls });
       } catch (error) {
-        res.status(500).json({ error: "Failed to process image upload" });
+        console.error("Image upload error:", error);
+        res.status(500).json({ 
+          error: "Failed to process image upload",
+          message: error instanceof Error ? error.message : "Unknown error" 
+        });
       }
     },
   );

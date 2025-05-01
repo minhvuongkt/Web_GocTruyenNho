@@ -227,15 +227,17 @@ export function RichTextEditor({
           </TabsContent>
         </Tabs>
       </CardContent>
-      <CardFooter className="flex justify-between border-t p-4">
-        <div className="text-sm text-muted-foreground">
-          Tự động lưu sau mỗi {autosaveInterval / 1000} giây không hoạt động
-        </div>
-        <Button onClick={handleSave} disabled={isSaving}>
-          <Save className="h-4 w-4 mr-1" />
-          {isSaving ? 'Đang lưu...' : 'Lưu lại'}
-        </Button>
-      </CardFooter>
+      {showSubmitButton && (
+        <CardFooter className="flex justify-between border-t p-4">
+          <div className="text-sm text-muted-foreground">
+            Tự động lưu sau mỗi {autosaveInterval / 1000} giây không hoạt động
+          </div>
+          <Button onClick={handleSave} disabled={isSaving}>
+            <Save className="h-4 w-4 mr-1" />
+            {isSaving ? 'Đang lưu...' : 'Lưu lại'}
+          </Button>
+        </CardFooter>
+      )}
     </Card>
   );
 }

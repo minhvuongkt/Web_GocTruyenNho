@@ -184,17 +184,18 @@ export default function ChapterNewPage({ contentId }: { contentId: number }) {
     onSuccess: (data) => {
       // Create image content from uploaded URLs
       if (data.imageUrls && data.imageUrls.length > 0) {
-        const imageContent = data.imageUrls
-          .map(
-            (url: string) =>
-              `<img src="${url}" alt="Trang truyện" class="manga-page" />`,
-          )
-          .join("\n");
-
-        // Create chapter with image content
+        // Cấu trúc mới: Lưu ảnh dưới dạng JSON với key là số thứ tự
+        const imageJson = data.imageUrls.reduce((acc: Record<string, string>, url: string, index: number) => {
+          acc[index + 1] = url;
+          return acc;
+        }, {});
+        
+        console.log("Saving image data as JSON:", imageJson);
+        
+        // Create chapter with image content as JSON
         createChapterMutation.mutate({
           ...chapter,
-          content: imageContent,
+          content: JSON.stringify(imageJson),
           positionInfo: {
             insertPosition,
             referenceChapterId: referenceChapterId || undefined,
@@ -232,17 +233,18 @@ export default function ChapterNewPage({ contentId }: { contentId: number }) {
     onSuccess: (data) => {
       // Create image content from extracted images
       if (data.imageUrls && data.imageUrls.length > 0) {
-        const imageContent = data.imageUrls
-          .map(
-            (url: string) =>
-              `<img src="${url}" alt="Trang truyện" class="manga-page" />`,
-          )
-          .join("\n");
-
-        // Create chapter with image content
+        // Cấu trúc mới: Lưu ảnh dưới dạng JSON với key là số thứ tự
+        const imageJson = data.imageUrls.reduce((acc: Record<string, string>, url: string, index: number) => {
+          acc[index + 1] = url;
+          return acc;
+        }, {});
+        
+        console.log("Saving image data as JSON:", imageJson);
+        
+        // Create chapter with image content as JSON
         createChapterMutation.mutate({
           ...chapter,
-          content: imageContent,
+          content: JSON.stringify(imageJson),
           positionInfo: {
             insertPosition,
             referenceChapterId: referenceChapterId || undefined,

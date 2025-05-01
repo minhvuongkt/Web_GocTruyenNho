@@ -1332,19 +1332,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(400).json({ error: "No ZIP file uploaded" });
         }
 
-        // In a real implementation, we would extract the ZIP file,
-        // process images, and return their URLs
-        // For now, we'll return a mock response
-
-        const imageUrls = [
-          "/uploads/chapter-images/sample-image-1.jpg",
-          "/uploads/chapter-images/sample-image-2.jpg",
-          "/uploads/chapter-images/sample-image-3.jpg",
-        ];
-
+        // Import extract-zip
+        const extract = require('extract-zip');
+        
+        // Create unique folder name for this extraction
+        const extractionId = Date.now();
+        const extractDir = path.join(
+          process.cwd(),
+          "public/uploads/chapter-images",
+          extractionId.toString()
+        );
+        
+        // Create the directory if it doesn't exist
+        if (!fs.existsSync(extractDir)) {
+          fs.mkdirSync(extractDir, { recursive: true });
+        }
+        
+        // Extract the ZIP file
+        await extract(req.file.path, { dir: extractDir });
+        
+        // Read the extracted files
+        const files = fs.readdirSync(extractDir);
+        
+        // Filter image files and sort them
+        const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
+        const imageFiles = files
+          .filter(file => {
+            const ext = path.extname(file).toLowerCase();
+            return imageExtensions.includes(ext);
+          })
+          .sort((a, b) => {
+            // Natural sorting for numeric filenames (1.jpg, 2.jpg, etc)
+            const numA = parseInt(a.replace(/[^0-9]/g, '')) || 0;
+            const numB = parseInt(b.replace(/[^0-9]/g, '')) || 0;
+            return numA - numB;
+          });
+        
+        // Generate URLs for each image
+        const imageUrls = imageFiles.map(file => 
+          `/uploads/chapter-images/${extractionId}/${file}`
+        );
+        
+        // Delete the ZIP file after extraction
+        fs.unlinkSync(req.file.path);
+        
+        // Return the URLs of extracted images
         res.status(200).json({ imageUrls });
       } catch (error) {
-        res.status(500).json({ error: "Failed to process ZIP file" });
+        console.error("Error processing ZIP file:", error);
+        res.status(500).json({ 
+          error: "Failed to process ZIP file",
+          message: error instanceof Error ? error.message : "Unknown error" 
+        });
       }
     },
   );

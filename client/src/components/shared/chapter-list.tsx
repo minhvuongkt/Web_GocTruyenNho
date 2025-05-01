@@ -102,36 +102,37 @@ export function ChapterList({
               filteredChapters.map((chapter) => (
                 <TableRow
                   key={chapter.id}
-                  className="chapter-item hover:bg-muted/50 transition-opacity"
+                  className="chapter-item hover:bg-muted/50 transition-opacity cursor-pointer"
+                  onClick={() =>
+                    (window.location.href = `/truyen/${contentId}/chapter/${chapter.number}`)
+                  }
                 >
-                  <Link href={`/truyen/${contentId}/chapter/${chapter.number}`}>
-                    <TableCell>{chapter.number}</TableCell>
-                    <TableCell>
-                      {chapter.title || `Chương ${chapter.number}`}
-                      {chapter.isLocked &&
-                        !userUnlockedChapters.includes(chapter.id) && (
-                          <Badge
-                            variant="outline"
-                            className="ml-2 bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400"
-                          >
-                            <LockIcon className="h-3 w-3 mr-1" />
-                            Khóa
-                          </Badge>
-                        )}
-                    </TableCell>
-                    <TableCell className="hidden md:table-cell">
-                      {formatDate(chapter.releaseDate)}
-                    </TableCell>
-                    {/* <TableCell className="text-right">
-                      <Button variant="ghost" size="sm" asChild>
-                        <Link
-                          href={`/truyen/${contentId}/chapter/${chapter.number}`}
+                  <TableCell>{chapter.number}</TableCell>
+                  <TableCell>
+                    {chapter.title || `Chương ${chapter.number}`}
+                    {chapter.isLocked &&
+                      !userUnlockedChapters.includes(chapter.id) && (
+                        <Badge
+                          variant="outline"
+                          className="ml-2 bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400"
                         >
-                          Đọc
-                        </Link>
-                      </Button>
-                    </TableCell> */}
-                  </Link>
+                          <LockIcon className="h-3 w-3 mr-1" />
+                          Khóa
+                        </Badge>
+                      )}
+                  </TableCell>
+                  <TableCell className="hidden md:table-cell">
+                    {formatDate(chapter.releaseDate)}
+                  </TableCell>
+                  {/* <TableCell className="text-right">
+              <Button variant="ghost" size="sm" asChild>
+                <Link
+                  href={`/truyen/${contentId}/chapter/${chapter.number}`}
+                >
+                  Đọc
+                </Link>
+              </Button>
+            </TableCell> */}
                 </TableRow>
               ))
             ) : (

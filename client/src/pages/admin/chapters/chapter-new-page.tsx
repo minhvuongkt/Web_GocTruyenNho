@@ -4,7 +4,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
 import { apiRequest } from "@/lib/queryClient";
 
-import { RichTextEditor } from "@/components/shared/rich-text-editor";
+import RichTextEditor from "@/components/rich-text-editor";
 import "react-quill/dist/quill.snow.css";
 // UI Components
 import AdminLayout from "@/components/layouts/admin-layout";
@@ -96,57 +96,6 @@ export default function ChapterNewPage({ contentId }: { contentId: number }) {
     },
     enabled: !!contentId,
   });
-  // const formatText = (format: string) => {
-  //   const textarea = document.getElementById(
-  //     "chapter-content",
-  //   ) as HTMLTextAreaElement;
-  //   if (!textarea) return;
-
-  //   const start = textarea.selectionStart;
-  //   const end = textarea.selectionEnd;
-  //   const selectedText = textarea.value.substring(start, end);
-  //   let formattedText = "";
-
-  //   switch (format) {
-  //     case "bold":
-  //       formattedText = `<b>${selectedText}</b>`;
-  //       break;
-  //     case "italic":
-  //       formattedText = `<i>${selectedText}</i>`;
-  //       break;
-  //     case "underline":
-  //       formattedText = `<u>${selectedText}</u>`;
-  //       break;
-  //     case "h1":
-  //       formattedText = `<h1>${selectedText}</h1>`;
-  //       break;
-  //     case "h2":
-  //       formattedText = `<h2>${selectedText}</h2>`;
-  //       break;
-  //     case "h3":
-  //       formattedText = `<h3>${selectedText}</h3>`;
-  //       break;
-  //     default:
-  //       formattedText = selectedText;
-  //   }
-
-  //   const newContent =
-  //     textarea.value.substring(0, start) +
-  //     formattedText +
-  //     textarea.value.substring(end);
-
-  //   setChapter((prev) => ({ ...prev, content: newContent }));
-
-  //   // Focus back to textarea and set cursor position
-  //   setTimeout(() => {
-  //     textarea.focus();
-  //     textarea.setSelectionRange(
-  //       start + formattedText.length,
-  //       start + formattedText.length,
-  //     );
-  //   }, 0);
-  // };
-
   // Query to fetch chapters for reference
   const { data: chaptersData, isLoading: chaptersLoading } = useQuery({
     queryKey: [`/api/content/${contentId}/chapters`],

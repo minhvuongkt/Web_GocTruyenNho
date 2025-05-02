@@ -175,19 +175,43 @@ export function ChapterEditPage({ contentId, chapterNumber }: ChapterEditPagePro
             <h1 className="text-2xl font-bold">{contentTitle}</h1>
             <p className="text-muted-foreground">Soạn thảo chương {chapter.number}</p>
           </div>
-          <Button 
-            onClick={() => navigate(`/truyen/${contentId}/chapter/${chapterNumber}`)}
-            variant="outline"
-          >
-            Xem chương
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button 
+              onClick={() => navigate(`/truyen/${contentId}/chapter/${chapterNumber}`)}
+              variant="outline"
+            >
+              <Eye className="h-4 w-4 mr-1" />
+              Xem chương
+            </Button>
+            {isSaving && (
+              <Button disabled>
+                <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                Đang lưu...
+              </Button>
+            )}
+          </div>
         </div>
 
-        <RichTextEditor
-          initialValue={finalContent || ''}
-          title={chapter.title || ''}
-          onSave={handleSaveChapter}
-        />
+        <div className="grid gap-6">
+          <RichTextEditor
+            initialValue={finalContent || ''}
+            title={chapter.title || ''}
+            onSave={handleSaveChapter}
+            autosaveInterval={60000} // 60 seconds
+            placeholder="Bắt đầu soạn thảo nội dung chương truyện..."
+          />
+          
+          <div className="text-xs text-muted-foreground mt-4 bg-secondary/50 p-4 rounded-lg">
+            <h3 className="font-semibold mb-2">Hướng dẫn:</h3>
+            <ul className="list-disc pl-5 space-y-1">
+              <li>Nội dung sẽ tự động lưu mỗi 60 giây.</li>
+              <li>Sử dụng thanh công cụ để định dạng và trang trí nội dung.</li>
+              <li>Có thể chọn font chữ khác nhau cho truyện của bạn.</li>
+              <li>Nhấn nút "Lưu lại" khi muốn lưu ngay lập tức.</li>
+              <li>Sử dụng nút "Xem trước" để kiểm tra nội dung trước khi xuất bản.</li>
+            </ul>
+          </div>
+        </div>
       </div>
     </MainLayout>
   );

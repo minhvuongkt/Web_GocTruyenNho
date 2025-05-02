@@ -894,17 +894,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
           // Xóa nội dung cũ trước khi thêm mới để tránh conflict
           if (existingContent && existingContent.length > 0) {
+            console.log(`Deleting ${existingContent.length} existing chapter content items for chapter ID ${chapter.id}`);
             for (const item of existingContent) {
               await db
                 .delete(schema.chapterContent)
                 .where(eq(schema.chapterContent.id, item.id));
             }
+          } else {
+            console.log(`No existing chapter content found for chapter ID ${chapter.id}`);
           }
 
           // Tạo nội dung mới
-          console.log("Saving chapter content:", {
+          console.log("Saving new chapter content:", {
             chapterId: chapter.id,
             contentLength: content.length,
+            contentType: contentInfo.type,
+            contentPreview: content.substring(0, 100) + (content.length > 100 ? '...' : '')
           });
 
           const newContent = await db
@@ -912,7 +917,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             .values({ chapterId: chapter.id, content })
             .returning();
 
-          console.log("Saved chapter content:", newContent[0]);
+          console.log("Saved chapter content with ID:", newContent[0]?.id);
         }
 
         res.json(updatedChapter);

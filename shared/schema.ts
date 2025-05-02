@@ -108,6 +108,9 @@ export const chapterContent = pgTable("chapter_content", {
   id: serial("id").primaryKey(),
   chapterId: integer("chapter_id").notNull(),
   content: text("content"),
+  pageOrder: integer("page_order").default(0),
+  contentType: text("content_type").default("text"), // "text" for novel HTML content, "image" for manga image URL
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 // User Activity Tables
@@ -268,6 +271,8 @@ export const insertChapterContentSchema = createInsertSchema(
 ).pick({
   chapterId: true,
   content: true,
+  pageOrder: true,
+  contentType: true,
 });
 
 export const insertCommentSchema = createInsertSchema(comments).pick({

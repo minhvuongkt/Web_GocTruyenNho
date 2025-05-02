@@ -222,8 +222,9 @@ export interface IStorage {
   createAdvertisement(adData: InsertAdvertisement): Promise<Advertisement>;
   getAdvertisement(id: number): Promise<Advertisement | undefined>;
   getActiveAdvertisements(
-    position: "banner" | "sidebar" | "popup",
+    position: "banner" | "sidebar_left" | "sidebar_right" | "popup" | "overlay",
   ): Promise<Advertisement[]>;
+  getActiveOverlayAd(): Promise<Advertisement | undefined>;
   getAllAdvertisements(
     page?: number,
     limit?: number,
@@ -235,6 +236,7 @@ export interface IStorage {
   deleteAdvertisement(id: number): Promise<boolean>;
   incrementAdViews(id: number): Promise<boolean>;
   incrementAdClicks(id: number): Promise<boolean>;
+  updateLastDisplayed(id: number): Promise<boolean>;
 
   // Payment settings
   getPaymentSettings(): Promise<PaymentSettings | undefined>;

@@ -30,8 +30,10 @@ export const paymentStatusEnum = pgEnum("payment_status", [
 ]);
 export const adPositionEnum = pgEnum("ad_position", [
   "banner",
-  "sidebar",
+  "sidebar_left",
+  "sidebar_right",
   "popup",
+  "overlay",
 ]);
 
 // Users Table
@@ -187,11 +189,17 @@ export const advertisements = pgTable("advertisements", {
   imageUrl: text("image_url").notNull(),
   targetUrl: text("target_url").notNull(),
   position: adPositionEnum("position").notNull(),
+  displayOrder: integer("display_order").notNull().default(0),
   startDate: timestamp("start_date").notNull(),
   endDate: timestamp("end_date").notNull(),
   isActive: boolean("is_active").notNull().default(true),
   views: integer("views").notNull().default(0),
   clicks: integer("clicks").notNull().default(0),
+  width: integer("width"),
+  height: integer("height"),
+  displayFrequency: integer("display_frequency").notNull().default(30), // In minutes, for overlay ads
+  lastDisplayedAt: timestamp("last_displayed_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
 // Zod schemas for insertions
@@ -302,6 +310,10 @@ export const insertAdvertisementSchema = createInsertSchema(advertisements)
     imageUrl: true,
     targetUrl: true,
     position: true,
+    displayOrder: true,
+    width: true,
+    height: true,
+    displayFrequency: true,
     startDate: true,
     endDate: true,
     isActive: true,
@@ -315,6 +327,9 @@ export const insertAdvertisementSchema = createInsertSchema(advertisements)
       (arg) => (typeof arg === "string" ? new Date(arg) : arg),
       z.date(),
     ),
+    displayFrequency: z.number().min(15).max(60).optional(),
+    width: z.number().positive().optional(),
+    height: z.number().positive().optional(),
   });
 
 // TypeScript types for the tables

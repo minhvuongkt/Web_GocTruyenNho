@@ -24,29 +24,22 @@ import { Save, Eye } from "lucide-react";
 
 // Font options cho dropdown
 const fontOptions = [
-  { value: "Arial", label: "Arial" },
-  { value: "Times New Roman", label: "Times New Roman" },
-  { value: "Roboto", label: "Roboto" },
-  { value: "Be Vietnam Pro", label: "Be Vietnam Pro" },
-  { value: "Open Sans", label: "Open Sans" },
-  { value: "Montserrat", label: "Montserrat" },
-  { value: "Quicksand", label: "Quicksand" },
+  { value: "Arial", label: "Arial", className: "arial" },
+  { value: "Times New Roman", label: "Times New Roman", className: "times-new-roman" },
+  { value: "Tahoma", label: "Tahoma", className: "tahoma" },
+  { value: "Verdana", label: "Verdana", className: "verdana" },
+  { value: "Open Sans", label: "Open Sans", className: "open-sans" },
+  { value: "Roboto", label: "Roboto", className: "roboto" },
+  { value: "Merriweather", label: "Merriweather", className: "merriweather" },
+  { value: "Source Sans Pro", label: "Source Sans Pro", className: "source-sans-pro" },
+  { value: "Noticia Text", label: "Noticia Text", className: "noticia-text" },
+  { value: "Segoe UI", label: "Segoe UI", className: "segoe-ui" },
+  { value: "Noto Sans", label: "Noto Sans", className: "noto-sans" },
+  { value: "Serif", label: "Serif", className: "serif" },
 ];
 
-const fonts = [
-  "arial",
-  "times-new-roman",
-  "tahoma",
-  "verdana",
-  "open-sans",
-  "roboto",
-  "merriweather",
-  "source-sans-pro",
-  "noticia-text",
-  "segoe-ui",
-  "noto-sans",
-  "serif",
-];
+// Đảm bảo danh sách font cho Quill khớp với fontOptions
+const fonts = fontOptions.map(font => font.className);
 
 const sizes = Array.from(
   { length: (48 - 10) / 2 + 1 },
@@ -115,7 +108,9 @@ export function RichTextEditor({
   const [editorValue, setEditorValue] = useState(initialValue);
   const [chapterTitle, setChapterTitle] = useState(title);
   const [activeTab, setActiveTab] = useState("edit");
-  const [fontFamily, setFontFamily] = useState("Arial");
+  // Sử dụng default font nếu không có font được chọn
+  const defaultFont = fontOptions[0].value;
+  const [fontFamily, setFontFamily] = useState(defaultFont);
   const [isSaving, setIsSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const quillRef = useRef<ReactQuill>(null);
@@ -225,37 +220,53 @@ export function RichTextEditor({
       </CardHeader>
       <Separator />
       <CardContent className="p-0">
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="edit">Soạn thảo</TabsTrigger>
-            <TabsTrigger value="preview">Xem trước</TabsTrigger>
-          </TabsList>
-          <TabsContent value="edit" className="p-4">
-            <div style={{ fontFamily }}>
-              <ReactQuill
-                ref={quillRef}
-                theme="snow"
-                value={editorValue}
-                onChange={(content) => {
-                  setEditorValue(content);
-                  if (onChange) {
-                    onChange(content);
-                  }
-                }}
-                modules={modules}
-                formats={formats}
-                placeholder={placeholder}
+        <div className="w-full">
+          <div className="flex w-full border-b mb-4">
+            <button
+              className={`w-1/2 py-2 text-center ${
+                activeTab === "edit" ? "bg-secondary text-secondary-foreground" : ""
+              }`}
+              onClick={() => setActiveTab("edit")}
+            >
+              Soạn thảo
+            </button>
+            <button
+              className={`w-1/2 py-2 text-center ${
+                activeTab === "preview" ? "bg-secondary text-secondary-foreground" : ""
+              }`}
+              onClick={() => setActiveTab("preview")}
+            >
+              Xem trước
+            </button>
+          </div>
+          
+          <div className="p-4">
+            {activeTab === "edit" ? (
+              <div style={{ fontFamily }}>
+                <ReactQuill
+                  ref={quillRef}
+                  theme="snow"
+                  value={editorValue}
+                  onChange={(content) => {
+                    setEditorValue(content);
+                    if (onChange) {
+                      onChange(content);
+                    }
+                  }}
+                  modules={modules}
+                  formats={formats}
+                  placeholder={placeholder}
+                />
+              </div>
+            ) : (
+              <div
+                className="ql-editor preview-content"
+                style={{ fontFamily }}
+                dangerouslySetInnerHTML={{ __html: editorValue }}
               />
-            </div>
-          </TabsContent>
-          <TabsContent value="preview" className="p-4">
-            <div
-              className="ql-editor preview-content"
-              style={{ fontFamily }}
-              dangerouslySetInnerHTML={{ __html: editorValue }}
-            />
-          </TabsContent>
-        </Tabs>
+            )}
+          </div>
+        </div>
       </CardContent>
       {showSubmitButton && (
         <CardFooter className="flex justify-between border-t p-4">

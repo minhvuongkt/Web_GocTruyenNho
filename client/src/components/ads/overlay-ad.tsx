@@ -11,7 +11,6 @@ interface AdData {
   title: string;
   imageUrl: string;
   targetUrl: string;
-  displayFrequency?: number;
 }
 
 export function OverlayAd({ onClose }: OverlayAdProps) {
@@ -22,18 +21,19 @@ export function OverlayAd({ onClose }: OverlayAdProps) {
     async function fetchOverlayAd() {
       try {
         setLoading(true);
-        const response = await fetch('/api/ads/overlay');
+        const response = await fetch('/api/ads?position=overlay');
         if (!response.ok) {
           throw new Error('Failed to fetch overlay ad');
         }
         
-        const adData = await response.json();
-        if (adData) {
-          setAd(adData);
+        const data = await response.json();
+        if (data && data.length > 0) {
+          // Get first active overlay ad
+          setAd(data[0]);
           // Record view
-          await apiRequest('POST', `/api/ads/${adData.id}/view`);
-          // Update last displayed timestamp
-          await apiRequest('POST', `/api/ads/${adData.id}/display`);
+          await apiRequest('POST', `/api/ads/${data[0].id}/view`);
+          // Record display time
+          await apiRequest('POST', `/api/ads/${data[0].id}/display`);
         }
       } catch (error) {
         console.error('Error fetching overlay ad:', error);
@@ -63,15 +63,17 @@ export function OverlayAd({ onClose }: OverlayAdProps) {
   }
 
   if (!ad) {
-    return null; // No ad to display
+    // No ad to display, execute onClose to clean up
+    onClose();
+    return null;
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70">
-      <div className="relative max-w-2xl max-h-[80vh] overflow-auto bg-white rounded-lg shadow-lg">
+    <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
+      <div className="relative max-w-3xl w-full bg-white rounded-lg overflow-hidden shadow-xl">
         <button 
           onClick={onClose}
-          className="absolute top-2 right-2 p-1 rounded-full bg-white/10 text-gray-700 hover:bg-gray-200 transition-colors z-10"
+          className="absolute top-2 right-2 p-1 rounded-full bg-white text-gray-700 hover:bg-gray-200 transition-colors z-10"
           aria-label="Close advertisement"
         >
           <X className="h-6 w-6" />
@@ -81,7 +83,7 @@ export function OverlayAd({ onClose }: OverlayAdProps) {
           <img 
             src={ad.imageUrl} 
             alt={ad.title} 
-            className="w-full h-auto object-contain rounded-lg" 
+            className="w-full h-auto" 
           />
           <div className="absolute bottom-0 left-0 right-0 bg-black/30 text-white text-xs p-1 text-center">
             Quảng cáo

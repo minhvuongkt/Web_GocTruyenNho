@@ -1389,7 +1389,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getActiveAdvertisements(
-    position: "banner" | "sidebar" | "popup",
+    position: "banner" | "sidebar_left" | "sidebar_right" | "popup" | "overlay",
   ): Promise<Advertisement[]> {
     const now = new Date();
 
@@ -1404,6 +1404,34 @@ export class DatabaseStorage implements IStorage {
           gt(advertisements.endDate, now),
         ),
       );
+  }
+
+  async getActiveOverlayAd(): Promise<Advertisement | undefined> {
+    const now = new Date();
+    
+    // Get an overlay ad that hasn't been displayed recently (at least 15 minutes ago)
+    // or has never been displayed
+    const fifteenMinutesAgo = new Date(now.getTime() - 15 * 60 * 1000);
+    
+    const [ad] = await db
+      .select()
+      .from(advertisements)
+      .where(
+        and(
+          eq(advertisements.position, "overlay"),
+          eq(advertisements.isActive, true),
+          lt(advertisements.startDate, now),
+          gt(advertisements.endDate, now),
+          or(
+            isNull(advertisements.lastDisplayed),
+            lt(advertisements.lastDisplayed, fifteenMinutesAgo)
+          )
+        ),
+      )
+      .orderBy(asc(advertisements.lastDisplayed), asc(advertisements.views))
+      .limit(1);
+    
+    return ad;
   }
 
   async getAllAdvertisements(
@@ -1467,6 +1495,17 @@ export class DatabaseStorage implements IStorage {
       .update(advertisements)
       .set({
         clicks: sql`${advertisements.clicks} + 1`,
+      })
+      .where(eq(advertisements.id, id));
+
+    return result.rowCount !== null && result.rowCount > 0;
+  }
+  
+  async updateLastDisplayed(id: number): Promise<boolean> {
+    const result = await db
+      .update(advertisements)
+      .set({
+        lastDisplayed: new Date(),
       })
       .where(eq(advertisements.id, id));
 

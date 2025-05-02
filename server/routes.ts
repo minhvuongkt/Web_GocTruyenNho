@@ -2670,9 +2670,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Fallback for users without position specified
       const allActiveAds = [];
       const bannerAds = await storage.getActiveAdvertisements("banner");
-      const sidebarAds = await storage.getActiveAdvertisements("sidebar");
+      const sidebarLeftAds = await storage.getActiveAdvertisements("sidebar_left");
+      const sidebarRightAds = await storage.getActiveAdvertisements("sidebar_right");
       const popupAds = await storage.getActiveAdvertisements("popup");
-      return res.json([...bannerAds, ...sidebarAds, ...popupAds]);
+      // Overlay ads are fetched on demand through a separate endpoint
+      return res.json([...bannerAds, ...sidebarLeftAds, ...sidebarRightAds, ...popupAds]);
     } catch (error) {
       console.error("Error fetching ads:", error);
       res.status(500).json({ error: "Failed to get ads" });

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { OverlayAd } from './overlay-ad';
+import { PopupAd } from './popup-ad';
 
 /**
  * Ad Manager Component
@@ -8,6 +9,7 @@ import { OverlayAd } from './overlay-ad';
  */
 export function AdManager() {
   const [showOverlayAd, setShowOverlayAd] = useState<boolean>(false);
+  const [showPopupAd, setShowPopupAd] = useState<boolean>(false);
   
   // Track the last time an overlay ad was shown
   useEffect(() => {
@@ -39,8 +41,8 @@ export function AdManager() {
     };
     
     // Initial check when component mounts
-    const shouldShowAd = checkIfShowOverlayAd();
-    if (shouldShowAd) {
+    const shouldShowOverlayAd = checkIfShowOverlayAd();
+    if (shouldShowOverlayAd) {
       // Slight delay to not show immediately when page loads
       const timer = setTimeout(() => {
         setShowOverlayAd(true);
@@ -50,15 +52,63 @@ export function AdManager() {
     }
   }, []);
   
+  // Manage popup ads - show after a short delay if overlay isn't showing
+  useEffect(() => {
+    // Check if we need to show a popup ad (different from overlay)
+    const lastPopupTime = localStorage.getItem('lastPopupAdTime');
+    const currentTime = new Date().getTime();
+    
+    const checkIfShowPopupAd = () => {
+      // If overlay is showing, don't show popup
+      if (showOverlayAd) return false;
+      
+      // If no timing information exists
+      if (!lastPopupTime) {
+        // First time, show after a short delay
+        return true;
+      }
+      
+      const lastTime = parseInt(lastPopupTime, 10);
+      const timeDifference = currentTime - lastTime;
+      
+      // Show popup ads more frequently than overlays
+      const minFrequency = 5 * 60 * 1000; // 5 minutes in milliseconds
+      
+      if (timeDifference >= minFrequency) {
+        return true;
+      }
+      
+      return false;
+    };
+    
+    // Check if we should show a popup ad
+    const shouldShowPopupAd = checkIfShowPopupAd();
+    if (shouldShowPopupAd) {
+      // Show popup after a short delay
+      const timer = setTimeout(() => {
+        setShowPopupAd(true);
+      }, 10000); // 10 second delay
+      
+      return () => clearTimeout(timer);
+    }
+  }, [showOverlayAd]);
+  
   const handleCloseOverlayAd = () => {
     setShowOverlayAd(false);
     // Update the last shown time
     localStorage.setItem('lastOverlayAdTime', new Date().getTime().toString());
   };
   
+  const handleClosePopupAd = () => {
+    setShowPopupAd(false);
+    // Update the last shown time
+    localStorage.setItem('lastPopupAdTime', new Date().getTime().toString());
+  };
+  
   return (
     <>
       {showOverlayAd && <OverlayAd onClose={handleCloseOverlayAd} />}
+      {showPopupAd && <PopupAd onClose={handleClosePopupAd} />}
     </>
   );
 }

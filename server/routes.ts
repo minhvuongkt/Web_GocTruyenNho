@@ -2648,11 +2648,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Ad Routes
   app.get("/api/ads", async (req, res) => {
     try {
-      const position = req.query.position as "banner" | "sidebar" | "popup";
+      const position = req.query.position as "banner" | "sidebar_left" | "sidebar_right" | "popup" | "overlay";
       const isAdmin =
         req.isAuthenticated() && (req.user as any).role === "admin";
 
       if (position) {
+        // Validate position parameter
+        const validPositions = ["banner", "sidebar_left", "sidebar_right", "popup", "overlay"];
+        if (!validPositions.includes(position)) {
+          return res.status(400).json({ error: "Invalid position parameter" });
+        }
+        
         const ads = await storage.getActiveAdvertisements(position);
         return res.json(ads);
       }

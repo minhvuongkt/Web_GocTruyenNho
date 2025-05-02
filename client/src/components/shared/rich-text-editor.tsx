@@ -46,10 +46,10 @@ const sizes = Array.from(
   (_, i) => `${10 + i * 2}px`,
 );
 
-// Quill modules và formats
+// Quill modules và formats với thêm tính năng
 const modules = {
   toolbar: [
-    // [{ header: [1, 2, 3, 4, 5, 6, false] }],
+    [{ header: [1, 2, 3, 4, 5, 6, false] }],
     [{ font: fonts }],
     [{ size: sizes }],
     ["bold", "italic", "underline", "strike"],
@@ -57,12 +57,22 @@ const modules = {
     [{ align: [] }],
     [{ list: "ordered" }, { list: "bullet" }, { list: "check" }],
     [{ indent: "-1" }, { indent: "+1" }],
-    ["link", "image", "video", "formula"],
+    ["blockquote", "code-block"],
+    ["link", "image", "video"],
+    ["clean"], // Xóa định dạng
   ],
+  clipboard: {
+    matchVisual: false, // Ngăn Quill định dạng văn bản khi dán
+  },
+  history: {
+    delay: 1000,
+    maxStack: 50,
+    userOnly: true,
+  },
 };
 
 const formats = [
-  // "header",
+  "header",
   "font",
   "size",
   "bold",
@@ -76,10 +86,12 @@ const formats = [
   "bullet",
   "check",
   "indent",
+  "blockquote",
+  "code-block",
   "link",
   "image",
   "video",
-  "formula",
+  "clean",
 ];
 
 interface RichTextEditorProps {

@@ -852,6 +852,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
 
         const { title, content } = req.body;
+        console.log("Updating chapter with content:", req.body);
 
         // Find the chapter based on contentId and number
         const chapters = await db
@@ -891,18 +892,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
             .from(schema.chapterContent)
             .where(eq(schema.chapterContent.chapterId, chapter.id));
 
+          // Xóa nội dung cũ trước khi thêm mới để tránh conflict
           if (existingContent && existingContent.length > 0) {
-            // Update existing content
-            await db
-              .update(schema.chapterContent)
-              .set({ content })
-              .where(eq(schema.chapterContent.id, existingContent[0].id));
-          } else {
-            // Create new content entry
-            await db
-              .insert(schema.chapterContent)
-              .values({ chapterId: chapter.id, content });
+            for (const item of existingContent) {
+              await db
+                .delete(schema.chapterContent)
+                .where(eq(schema.chapterContent.id, item.id));
+            }
           }
+
+          // Tạo nội dung mới
+          console.log("Saving chapter content:", {
+            chapterId: chapter.id,
+            contentLength: content.length,
+          });
+
+          const newContent = await db
+            .insert(schema.chapterContent)
+            .values({ chapterId: chapter.id, content })
+            .returning();
+
+          console.log("Saved chapter content:", newContent[0]);
         }
 
         res.json(updatedChapter);

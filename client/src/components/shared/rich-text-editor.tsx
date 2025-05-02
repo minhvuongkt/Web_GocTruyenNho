@@ -20,67 +20,7 @@ import {
 } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
-import { Save, Eye, AlertTriangle } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
-
-// Register custom image handler
-const imageHandler = function(this: any) {
-  const input = document.createElement('input');
-  input.setAttribute('type', 'file');
-  input.setAttribute('accept', 'image/*');
-  input.click();
-
-  input.onchange = async () => {
-    if (!input.files || !input.files[0]) return;
-    
-    const file = input.files[0];
-    
-    // Validate file type and size
-    const isValidType = file.type.startsWith('image/');
-    const isValidSize = file.size <= 5 * 1024 * 1024; // 5MB
-    
-    if (!isValidType) {
-      alert('Only image files are allowed');
-      return;
-    }
-    
-    if (!isValidSize) {
-      alert('Image file is too large (max 5MB)');
-      return;
-    }
-    
-    // Create FormData for upload
-    const formData = new FormData();
-    formData.append('images', file);
-    formData.append('imageNames', `editor_image_${Date.now()}.${file.name.split('.').pop()}`);
-    
-    try {
-      // Upload the image
-      const response = await fetch('/api/chapters/images/upload', {
-        method: 'POST',
-        body: formData,
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to upload image');
-      }
-      
-      const data = await response.json();
-      
-      if (data.imageUrls && data.imageUrls.length > 0) {
-        // Insert the uploaded image URL into the editor
-        const url = data.imageUrls[0];
-        const quill = this.quill;
-        const range = quill.getSelection(true);
-        quill.insertEmbed(range.index, 'image', url);
-        quill.setSelection(range.index + 1);
-      }
-    } catch (error) {
-      console.error('Image upload failed:', error);
-      alert('Failed to upload image. Please try again.');
-    }
-  };
-};
+import { Save, Eye } from "lucide-react";
 
 // Font options cho dropdown
 const fontOptions = [
@@ -106,26 +46,21 @@ const sizes = Array.from(
   (_, i) => `${10 + i * 2}px`,
 );
 
-// Create dynamic Quill modules with custom image handler
-const createModules = () => ({
-  toolbar: {
-    container: [
-      [{ header: [1, 2, 3, 4, 5, 6, false] }],
-      [{ font: fonts }],
-      [{ size: sizes }],
-      ["bold", "italic", "underline", "strike"],
-      [{ color: [] }, { background: [] }],
-      [{ align: [] }],
-      [{ list: "ordered" }, { list: "bullet" }, { list: "check" }],
-      [{ indent: "-1" }, { indent: "+1" }],
-      ["blockquote", "code-block"],
-      ["link", "image", "video"],
-      ["clean"], // Xóa định dạng
-    ],
-    handlers: {
-      image: imageHandler
-    }
-  },
+// Quill modules và formats với thêm tính năng
+const modules = {
+  toolbar: [
+    [{ header: [1, 2, 3, 4, 5, 6, false] }],
+    [{ font: fonts }],
+    [{ size: sizes }],
+    ["bold", "italic", "underline", "strike"],
+    [{ color: [] }, { background: [] }],
+    [{ align: [] }],
+    [{ list: "ordered" }, { list: "bullet" }, { list: "check" }],
+    [{ indent: "-1" }, { indent: "+1" }],
+    ["blockquote", "code-block"],
+    ["link", "image", "video"],
+    ["clean"], // Xóa định dạng
+  ],
   clipboard: {
     matchVisual: false, // Ngăn Quill định dạng văn bản khi dán
   },
@@ -133,8 +68,8 @@ const createModules = () => ({
     delay: 1000,
     maxStack: 50,
     userOnly: true,
-  }
-});
+  },
+};
 
 const formats = [
   "header",
@@ -172,7 +107,7 @@ interface RichTextEditorProps {
 }
 
 export function RichTextEditor({
-  id = "rich-text-editor",
+  id,
   initialValue = "",
   onChange,
   onSave,
@@ -191,29 +126,13 @@ export function RichTextEditor({
   const [isSaving, setIsSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const quillRef = useRef<ReactQuill>(null);
-  const { toast } = useToast();
-  const [modules] = useState(() => createModules());
-
-  // Initialize with initial value when it changes
-  useEffect(() => {
-    if (initialValue && initialValue !== editorValue) {
-      setEditorValue(initialValue);
-    }
-  }, [initialValue]);
-
-  // Update title when it changes
-  useEffect(() => {
-    if (title && title !== chapterTitle) {
-      setChapterTitle(title);
-    }
-  }, [title]);
 
   // Auto-save timer
   useEffect(() => {
     if (readOnly) return;
 
     const timer = setInterval(() => {
-      if (editorValue !== initialValue && editorValue.trim() !== '') {
+      if (editorValue !== initialValue) {
         handleSave();
       }
     }, autosaveInterval);
@@ -225,43 +144,18 @@ export function RichTextEditor({
   const handleSave = () => {
     if (readOnly) return;
 
-    // Don't save if content is empty
-    if (editorValue.trim() === '') {
-      toast({
-        title: "Không thể lưu nội dung trống",
-        description: "Vui lòng nhập nội dung trước khi lưu",
-        variant: "destructive",
-      });
-      return;
-    }
-
     setIsSaving(true);
 
-    try {
-      // Call onSave if provided
-      if (onSave) {
-        onSave(editorValue, chapterTitle);
-      }
-
-      setLastSaved(new Date());
-      
-      // Show success toast
-      toast({
-        title: "Đã lưu nội dung",
-        description: `Nội dung được lưu lúc ${new Date().toLocaleTimeString()}`,
-      });
-    } catch (error) {
-      console.error("Error saving content:", error);
-      toast({
-        title: "Lỗi khi lưu nội dung",
-        description: "Đã xảy ra lỗi khi lưu nội dung. Vui lòng thử lại.",
-        variant: "destructive",
-      });
-    } finally {
-      setTimeout(() => {
-        setIsSaving(false);
-      }, 1000);
+    // Call onSave if provided
+    if (onSave) {
+      onSave(editorValue, chapterTitle);
     }
+
+    setLastSaved(new Date());
+
+    setTimeout(() => {
+      setIsSaving(false);
+    }, 1000);
   };
 
   // Apply font family to entire editor
@@ -374,14 +268,7 @@ export function RichTextEditor({
                   modules={modules}
                   formats={formats}
                   placeholder={placeholder}
-                  id={id}
                 />
-                <div className="text-xs text-muted-foreground mt-2">
-                  <div className="flex items-center gap-1">
-                    <AlertTriangle className="h-3 w-3" />
-                    <span>Lưu ý: Khi chèn ảnh, ảnh sẽ được tải lên máy chủ.</span>
-                  </div>
-                </div>
               </div>
             ) : (
               <div

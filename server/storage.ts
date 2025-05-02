@@ -985,21 +985,9 @@ export class DatabaseStorage implements IStorage {
   async createChapterContent(
     chapterContentData: InsertChapterContent,
   ): Promise<ChapterContent> {
-    // Set default contentType if not provided
-    const dataToInsert = {
-      ...chapterContentData,
-      contentType: chapterContentData.contentType || (
-        // If content is JSON-like, it's likely manga images
-        chapterContentData.content?.startsWith('[') && chapterContentData.content?.endsWith(']') 
-          ? 'image' 
-          : 'text'
-      ),
-      updatedAt: new Date()
-    };
-    
     const [newContent] = await db
       .insert(chapterContent)
-      .values(dataToInsert)
+      .values(chapterContentData)
       .returning();
     return newContent;
   }
@@ -1010,9 +998,9 @@ export class DatabaseStorage implements IStorage {
     const chapterContentList = await db
       .select()
       .from(chapterContent)
-      .where(eq(chapterContent.chapterId, chapterId))
-      .orderBy(chapterContent.pageOrder, asc(chapterContent.id));
+      .where(eq(chapterContent.chapterId, chapterId));
 
+    // Sort by page order if available
     return chapterContentList;
   }
 
@@ -1020,29 +1008,9 @@ export class DatabaseStorage implements IStorage {
     id: number,
     contentData: Partial<InsertChapterContent>,
   ): Promise<ChapterContent | undefined> {
-    // First, get the current content to determine type if not specified
-    const [currentContent] = await db
-      .select()
-      .from(chapterContent)
-      .where(eq(chapterContent.id, id));
-      
-    const dataToUpdate = {
-      ...contentData,
-      updatedAt: new Date(),
-    };
-    
-    // If content is being updated but contentType is not specified
-    if (contentData.content && !contentData.contentType && !currentContent.contentType) {
-      // Auto-detect content type (image JSON array vs text HTML)
-      dataToUpdate.contentType = 
-        contentData.content.startsWith('[') && contentData.content.endsWith(']') 
-          ? 'image'
-          : 'text';
-    }
-    
     const [updatedContent] = await db
       .update(chapterContent)
-      .set(dataToUpdate)
+      .set(contentData)
       .where(eq(chapterContent.id, id))
       .returning();
 

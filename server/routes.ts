@@ -2712,7 +2712,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           title,
           imageUrl,
           targetUrl,
-          position: position as "banner" | "sidebar" | "popup",
+          position: position as "banner" | "sidebar_left" | "sidebar_right" | "popup" | "overlay",
           startDate: new Date(startDate),
           endDate: new Date(endDate),
           isActive:
@@ -2820,6 +2820,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ success: true });
     } catch (error) {
       res.status(500).json({ error: "Failed to record ad click" });
+    }
+  });
+
+  // Special route for overlay ads
+  app.get("/api/ads/overlay", async (req, res) => {
+    try {
+      const overlayAd = await storage.getActiveOverlayAd();
+      res.json(overlayAd || null);
+    } catch (error) {
+      console.error("Error fetching overlay ad:", error);
+      res.status(500).json({ error: "Failed to get overlay ad" });
+    }
+  });
+  
+  app.post("/api/ads/:id/display", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      await storage.updateLastDisplayed(id);
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update ad display time" });
     }
   });
 

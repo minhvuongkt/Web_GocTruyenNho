@@ -42,12 +42,13 @@ const adSchema = z.object({
   title: z.string().min(1, { message: "Tiêu đề không được để trống" }),
   imageUrl: z.string().min(1, { message: "URL hình ảnh không được để trống" }),
   targetUrl: z.string().min(1, { message: "URL đích không được để trống" }),
-  position: z.enum(["banner", "sidebar", "popup"], { 
+  position: z.enum(["banner", "sidebar_left", "sidebar_right", "popup", "overlay"], { 
     required_error: "Vui lòng chọn vị trí" 
   }),
   startDate: z.string().min(1, { message: "Ngày bắt đầu không được để trống" }),
   endDate: z.string().min(1, { message: "Ngày kết thúc không được để trống" }),
   isActive: z.boolean().default(true),
+  displayFrequency: z.number().min(15).max(60).optional(),
 });
 
 type AdFormValues = z.infer<typeof adSchema>;
@@ -265,8 +266,10 @@ export function AdvertisementFormDialog({
                     </FormControl>
                     <SelectContent>
                       <SelectItem value="banner">Banner</SelectItem>
-                      <SelectItem value="sidebar">Thanh bên</SelectItem>
+                      <SelectItem value="sidebar_left">Thanh bên trái</SelectItem>
+                      <SelectItem value="sidebar_right">Thanh bên phải</SelectItem>
                       <SelectItem value="popup">Popup</SelectItem>
+                      <SelectItem value="overlay">Overlay (Toàn màn hình)</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />

@@ -20,6 +20,13 @@ export async function apiRequest(
       credentials: "include",
     });
 
+    // For non-OK responses that should be handled by the caller (like 401, 404),
+    // we'll skip throwing and let the caller handle it
+    if (url.includes('/api/user/unlocked-chapters/')) {
+      return res;
+    }
+
+    // For all other endpoints, maintain the original behavior
     await throwIfResNotOk(res);
     return res;
   } catch (error) {

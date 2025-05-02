@@ -110,10 +110,17 @@ export function NovelDetailPage({ id }: NovelDetailPageProps) {
   const { data: unlockedChapters } = useQuery({
     queryKey: [`/api/user/unlocked-chapters/${id}`],
     queryFn: async () => {
-      const res = await apiRequest("GET", `/api/user/unlocked-chapters/${id}`);
-      return res.json();
+      try {
+        const res = await apiRequest("GET", `/api/user/unlocked-chapters/${id}`);
+        if (!res.ok) return []; // Return empty array if response is not OK
+        return await res.json();
+      } catch (error) {
+        console.error("API Request Error (GET /api/user/unlocked-chapters/" + id + "):", error);
+        return []; // Return empty array on error
+      }
     },
     enabled: !!user,
+    retry: 1,
   });
 
   // Submit comment mutation

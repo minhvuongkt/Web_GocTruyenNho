@@ -95,6 +95,7 @@ export function AdvertisementFormDialog({
         startDate: format(new Date(advertisement.startDate), "yyyy-MM-dd"),
         endDate: format(new Date(advertisement.endDate), "yyyy-MM-dd"),
         isActive: advertisement.isActive,
+        displayFrequency: advertisement.position === "overlay" ? advertisement.displayFrequency || 30 : undefined,
       });
     } else if (mode === "add") {
       form.reset({
@@ -105,6 +106,7 @@ export function AdvertisementFormDialog({
         startDate: format(new Date(), "yyyy-MM-dd"),
         endDate: format(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), "yyyy-MM-dd"),
         isActive: true,
+        displayFrequency: 30,
       });
     }
   }, [advertisement, mode, form]);
@@ -306,6 +308,38 @@ export function AdvertisementFormDialog({
                 )}
               />
             </div>
+
+            {form.watch("position") === "overlay" && (
+              <FormField
+                control={form.control}
+                name="displayFrequency"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Tần suất hiển thị (phút)</FormLabel>
+                    <FormControl>
+                      <Input 
+                        type="number" 
+                        min="15" 
+                        max="60" 
+                        placeholder="30"
+                        {...field} 
+                        value={field.value || 30}
+                        onChange={(e) => {
+                          const value = parseInt(e.target.value);
+                          if (value >= 15 && value <= 60) {
+                            field.onChange(value);
+                          }
+                        }}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      Thời gian giữa các lần hiển thị quảng cáo (15-60 phút)
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
 
             <FormField
               control={form.control}

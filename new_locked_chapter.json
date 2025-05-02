@@ -1,0 +1,8 @@
+{
+  "contentId": 1,
+  "number": 4,
+  "title": "Morgan and Koby",
+  "isLocked": true,
+  "unlockPrice": 10,
+  "content": "{\"1\":\"https://example.com/manga/onepiece/chapter4/page1.jpg\",\"2\":\"https://example.com/manga/onepiece/chapter4/page2.jpg\",\"3\":\"https://example.com/manga/onepiece/chapter4/page3.jpg\"}"
+}

@@ -123,6 +123,11 @@ export async function pdfToHtml(buffer: Buffer): Promise<string> {
     const data = await readFile(tempPath);
     
     // Xử lý tài liệu PDF (dựa trên pdf.js)
+    // Cấu hình môi trường worker để tránh lỗi
+    if (typeof window === 'undefined') {
+      pdf.GlobalWorkerOptions.workerSrc = require.resolve('pdfjs-dist/build/pdf.worker.js');
+    }
+    
     const document = await pdf.getDocument({ data }).promise;
     
     let content = '';

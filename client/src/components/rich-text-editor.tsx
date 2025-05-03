@@ -24,7 +24,11 @@ const fonts = [
 ];
 
 // Define readable font display names
-const fontNameMap = {
+interface FontNameMap {
+  [key: string]: string;
+}
+
+const fontNameMap: FontNameMap = {
   'arial': 'Arial',
   'times-new-roman': 'Times New Roman',
   'tahoma': 'Tahoma',
@@ -44,22 +48,84 @@ const Font = Quill.import('formats/font');
 Font.whitelist = fonts;
 Quill.register(Font, true);
 
+// Register Size Format
+const Size = Quill.import('formats/size');
+Size.whitelist = ['small', 'normal', 'large', 'huge'];
+Quill.register(Size, true);
+
 // Add CSS for the fonts and other styling
 const editorStyles = `
   /* Import Google Fonts */
   @import url('https://fonts.googleapis.com/css2?family=Roboto&family=Open+Sans&family=Merriweather&family=Source+Sans+Pro&family=Noticia+Text&family=Noto+Sans&display=swap');
 
   /* Styles for font dropdown items */
-  ${fonts.map(font => `
-    .ql-snow .ql-picker.ql-font .ql-picker-item[data-value="${font}"]::before,
-    .ql-snow .ql-picker.ql-font .ql-picker-label[data-value="${font}"]::before {
-      content: "${fontNameMap[font] || font}";
-      font-family: "${fontNameMap[font] || font}";
-    }
-    .ql-font-${font} {
-      font-family: "${fontNameMap[font] || font}" !important;
-    }
-  `).join('')}
+  .ql-font-arial { font-family: Arial !important; }
+  .ql-font-times-new-roman { font-family: "Times New Roman" !important; }
+  .ql-font-tahoma { font-family: Tahoma !important; }
+  .ql-font-verdana { font-family: Verdana !important; }
+  .ql-font-open-sans { font-family: "Open Sans" !important; }
+  .ql-font-roboto { font-family: Roboto !important; }
+  .ql-font-merriweather { font-family: Merriweather !important; }
+  .ql-font-source-sans-pro { font-family: "Source Sans Pro" !important; }
+  .ql-font-noticia-text { font-family: "Noticia Text" !important; }
+  .ql-font-segoe-ui { font-family: "Segoe UI" !important; }
+  .ql-font-noto-sans { font-family: "Noto Sans" !important; }
+  .ql-font-serif { font-family: Serif !important; }
+  
+  /* Font label display */
+  .ql-snow .ql-picker.ql-font .ql-picker-label[data-value="arial"]::before,
+  .ql-snow .ql-picker.ql-font .ql-picker-item[data-value="arial"]::before { content: "Arial"; }
+  
+  .ql-snow .ql-picker.ql-font .ql-picker-label[data-value="times-new-roman"]::before,
+  .ql-snow .ql-picker.ql-font .ql-picker-item[data-value="times-new-roman"]::before { content: "Times New Roman"; }
+  
+  .ql-snow .ql-picker.ql-font .ql-picker-label[data-value="tahoma"]::before,
+  .ql-snow .ql-picker.ql-font .ql-picker-item[data-value="tahoma"]::before { content: "Tahoma"; }
+  
+  .ql-snow .ql-picker.ql-font .ql-picker-label[data-value="verdana"]::before,
+  .ql-snow .ql-picker.ql-font .ql-picker-item[data-value="verdana"]::before { content: "Verdana"; }
+  
+  .ql-snow .ql-picker.ql-font .ql-picker-label[data-value="open-sans"]::before,
+  .ql-snow .ql-picker.ql-font .ql-picker-item[data-value="open-sans"]::before { content: "Open Sans"; }
+  
+  .ql-snow .ql-picker.ql-font .ql-picker-label[data-value="roboto"]::before,
+  .ql-snow .ql-picker.ql-font .ql-picker-item[data-value="roboto"]::before { content: "Roboto"; }
+  
+  .ql-snow .ql-picker.ql-font .ql-picker-label[data-value="merriweather"]::before,
+  .ql-snow .ql-picker.ql-font .ql-picker-item[data-value="merriweather"]::before { content: "Merriweather"; }
+  
+  .ql-snow .ql-picker.ql-font .ql-picker-label[data-value="source-sans-pro"]::before,
+  .ql-snow .ql-picker.ql-font .ql-picker-item[data-value="source-sans-pro"]::before { content: "Source Sans Pro"; }
+  
+  .ql-snow .ql-picker.ql-font .ql-picker-label[data-value="noticia-text"]::before,
+  .ql-snow .ql-picker.ql-font .ql-picker-item[data-value="noticia-text"]::before { content: "Noticia Text"; }
+  
+  .ql-snow .ql-picker.ql-font .ql-picker-label[data-value="segoe-ui"]::before,
+  .ql-snow .ql-picker.ql-font .ql-picker-item[data-value="segoe-ui"]::before { content: "Segoe UI"; }
+  
+  .ql-snow .ql-picker.ql-font .ql-picker-label[data-value="noto-sans"]::before,
+  .ql-snow .ql-picker.ql-font .ql-picker-item[data-value="noto-sans"]::before { content: "Noto Sans"; }
+  
+  .ql-snow .ql-picker.ql-font .ql-picker-label[data-value="serif"]::before,
+  .ql-snow .ql-picker.ql-font .ql-picker-item[data-value="serif"]::before { content: "Serif"; }
+  
+  /* Size styles */
+  .ql-snow .ql-picker.ql-size .ql-picker-label[data-value="small"]::before,
+  .ql-snow .ql-picker.ql-size .ql-picker-item[data-value="small"]::before { content: "Small"; }
+  
+  .ql-snow .ql-picker.ql-size .ql-picker-label[data-value="normal"]::before,
+  .ql-snow .ql-picker.ql-size .ql-picker-item[data-value="normal"]::before { content: "Normal"; }
+  
+  .ql-snow .ql-picker.ql-size .ql-picker-label[data-value="large"]::before,
+  .ql-snow .ql-picker.ql-size .ql-picker-item[data-value="large"]::before { content: "Large"; }
+  
+  .ql-snow .ql-picker.ql-size .ql-picker-label[data-value="huge"]::before,
+  .ql-snow .ql-picker.ql-size .ql-picker-item[data-value="huge"]::before { content: "Huge"; }
+  
+  .ql-size-small { font-size: 0.75em !important; }
+  .ql-size-normal { font-size: 1em !important; }
+  .ql-size-large { font-size: 1.5em !important; }
+  .ql-size-huge { font-size: 2em !important; }
 
   /* Fix font dropdown width */
   .ql-snow .ql-picker.ql-font {

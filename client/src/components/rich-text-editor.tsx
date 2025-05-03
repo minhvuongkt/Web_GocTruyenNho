@@ -48,9 +48,15 @@ const Font = Quill.import('formats/font');
 Font.whitelist = fonts;
 Quill.register(Font, true);
 
-// Register Size Format
+// Định nghĩa danh sách kích cỡ phông chữ từ 10px đến 48px
+const fontSizes = [];
+for (let i = 10; i <= 48; i += 2) {
+  fontSizes.push(i + 'px');
+}
+
+// Đăng ký Size Format với danh sách tùy chỉnh
 const Size = Quill.import('formats/size');
-Size.whitelist = ['small', 'normal', 'large', 'huge'];
+Size.whitelist = fontSizes;
 Quill.register(Size, true);
 
 // Add CSS for the fonts and other styling
@@ -109,23 +115,19 @@ const editorStyles = `
   .ql-snow .ql-picker.ql-font .ql-picker-label[data-value="serif"]::before,
   .ql-snow .ql-picker.ql-font .ql-picker-item[data-value="serif"]::before { content: "Serif"; }
   
-  /* Size styles */
-  .ql-snow .ql-picker.ql-size .ql-picker-label[data-value="small"]::before,
-  .ql-snow .ql-picker.ql-size .ql-picker-item[data-value="small"]::before { content: "Small"; }
+  /* Kích thước phông chữ tùy chỉnh từ 10px đến 48px */
+  /* Hiển thị tên kích thước */
+  ${fontSizes.map(size => `
+  .ql-snow .ql-picker.ql-size .ql-picker-label[data-value="${size}"]::before,
+  .ql-snow .ql-picker.ql-size .ql-picker-item[data-value="${size}"]::before {
+    content: "${size}";
+  }`).join('\n')}
   
-  .ql-snow .ql-picker.ql-size .ql-picker-label[data-value="normal"]::before,
-  .ql-snow .ql-picker.ql-size .ql-picker-item[data-value="normal"]::before { content: "Normal"; }
-  
-  .ql-snow .ql-picker.ql-size .ql-picker-label[data-value="large"]::before,
-  .ql-snow .ql-picker.ql-size .ql-picker-item[data-value="large"]::before { content: "Large"; }
-  
-  .ql-snow .ql-picker.ql-size .ql-picker-label[data-value="huge"]::before,
-  .ql-snow .ql-picker.ql-size .ql-picker-item[data-value="huge"]::before { content: "Huge"; }
-  
-  .ql-size-small { font-size: 0.75em !important; }
-  .ql-size-normal { font-size: 1em !important; }
-  .ql-size-large { font-size: 1.5em !important; }
-  .ql-size-huge { font-size: 2em !important; }
+  /* Áp dụng kích thước thực tế */
+  ${fontSizes.map(size => `
+  .ql-size-${size.replace('px', '')} {
+    font-size: ${size} !important;
+  }`).join('\n')}
 
   /* Fix font dropdown width */
   .ql-snow .ql-picker.ql-font {
@@ -375,33 +377,12 @@ export default function RichTextEditor({
     }
   }, [value, onChange, autosaveInterval, toast]);
 
-  // Handle value change with proper format preservation
+  // Handle value change without causing infinite loops
   const handleChange = (content: string) => {
-    // Make sure to preserve font classes by ensuring they're properly wrapped
-    // This is needed because sometimes Quill can strip these classes during editing
-    let processedContent = content;
-    
-    // If there are paragraphs without font classes, add the default font
-    if (processedContent.includes('<p>') && !processedContent.includes('ql-font-')) {
-      processedContent = processedContent.replace(/<p>/g, '<p class="ql-font-arial">');
+    // Chỉ cập nhật state khi nội dung thật sự thay đổi
+    if (content !== value) {
+      setValue(content);
     }
-
-    // Preserve font size classes if they're missing
-    if (processedContent.includes('<p') && !processedContent.includes('ql-size-')) {
-      // Only add size class if there isn't one already
-      processedContent = processedContent.replace(
-        /<p((?![^>]*ql-size-)[^>]*)>/g, 
-        '<p$1 class="ql-size-normal">'
-      );
-    }
-
-    // Add both font and size if neither exists
-    processedContent = processedContent.replace(
-      /<p(?![^>]*class=)>/g, 
-      '<p class="ql-font-arial ql-size-normal">'
-    );
-
-    setValue(processedContent);
   };
 
   // Handle saving content with additional formatting preservation
@@ -446,7 +427,7 @@ export default function RichTextEditor({
       container: [
         [{ header: [1, 2, 3, 4, 5, 6, false] }],
         [{ font: fonts }],
-        [{ size: ['small', 'normal', 'large', 'huge'] }],
+        [{ size: fontSizes }],
         ['bold', 'italic', 'underline', 'strike'],
         [{ color: [] }, { background: [] }],
         [{ align: [] }],

@@ -1433,7 +1433,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     },
   );
 
-  // Text file processing endpoint for novel chapters
+  // Endpoint xử lý file văn bản cho nội dung truyện
   app.post(
     "/api/chapters/text/process",
     ensureAdmin,
@@ -1444,10 +1444,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           "text/plain",
           "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
           "application/msword",
+          "application/pdf"
         ];
         if (!validTypes.includes(file.mimetype)) {
           return cb(
-            new Error("Only TXT, DOC, and DOCX files are allowed!"),
+            new Error("Only TXT, DOC, DOCX, and PDF files are allowed!"),
             false,
           );
         }
@@ -1463,73 +1464,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(400).json({ error: "No text file uploaded" });
         }
 
-        let content = "";
+        // Import module xử lý tài liệu
+        const { processDocument } = await import('./document-processor.js');
         
-        if (req.file.mimetype === "text/plain") {
-          // For text files, read the buffer as UTF-8 and convert to HTML
-          const textContent = req.file.buffer.toString("utf-8");
-          
-          // Convert plain text to HTML, maintaining paragraphs
-          content = textContent
-            .split(/\r?\n\r?\n/) // Split on empty lines (paragraphs)
-            .map(para => para.trim())
-            .filter(para => para.length > 0)
-            .map(para => `<p>${para.replace(/\r?\n/g, ' ')}</p>`)
-            .join('');
-            
-        } else if (
-          req.file.mimetype === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
-          req.file.mimetype === "application/msword"
-        ) {
-          // For DOC/DOCX, use mammoth.js to convert to HTML
-          const mammoth = (await import("mammoth")).default;
-          
-          try {
-            const result = await mammoth.convertToHtml({ buffer: req.file.buffer }, {
-              // Configuration to preserve styles
-              styleMap: [
-                "p[style-name='Heading 1'] => h1:fresh",
-                "p[style-name='Heading 2'] => h2:fresh",
-                "p[style-name='Heading 3'] => h3:fresh",
-                "p[style-name='Heading 4'] => h4:fresh",
-                "p[style-name='Heading 5'] => h5:fresh",
-                "p[style-name='Heading 6'] => h6:fresh",
-                "b => strong",
-                "i => em",
-                "u => u",
-                "strike => s",
-                "p => p:fresh",
-              ]
-            });
-            
-            content = result.value;
-            
-            // Log warnings if any
-            if (result.messages.length > 0) {
-              console.log("Mammoth warnings:", result.messages);
-            }
-          } catch (mammothError) {
-            console.error("Error converting document:", mammothError);
-            return res.status(500).json({
-              error: "Failed to process document file",
-              message: "The document format could not be processed correctly."
-            });
-          }
+        try {
+          // Xử lý tài liệu bằng module chuyên dụng
+          const content = await processDocument(req.file.buffer, req.file.mimetype);
+          res.status(200).json({ content });
+        } catch (processingError) {
+          console.error("Error processing document:", processingError);
+          return res.status(500).json({
+            error: "Failed to process document",
+            message: processingError instanceof Error ? processingError.message : "Unknown error"
+          });
         }
-
-        // Format content with proper font styles if needed
-        if (content) {
-          // Make sure paragraphs have the default font class
-          content = content.replace(/<p>/g, '<p class="ql-font-arial">');
-          
-          // Keep text formatting when found in the document:
-          // - Convert <b> to <strong>
-          content = content.replace(/<b>/g, '<strong>').replace(/<\/b>/g, '</strong>');
-          // - Convert <i> to <em>
-          content = content.replace(/<i>/g, '<em>').replace(/<\/i>/g, '</em>');
-        }
-
-        res.status(200).json({ content });
       } catch (error) {
         console.error("File processing error:", error);
         res.status(500).json({ 

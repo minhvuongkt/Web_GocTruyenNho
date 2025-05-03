@@ -5,7 +5,7 @@ import { queryClient } from "@/lib/queryClient";
 import { apiRequest } from "@/lib/queryClient";
 
 // Rich text editor
-import RichTextEditor from "@/components/rich-text-editor";
+import EnhancedRichTextEditor from "@/components/enhanced-rich-text-editor";
 import "react-quill/dist/quill.snow.css";
 
 // UI Components
@@ -898,7 +898,7 @@ export default function ChapterEditPage({
                     />
                   </div>
 
-                  <RichTextEditor
+                  <EnhancedRichTextEditor
                     id="chapter-content"
                     initialValue={chapter.content}
                     onChange={(content) => {

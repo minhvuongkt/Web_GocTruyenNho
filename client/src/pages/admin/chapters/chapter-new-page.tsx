@@ -4,7 +4,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
 import { apiRequest } from "@/lib/queryClient";
 
-import RichTextEditor from "@/components/rich-text-editor";
+import EnhancedRichTextEditor from "@/components/enhanced-rich-text-editor";
 import "react-quill/dist/quill.snow.css";
 // UI Components
 import AdminLayout from "@/components/layouts/admin-layout";
@@ -907,7 +907,7 @@ export default function ChapterNewPage({ contentId }: { contentId: number }) {
                     />
                   </div>
 
-                  <RichTextEditor
+                  <EnhancedRichTextEditor
                     id="chapter-content"
                     initialValue={chapter.content}
                     onChange={(content) => {

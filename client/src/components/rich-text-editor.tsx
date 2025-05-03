@@ -7,66 +7,77 @@ import { Label } from "./ui/label";
 import { Separator } from "./ui/separator";
 import { useToast } from "@/hooks/use-toast";
 
-// Quill API to define custom fonts and sizes
-// We need to register them before using them
-const Font = Quill.import("formats/font");
-const Size = Quill.import("formats/size");
-
 // Define the fonts list
 const fonts = [
-  "arial",
-  "times-new-roman",
-  "tahoma",
-  "verdana",
-  "open-sans",
-  "roboto",
-  "merriweather",
-  "source-sans-pro",
-  "noticia-text",
-  "segoe-ui",
-  "noto-sans",
-  "serif",
+  'arial',
+  'times-new-roman',
+  'tahoma', 
+  'verdana',
+  'open-sans',
+  'roboto',
+  'merriweather',
+  'source-sans-pro',
+  'noticia-text',
+  'segoe-ui',
+  'noto-sans',
+  'serif'
 ];
 
-// Define sizes from 10px to 48px in 2px increments
-const sizes = Array.from(
-  { length: (48 - 10) / 2 + 1 },
-  (_, i) => `${10 + i * 2}px`
-);
+// Define readable font display names
+const fontNameMap = {
+  'arial': 'Arial',
+  'times-new-roman': 'Times New Roman',
+  'tahoma': 'Tahoma',
+  'verdana': 'Verdana',
+  'open-sans': 'Open Sans',
+  'roboto': 'Roboto',
+  'merriweather': 'Merriweather',
+  'source-sans-pro': 'Source Sans Pro',
+  'noticia-text': 'Noticia Text',
+  'segoe-ui': 'Segoe UI',
+  'noto-sans': 'Noto Sans',
+  'serif': 'Serif',
+};
 
-// Register fonts
+// Register Font Format
+const Font = Quill.import('formats/font');
 Font.whitelist = fonts;
 Quill.register(Font, true);
 
-// Register sizes
-Size.whitelist = sizes;
-Quill.register(Size, true);
+// Add CSS for the fonts and other styling
+const editorStyles = `
+  /* Import Google Fonts */
+  @import url('https://fonts.googleapis.com/css2?family=Roboto&family=Open+Sans&family=Merriweather&family=Source+Sans+Pro&family=Noticia+Text&family=Noto+Sans&display=swap');
 
-// Add CSS for the fonts
-const fontStyles = `
+  /* Styles for font dropdown items */
   ${fonts.map(font => `
     .ql-snow .ql-picker.ql-font .ql-picker-item[data-value="${font}"]::before,
     .ql-snow .ql-picker.ql-font .ql-picker-label[data-value="${font}"]::before {
-      content: "${font.replace(/-/g, ' ')}";
-      font-family: "${font.replace(/-/g, ' ')}";
+      content: "${fontNameMap[font] || font}";
+      font-family: "${fontNameMap[font] || font}";
     }
     .ql-font-${font} {
-      font-family: "${font.replace(/-/g, ' ')}";
-    }
-  `).join('')}
-  
-  ${sizes.map(size => `
-    .ql-snow .ql-picker.ql-size .ql-picker-item[data-value="${size}"]::before,
-    .ql-snow .ql-picker.ql-size .ql-picker-label[data-value="${size}"]::before {
-      content: "${size}";
-      font-size: ${size};
-    }
-    .ql-size-${size.replace('px', '')} {
-      font-size: ${size};
+      font-family: "${fontNameMap[font] || font}" !important;
     }
   `).join('')}
 
-  /* Custom styles for image resizing and drag-drop */
+  /* Fix font dropdown width */
+  .ql-snow .ql-picker.ql-font {
+    width: 120px;
+  }
+
+  /* Fix size dropdown width */
+  .ql-snow .ql-picker.ql-size {
+    width: 100px;
+  }
+
+  /* Make dropdown text more readable */
+  .ql-snow .ql-picker-options {
+    max-height: 300px;
+    overflow-y: auto;
+  }
+
+  /* Custom styles for image resizing */
   .ql-editor img {
     cursor: pointer;
     display: block;
@@ -105,9 +116,6 @@ class ImageResize {
   initialX: number;
   initialY: number;
   isResizing: boolean;
-  isDragging: boolean;
-  dragStartX: number;
-  dragStartY: number;
 
   constructor(quill: any, options: any) {
     this.quill = quill;
@@ -116,15 +124,12 @@ class ImageResize {
     this.overlay = null;
     this.handle = null;
     
-    // Initialize properties for resize and drag
+    // Initialize properties for resize
     this.initialWidth = 0;
     this.initialHeight = 0;
     this.initialX = 0;
     this.initialY = 0;
     this.isResizing = false;
-    this.isDragging = false;
-    this.dragStartX = 0;
-    this.dragStartY = 0;
     
     // Setup listeners
     this.quill.root.addEventListener('click', this.handleClick.bind(this));
@@ -155,19 +160,12 @@ class ImageResize {
       this.initialX = e.clientX;
       this.initialY = e.clientY;
       this.isResizing = true;
-    } else if (e.target === this.currentImg) {
-      e.preventDefault();
-      this.quill.root.setAttribute('contenteditable', 'false');
-      this.isDragging = true;
-      this.dragStartX = e.clientX;
-      this.dragStartY = e.clientY;
     }
   }
 
   handleMouseup() {
-    if (this.isResizing || this.isDragging) {
+    if (this.isResizing) {
       this.isResizing = false;
-      this.isDragging = false;
       this.quill.root.setAttribute('contenteditable', 'true');
       if (this.overlay && this.handle && this.currentImg) {
         this.positionElements();
@@ -178,10 +176,8 @@ class ImageResize {
   handleMousemove(e: MouseEvent) {
     if (this.isResizing && this.currentImg) {
       const deltaX = e.clientX - this.initialX;
-      const deltaY = e.clientY - this.initialY;
       
-      // Calculate new dimensions
-      // Keep aspect ratio by using only width changes
+      // Calculate new dimensions (keep aspect ratio)
       const aspectRatio = this.initialHeight / this.initialWidth;
       let newWidth = this.initialWidth + deltaX;
       let newHeight = newWidth * aspectRatio;
@@ -196,14 +192,6 @@ class ImageResize {
       
       // Update resize handles
       this.positionElements();
-    } else if (this.isDragging && this.currentImg) {
-      // Handle dragging (simple position adjustment)
-      // For full drag support, you would need to calculate offset in the editor
-      // and update the image position accordingly
-      
-      // In this simple implementation, we're just showing how to detect drag
-      // Full drag-n-drop would require additional DOM manipulation
-      console.log('Dragging image', e.clientX - this.dragStartX, e.clientY - this.dragStartY);
     }
   }
 
@@ -245,10 +233,10 @@ class ImageResize {
   }
 }
 
-// Add the ImageResize module to Quill
+// Register the image resize module
 Quill.register('modules/imageResize', ImageResize);
 
-// Add image upload handler
+// Image upload handler for the toolbar
 function imageHandler(this: any) {
   const input = document.createElement('input');
   input.setAttribute('type', 'file');
@@ -294,7 +282,7 @@ export default function RichTextEditor({
   // Add style element to the document for custom font and size styles
   useEffect(() => {
     const styleElement = document.createElement('style');
-    styleElement.innerHTML = fontStyles;
+    styleElement.innerHTML = editorStyles;
     document.head.appendChild(styleElement);
 
     return () => {
@@ -341,7 +329,7 @@ export default function RichTextEditor({
       container: [
         [{ header: [1, 2, 3, 4, 5, 6, false] }],
         [{ font: fonts }],
-        [{ size: sizes }],
+        [{ size: ['small', 'normal', 'large', 'huge'] }],
         ['bold', 'italic', 'underline', 'strike'],
         [{ color: [] }, { background: [] }],
         [{ align: [] }],
@@ -357,9 +345,7 @@ export default function RichTextEditor({
     clipboard: {
       matchVisual: false,
     },
-    imageResize: {
-      modules: ['Resize', 'DisplaySize']
-    }
+    imageResize: {}
   }), []);
 
   // Configure formats
@@ -400,7 +386,7 @@ export default function RichTextEditor({
         const imageFiles = files.filter(file => file.type.startsWith('image/'));
 
         if (imageFiles.length > 0) {
-          // Get the cursor position for the drop
+          // Get cursor position for the drop
           const selection = editor.getSelection();
           let index = 0;
           if (selection) {
@@ -411,9 +397,8 @@ export default function RichTextEditor({
           imageFiles.forEach((file) => {
             const reader = new FileReader();
             reader.onload = () => {
-              editor.insertEmbed(index, 'image', reader.result);
+              editor.insertEmbed(index, 'image', reader.result, 'user');
               index += 1;
-              editor.setSelection(index, 0);
             };
             reader.readAsDataURL(file);
           });
@@ -421,104 +406,79 @@ export default function RichTextEditor({
       }
     };
 
-    // Prevent default behavior for drag over to enable drop
     const handleDragOver = (e: DragEvent) => {
       e.preventDefault();
-      e.stopPropagation();
+    };
+
+    const handlePaste = (e: ClipboardEvent) => {
+      if (e.clipboardData?.items) {
+        const items = Array.from(e.clipboardData.items);
+        const imageItems = items.filter(item => item.type.startsWith('image/'));
+
+        if (imageItems.length > 0) {
+          e.preventDefault();
+          
+          // Get cursor position
+          const selection = editor.getSelection();
+          let index = 0;
+          if (selection) {
+            index = selection.index;
+          }
+
+          // Insert images from clipboard
+          imageItems.forEach(item => {
+            const file = item.getAsFile();
+            if (file) {
+              const reader = new FileReader();
+              reader.onload = () => {
+                editor.insertEmbed(index, 'image', reader.result, 'user');
+                index += 1;
+              };
+              reader.readAsDataURL(file);
+            }
+          });
+        }
+      }
     };
 
     editorContainer.addEventListener('drop', handleDrop as EventListener);
     editorContainer.addEventListener('dragover', handleDragOver as EventListener);
+    editorContainer.addEventListener('paste', handlePaste as EventListener);
 
     return () => {
       editorContainer.removeEventListener('drop', handleDrop as EventListener);
       editorContainer.removeEventListener('dragover', handleDragOver as EventListener);
+      editorContainer.removeEventListener('paste', handlePaste as EventListener);
     };
-  }, [id]);
-
-  // Enable paste images from clipboard
-  useEffect(() => {
-    const editor = quillRef.current?.getEditor();
-    if (!editor) return;
-
-    const handlePaste = (e: ClipboardEvent) => {
-      const clipboardData = e.clipboardData;
-      if (!clipboardData) return;
-
-      // Check if there are images in the clipboard
-      const items = Array.from(clipboardData.items);
-      const imageItems = items.filter(item => item.type.startsWith('image/'));
-
-      if (imageItems.length > 0) {
-        e.preventDefault();
-        
-        // Get the cursor position
-        const selection = editor.getSelection();
-        let index = 0;
-        if (selection) {
-          index = selection.index;
-        }
-
-        // Insert images one by one
-        imageItems.forEach((item) => {
-          const blob = item.getAsFile();
-          if (!blob) return;
-
-          const reader = new FileReader();
-          reader.onload = () => {
-            editor.insertEmbed(index, 'image', reader.result);
-            index += 1;
-            editor.setSelection(index, 0);
-          };
-          reader.readAsDataURL(blob);
-        });
-      }
-    };
-
-    // Add paste event listener to the editor
-    const editorContainer = document.querySelector(`#${id} .ql-editor`);
-    if (editorContainer) {
-      editorContainer.addEventListener('paste', handlePaste as EventListener);
-    }
-
-    return () => {
-      if (editorContainer) {
-        editorContainer.removeEventListener('paste', handlePaste as EventListener);
-      }
-    };
-  }, [id]);
+  }, [id, quillRef]);
 
   return (
-    <Card
-      className="overflow-hidden border border-input"
-      id={id}
-    >
-      <div className="bg-muted p-2">
-        <Label className="text-sm">
-          Soạn thảo nội dung
-        </Label>
-      </div>
-      <Separator />
-      <ReactQuill
-        ref={quillRef}
-        theme="snow"
-        value={value}
-        onChange={handleChange}
-        placeholder={placeholder}
-        modules={modules}
-        formats={formats}
-        className="h-[400px] overflow-auto"
-      />
-      {showSubmitButton && (
-        <div className="p-2 bg-muted flex justify-end">
-          <Button
-            type="button"
-            onClick={handleSave}
-          >
-            Lưu nội dung
-          </Button>
+    <div className="relative w-full">
+      <Card id={id} className="relative w-full">
+        <div className="min-h-[300px]">
+          <ReactQuill
+            ref={quillRef}
+            theme="snow"
+            value={value}
+            onChange={handleChange}
+            modules={modules}
+            formats={formats}
+            placeholder={placeholder}
+          />
         </div>
-      )}
-    </Card>
+        
+        {showSubmitButton && (
+          <div className="p-2 bg-muted flex justify-end">
+            <Button
+              type="button"
+              onClick={handleSave}
+              className="mt-2"
+            >
+              Lưu nội dung
+            </Button>
+          </div>
+        )}
+      </Card>
+    </div>
   );
 }

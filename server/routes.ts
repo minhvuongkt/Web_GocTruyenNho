@@ -1454,7 +1454,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         cb(null, true);
       },
       limits: {
-        fileSize: 100 * 1024 * 1024, // 10MB
+        fileSize: 100 * 1024 * 1024, // 100MB limit
       },
     }).single("textFile"),
     async (req, res) => {
@@ -1463,22 +1463,79 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(400).json({ error: "No text file uploaded" });
         }
 
-        // In a real implementation, we would process the file based on its type
-        // For now, we'll return a simple response
         let content = "";
-
+        
         if (req.file.mimetype === "text/plain") {
-          // For text files, just read the buffer as UTF-8
-          content = req.file.buffer.toString("utf-8");
-        } else {
-          // For DOC/DOCX, we would use a library like mammoth.js
-          // For now, we'll return a placeholder
-          content = `<p>This is the processed content from the ${req.file.originalname} file.</p>`;
+          // For text files, read the buffer as UTF-8 and convert to HTML
+          const textContent = req.file.buffer.toString("utf-8");
+          
+          // Convert plain text to HTML, maintaining paragraphs
+          content = textContent
+            .split(/\r?\n\r?\n/) // Split on empty lines (paragraphs)
+            .map(para => para.trim())
+            .filter(para => para.length > 0)
+            .map(para => `<p>${para.replace(/\r?\n/g, ' ')}</p>`)
+            .join('');
+            
+        } else if (
+          req.file.mimetype === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
+          req.file.mimetype === "application/msword"
+        ) {
+          // For DOC/DOCX, use mammoth.js to convert to HTML
+          const mammoth = require("mammoth");
+          
+          try {
+            const result = await mammoth.convertToHtml({ buffer: req.file.buffer }, {
+              // Configuration to preserve styles
+              styleMap: [
+                "p[style-name='Heading 1'] => h1:fresh",
+                "p[style-name='Heading 2'] => h2:fresh",
+                "p[style-name='Heading 3'] => h3:fresh",
+                "p[style-name='Heading 4'] => h4:fresh",
+                "p[style-name='Heading 5'] => h5:fresh",
+                "p[style-name='Heading 6'] => h6:fresh",
+                "b => strong",
+                "i => em",
+                "u => u",
+                "strike => s",
+                "p => p:fresh",
+              ]
+            });
+            
+            content = result.value;
+            
+            // Log warnings if any
+            if (result.messages.length > 0) {
+              console.log("Mammoth warnings:", result.messages);
+            }
+          } catch (mammothError) {
+            console.error("Error converting document:", mammothError);
+            return res.status(500).json({
+              error: "Failed to process document file",
+              message: "The document format could not be processed correctly."
+            });
+          }
+        }
+
+        // Format content with proper font styles if needed
+        if (content) {
+          // Make sure paragraphs have the default font class
+          content = content.replace(/<p>/g, '<p class="ql-font-arial">');
+          
+          // Keep text formatting when found in the document:
+          // - Convert <b> to <strong>
+          content = content.replace(/<b>/g, '<strong>').replace(/<\/b>/g, '</strong>');
+          // - Convert <i> to <em>
+          content = content.replace(/<i>/g, '<em>').replace(/<\/i>/g, '</em>');
         }
 
         res.status(200).json({ content });
       } catch (error) {
-        res.status(500).json({ error: "Failed to process text file" });
+        console.error("File processing error:", error);
+        res.status(500).json({ 
+          error: "Failed to process text file",
+          message: error instanceof Error ? error.message : "Unknown error" 
+        });
       }
     },
   );

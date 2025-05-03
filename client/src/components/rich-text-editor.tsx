@@ -375,14 +375,65 @@ export default function RichTextEditor({
     }
   }, [value, onChange, autosaveInterval, toast]);
 
-  // Handle value change
+  // Handle value change with proper format preservation
   const handleChange = (content: string) => {
-    setValue(content);
+    // Make sure to preserve font classes by ensuring they're properly wrapped
+    // This is needed because sometimes Quill can strip these classes during editing
+    let processedContent = content;
+    
+    // If there are paragraphs without font classes, add the default font
+    if (processedContent.includes('<p>') && !processedContent.includes('ql-font-')) {
+      processedContent = processedContent.replace(/<p>/g, '<p class="ql-font-arial">');
+    }
+
+    // Preserve font size classes if they're missing
+    if (processedContent.includes('<p') && !processedContent.includes('ql-size-')) {
+      // Only add size class if there isn't one already
+      processedContent = processedContent.replace(
+        /<p((?![^>]*ql-size-)[^>]*)>/g, 
+        '<p$1 class="ql-size-normal">'
+      );
+    }
+
+    // Add both font and size if neither exists
+    processedContent = processedContent.replace(
+      /<p(?![^>]*class=)>/g, 
+      '<p class="ql-font-arial ql-size-normal">'
+    );
+
+    setValue(processedContent);
   };
 
-  // Handle saving content
+  // Handle saving content with additional formatting preservation
   const handleSave = () => {
-    onChange(value);
+    // Final pass to ensure all formatting is preserved before saving to database
+    let finalContent = value;
+    
+    // Ensure paragraphs have proper font classes
+    if (!finalContent.includes('ql-font-')) {
+      finalContent = finalContent.replace(/<p(?![^>]*ql-font-)[^>]*>/g, match => {
+        if (match.includes('class="')) {
+          return match.replace('class="', 'class="ql-font-arial '); 
+        } else {
+          return match.replace('<p', '<p class="ql-font-arial"');
+        }
+      });
+    }
+    
+    // Ensure paragraphs have proper size classes
+    if (!finalContent.includes('ql-size-')) {
+      finalContent = finalContent.replace(/<p(?![^>]*ql-size-)[^>]*>/g, match => {
+        if (match.includes('class="')) {
+          return match.replace('class="', 'class="ql-size-normal '); 
+        } else {
+          return match.replace('<p', '<p class="ql-size-normal"');
+        }
+      });
+    }
+    
+    // Pass the fully formatted content to parent component
+    onChange(finalContent);
+    
     toast({
       title: "Đã lưu",
       description: "Nội dung đã được lưu thành công",

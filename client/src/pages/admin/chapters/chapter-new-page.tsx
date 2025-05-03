@@ -4,7 +4,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
 import { apiRequest } from "@/lib/queryClient";
 
-import { RichTextEditor } from "@/components/shared/rich-text-editor";
+import RichTextEditor from "@/components/rich-text-editor";
 import "react-quill/dist/quill.snow.css";
 // UI Components
 import AdminLayout from "@/components/layouts/admin-layout";

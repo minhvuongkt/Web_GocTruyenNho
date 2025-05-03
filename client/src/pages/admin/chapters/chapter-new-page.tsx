@@ -400,13 +400,14 @@ export default function ChapterNewPage({ contentId }: { contentId: number }) {
         "text/plain",
         "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         "application/msword",
+        "application/pdf"
       ].includes(file.type);
-      const isValidSize = file.size <= 100 * 1024 * 1024; // 10MB limit
+      const isValidSize = file.size <= 100 * 1024 * 1024; // 100MB limit
 
       if (!isValidType) {
         toast({
           title: "Loại file không hợp lệ",
-          description: `${file.name} không phải là định dạng TXT, DOC hoặc DOCX`,
+          description: `${file.name} không phải là định dạng TXT, DOC, DOCX hoặc PDF`,
           variant: "destructive",
         });
         return;

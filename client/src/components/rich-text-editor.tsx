@@ -49,7 +49,7 @@ Font.whitelist = fonts;
 Quill.register(Font, true);
 
 // Định nghĩa danh sách kích cỡ phông chữ từ 10px đến 48px
-const fontSizes = [];
+const fontSizes: string[] = [];
 for (let i = 10; i <= 48; i += 2) {
   fontSizes.push(i + 'px');
 }

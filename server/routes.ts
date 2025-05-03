@@ -1482,7 +1482,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           req.file.mimetype === "application/msword"
         ) {
           // For DOC/DOCX, use mammoth.js to convert to HTML
-          const mammoth = await import("mammoth");
+          const mammoth = (await import("mammoth")).default;
           
           try {
             const result = await mammoth.convertToHtml({ buffer: req.file.buffer }, {

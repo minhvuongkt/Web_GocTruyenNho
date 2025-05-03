@@ -418,7 +418,7 @@ export default function EnhancedRichTextEditor({
     
     try {
       const formData = new FormData();
-      formData.append('file', file);
+      formData.append('textFile', file);
       
       const response = await fetch('/api/chapters/text/process', {
         method: 'POST',

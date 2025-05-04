@@ -713,6 +713,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const updateChapterHandler = async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
+      
+      // Lấy tất cả dữ liệu từ request body
+      console.log("Updating novel chapter with content:", req.body);
+      
+      // Tách nội dung ra khỏi dữ liệu chapter
       const { content, ...chapterData } = req.body;
 
       // Handle the releaseDate properly - ensure it's a valid Date object or null
@@ -758,13 +763,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Log chapterData before update to debug
-      console.log("Updating chapter with data:", JSON.stringify(chapterData));
+      console.log("Updating chapter with data:", chapterData);
 
       // Cập nhật thông tin chapter (không bao gồm nội dung)
       const updatedChapter = await storage.updateChapter(id, chapterData);
 
+      // Kiểm tra nhiều trường hợp của nội dung
+      let chapterContent = content;
+      
+      // Nếu không có content nhưng có req.body.content thì dùng req.body.content
+      if (chapterContent === undefined && typeof req.body === 'object' && req.body !== null) {
+        if ('content' in req.body) {
+          chapterContent = req.body.content;
+        }
+      }
+      
       // Nếu có nội dung mới, cập nhật vào bảng chapter_content
-      if (content !== undefined) {
+      if (chapterContent !== undefined) {
+        console.log("Processing chapter content to update:", 
+          typeof chapterContent, 
+          typeof chapterContent === 'string' 
+            ? (chapterContent.substring(0, 100) + "...") 
+            : "non-string content"
+        );
+        
+        // Xử lý nội dung HTML để đảm bảo giữ định dạng font/size
+        if (contentInfo.type === "novel" && typeof chapterContent === 'string') {
+          // Import module xử lý tài liệu
+          const { cleanHTML } = await import('./document-processor.js');
+          
+          // Đảm bảo tất cả các HTML có định dạng font và size đúng
+          chapterContent = cleanHTML(chapterContent);
+          
+          console.log("Content processed to preserve font/size formatting in updateChapterHandler");
+        }
+        
         // Xử lý nội dung dựa trên loại truyện (manga/novel)
         const existingContent = await storage.getChapterContentByChapter(id);
 
@@ -776,19 +809,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
 
         // Lưu nội dung mới
-        if (contentInfo.type === "manga") {
-          // For manga, store either JSON string directly or HTML content
-          await storage.createChapterContent({
-            chapterId: id,
-            content: content,
-          });
-        } else {
-          // Xử lý truyện chữ
-          await storage.createChapterContent({
-            chapterId: id,
-            content: content,
-          });
-        }
+        console.log(`Creating new chapter content for chapter ID ${id}`);
+        const newContent = await storage.createChapterContent({
+          chapterId: id,
+          content: chapterContent,
+        });
+        
+        console.log("Saved chapter content with ID:", newContent?.id);
+      } else {
+        console.log("No content update required for chapter ID", id);
       }
 
       res.json(updatedChapter);

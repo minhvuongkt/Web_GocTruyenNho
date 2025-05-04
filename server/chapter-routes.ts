@@ -1,22 +1,10 @@
 // Định nghĩa các routes cho chapter
-import { Express, Request, Response } from 'express';
+import { Express, Request, Response, NextFunction } from 'express';
 import * as chapterService from './chapter-service';
 import { processInlineImages } from './document-processor';
+import { ensureAdmin } from './auth-middleware';
 
-// Import middleware authentication
-function ensureAdmin(req: Request, res: Response, next: Function) {
-  // Kiểm tra nếu user đã đăng nhập (được xác thực)
-  if (!req.isAuthenticated || !req.isAuthenticated()) {
-    return res.status(401).json({ error: "Not authenticated" });
-  }
-
-  // Kiểm tra nếu user có role admin
-  if ((req.user as any).role !== "admin") {
-    return res.status(403).json({ error: "Forbidden. Admin access required." });
-  }
-
-  next();
-}
+// Không cần định nghĩa lại ensureAdmin vì đã import từ auth-middleware.ts
 
 // Middleware để xử lý hình ảnh nội tuyến trong nội dung
 async function processContentImages(req: Request, res: Response, next: Function) {

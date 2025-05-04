@@ -141,23 +141,8 @@ export function registerChapterRoutes(app: Express) {
     }
   });
   
-  // Tạo chapter mới - sử dụng middleware tùy chỉnh để debug
-  app.post('/api/content/:contentId/chapters', (req, res, next) => {
-    console.log('Custom middleware - Authentication check:');
-    console.log('- req.isAuthenticated:', req.isAuthenticated);
-    console.log('- req.isAuthenticated():', req.isAuthenticated ? req.isAuthenticated() : 'function not available');
-    console.log('- req.user:', req.user);
-    
-    if (!req.isAuthenticated || !req.isAuthenticated()) {
-      return res.status(401).json({ error: "Custom check: Not authenticated" });
-    }
-    
-    if (!req.user || (req.user as any).role !== 'admin') {
-      return res.status(403).json({ error: "Custom check: Admin access required" });
-    }
-    
-    next();
-  }, processContentImages, async (req: Request, res: Response) => {
+  // Tạo chapter mới
+  app.post('/api/content/:contentId/chapters', ensureAdmin, processContentImages, async (req: Request, res: Response) => {
     try {
       const contentId = parseInt(req.params.contentId);
       

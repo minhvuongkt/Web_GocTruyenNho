@@ -34,16 +34,17 @@ const imageFilter = (req: any, file: Express.Multer.File, cb: Function) => {
 };
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Đăng ký các routes cho chapter
-  registerChapterRoutes(app);
   // Setup static file serving for uploads directory
   app.use(
     "/uploads",
     express.static(path.join(process.cwd(), "public/uploads")),
   );
 
-  // Setup authentication
+  // Setup authentication first before registering routes that use authentication
   setupAuth(app);
+  
+  // Đăng ký các routes cho chapter sau khi đã setup authentication
+  registerChapterRoutes(app);
 
   // Setup multer for file uploads
   const upload = multer({

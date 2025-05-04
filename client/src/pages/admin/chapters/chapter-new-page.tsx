@@ -325,7 +325,7 @@ export default function ChapterNewPage({ contentId }: { contentId: number }) {
         const isValidType = ["image/jpeg", "image/png", "image/webp"].includes(
           file.type,
         );
-        const isValidSize = file.size <= 5 * 1024 * 1024; // 5MB limit
+        const isValidSize = file.size <= 20 * 1024 * 1024; // 5MB limit
 
         if (!isValidType) {
           toast({
@@ -338,7 +338,7 @@ export default function ChapterNewPage({ contentId }: { contentId: number }) {
         if (!isValidSize) {
           toast({
             title: "File quá lớn",
-            description: `${file.name} vượt quá giới hạn 5MB`,
+            description: `${file.name} vượt quá giới hạn 20MB`,
             variant: "destructive",
           });
         }
@@ -400,7 +400,7 @@ export default function ChapterNewPage({ contentId }: { contentId: number }) {
         "text/plain",
         "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         "application/msword",
-        "application/pdf"
+        "application/pdf",
       ].includes(file.type);
       const isValidSize = file.size <= 100 * 1024 * 1024; // 100MB limit
 

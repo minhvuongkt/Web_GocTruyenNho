@@ -20,6 +20,7 @@ import {
 import { setupAuth } from "./auth";
 import { ensureAuthenticated, ensureAdmin } from "./auth-middleware";
 import { registerChapterRoutes } from "./chapter-routes"; // Import routes mới cho chapter
+import { registerUploadRoutes } from "./document-upload-routes"; // Import routes mới cho upload
 import { db } from "./db";
 import { eq, and } from "drizzle-orm";
 
@@ -45,6 +46,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Đăng ký các routes cho chapter sau khi đã setup authentication
   registerChapterRoutes(app);
+  
+  // Đăng ký các routes cho upload document và media
+  registerUploadRoutes(app);
 
   // Setup multer for file uploads
   const upload = multer({

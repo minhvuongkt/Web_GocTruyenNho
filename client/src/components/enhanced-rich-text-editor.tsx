@@ -1,14 +1,16 @@
-import React, { useState, useRef, useEffect, useMemo } from 'react';
-import ReactQuill from 'react-quill';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import ReactQuill, { Quill } from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
-import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { useToast } from '@/hooks/use-toast';
-import Quill from 'quill';
-import { Progress } from '@/components/ui/progress';
-import { Loader2 } from 'lucide-react';
+import { Card, CardContent } from './ui/card';
+import { Button } from './ui/button';
+import { Input } from './ui/input';
+import { Label } from './ui/label';
+import { Alert, AlertDescription } from './ui/alert';
+import { Spinner } from './ui/spinner';
+import { useToast } from '../hooks/use-toast';
+import { apiRequest } from '../lib/queryClient';
 
-// Danh sách font chữ hỗ trợ
+// Định nghĩa các font chữ
 const fonts = [
   'arial',
   'times-new-roman',
@@ -24,668 +26,577 @@ const fonts = [
   'serif',
 ];
 
-// Đăng ký Font Format
-const Font = Quill.import('formats/font');
-Font.whitelist = fonts;
-Quill.register(Font, true);
+// Định nghĩa các kích cỡ từ 10px đến 48px
+const fontSizes = [
+  '10px', '11px', '12px', '14px', '16px', '18px', '20px', 
+  '22px', '24px', '26px', '28px', '32px', '36px', '40px', '44px', '48px'
+];
 
-// Tạo danh sách kích cỡ phông chữ từ 10px đến 48px
-const fontSizes: string[] = [];
-for (let i = 10; i <= 48; i += 2) {
-  fontSizes.push(i + 'px');
-}
+// Đăng ký các font chữ cho Quill
+const fontAttributor = Quill.import('attributors/style/font');
+fontAttributor.whitelist = fonts;
+Quill.register(fontAttributor, true);
 
-// Đăng ký Size Format
-const Size = Quill.import('formats/size');
-Size.whitelist = fontSizes;
-Quill.register(Size, true);
+// Size Format
+const sizeAttributor = Quill.import('attributors/style/size');
+sizeAttributor.whitelist = fontSizes;
+Quill.register(sizeAttributor, true);
 
-// CSS tùy chỉnh cho rich text editor
-const editorStyles = `
-  /* Import Google Fonts */
-  @import url('https://fonts.googleapis.com/css2?family=Roboto&family=Open+Sans&family=Merriweather&family=Source+Sans+Pro&family=Noticia+Text&family=Noto+Sans&display=swap');
-
-  /* Font families */
-  .ql-font-arial { font-family: Arial !important; }
-  .ql-font-times-new-roman { font-family: "Times New Roman" !important; }
-  .ql-font-tahoma { font-family: Tahoma !important; }
-  .ql-font-verdana { font-family: Verdana !important; }
-  .ql-font-open-sans { font-family: "Open Sans" !important; }
-  .ql-font-roboto { font-family: Roboto !important; }
-  .ql-font-merriweather { font-family: Merriweather !important; }
-  .ql-font-source-sans-pro { font-family: "Source Sans Pro" !important; }
-  .ql-font-noticia-text { font-family: "Noticia Text" !important; }
-  .ql-font-segoe-ui { font-family: "Segoe UI" !important; }
-  .ql-font-noto-sans { font-family: "Noto Sans" !important; }
-  .ql-font-serif { font-family: Serif !important; }
-  
-  /* Font label display in dropdown */
-  .ql-snow .ql-picker.ql-font .ql-picker-label[data-value="arial"]::before,
-  .ql-snow .ql-picker.ql-font .ql-picker-item[data-value="arial"]::before { content: "Arial"; }
-  
-  .ql-snow .ql-picker.ql-font .ql-picker-label[data-value="times-new-roman"]::before,
-  .ql-snow .ql-picker.ql-font .ql-picker-item[data-value="times-new-roman"]::before { content: "Times New Roman"; }
-  
-  .ql-snow .ql-picker.ql-font .ql-picker-label[data-value="tahoma"]::before,
-  .ql-snow .ql-picker.ql-font .ql-picker-item[data-value="tahoma"]::before { content: "Tahoma"; }
-  
-  .ql-snow .ql-picker.ql-font .ql-picker-label[data-value="verdana"]::before,
-  .ql-snow .ql-picker.ql-font .ql-picker-item[data-value="verdana"]::before { content: "Verdana"; }
-  
-  .ql-snow .ql-picker.ql-font .ql-picker-label[data-value="open-sans"]::before,
-  .ql-snow .ql-picker.ql-font .ql-picker-item[data-value="open-sans"]::before { content: "Open Sans"; }
-  
-  .ql-snow .ql-picker.ql-font .ql-picker-label[data-value="roboto"]::before,
-  .ql-snow .ql-picker.ql-font .ql-picker-item[data-value="roboto"]::before { content: "Roboto"; }
-  
-  .ql-snow .ql-picker.ql-font .ql-picker-label[data-value="merriweather"]::before,
-  .ql-snow .ql-picker.ql-font .ql-picker-item[data-value="merriweather"]::before { content: "Merriweather"; }
-  
-  .ql-snow .ql-picker.ql-font .ql-picker-label[data-value="source-sans-pro"]::before,
-  .ql-snow .ql-picker.ql-font .ql-picker-item[data-value="source-sans-pro"]::before { content: "Source Sans Pro"; }
-  
-  .ql-snow .ql-picker.ql-font .ql-picker-label[data-value="noticia-text"]::before,
-  .ql-snow .ql-picker.ql-font .ql-picker-item[data-value="noticia-text"]::before { content: "Noticia Text"; }
-  
-  .ql-snow .ql-picker.ql-font .ql-picker-label[data-value="segoe-ui"]::before,
-  .ql-snow .ql-picker.ql-font .ql-picker-item[data-value="segoe-ui"]::before { content: "Segoe UI"; }
-  
-  .ql-snow .ql-picker.ql-font .ql-picker-label[data-value="noto-sans"]::before,
-  .ql-snow .ql-picker.ql-font .ql-picker-item[data-value="noto-sans"]::before { content: "Noto Sans"; }
-  
-  .ql-snow .ql-picker.ql-font .ql-picker-label[data-value="serif"]::before,
-  .ql-snow .ql-picker.ql-font .ql-picker-item[data-value="serif"]::before { content: "Serif"; }
-  
-  /* Kích thước phông chữ */
-  ${fontSizes.map(size => `
-  .ql-snow .ql-picker.ql-size .ql-picker-label[data-value="${size}"]::before,
-  .ql-snow .ql-picker.ql-size .ql-picker-item[data-value="${size}"]::before {
-    content: "${size}";
-    font-size: ${size};
-  }`).join('\n')}
-  
-  /* Áp dụng kích thước thực tế cho nội dung */
-  ${fontSizes.map(size => `
-  .ql-size-${size.replace('px', '')} {
-    font-size: ${size} !important;
-  }`).join('\n')}
-
-  /* Tối ưu dropdown */
-  .ql-snow .ql-picker.ql-font {
-    width: 130px;
-  }
-
-  .ql-snow .ql-picker.ql-size {
-    width: 80px;
-  }
-
-  .ql-snow .ql-picker-options {
-    max-height: 300px;
-    overflow-y: auto;
-  }
-
-  /* Tùy chỉnh hiển thị hình ảnh */
-  .ql-editor img {
-    max-width: 100%;
-    height: auto;
-    display: block;
-    margin: 0 auto;
-    cursor: pointer;
-  }
-  
-  /* Tùy chỉnh resize hình ảnh */
-  .ql-editor .image-resizer {
-    position: relative;
-    display: inline-block;
-  }
-  
-  .ql-editor .image-resizer .resize-handle {
-    position: absolute;
-    height: 12px;
-    width: 12px;
-    background: #1e88e5;
-    border-radius: 50%;
-    border: 1px solid white;
-  }
-  
-  .ql-editor .image-resizer .resize-handle.br {
-    bottom: -6px;
-    right: -6px;
-    cursor: se-resize;
-  }
-  
-  /* Cải thiện hiển thị file drop zone */
-  .file-drop-active {
-    border: 2px dashed #4f46e5;
-    background-color: rgba(79, 70, 229, 0.1);
-    border-radius: 4px;
-  }
-`;
-
-// Tạo module resize hình ảnh tùy chỉnh
+// Nhập lớp Quill Image Resize
 class ImageResize {
   quill: any;
   options: any;
-  currentImg: any;
-  overlay: any;
-  handle: any;
-  initialWidth: number;
-  initialHeight: number;
-  initialX: number;
-  initialY: number;
-  isResizing: boolean;
-
+  currentImage: HTMLElement | null;
+  overlay: HTMLElement;
+  
   constructor(quill: any, options: any) {
     this.quill = quill;
     this.options = options;
-    this.currentImg = null;
-    this.overlay = null;
-    this.handle = null;
+    this.currentImage = null;
     
-    this.initialWidth = 0;
-    this.initialHeight = 0;
-    this.initialX = 0;
-    this.initialY = 0;
-    this.isResizing = false;
+    // Tạo overlay để bọc ảnh khi chỉnh sửa
+    this.overlay = document.createElement('div');
+    this.overlay.classList.add('image-resize-overlay');
     
+    // Thêm style cho overlay
+    document.head.appendChild(document.createElement('style')).textContent = `
+      .image-resize-overlay {
+        position: absolute;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: 1px dashed #3498db;
+        z-index: 100;
+      }
+      .image-resize-handle {
+        position: absolute;
+        height: 12px;
+        width: 12px;
+        background: white;
+        border: 1px solid #3498db;
+        z-index: 101;
+      }
+      .image-resize-handle-ne { top: -6px; right: -6px; cursor: ne-resize; }
+      .image-resize-handle-se { bottom: -6px; right: -6px; cursor: se-resize; }
+      .image-resize-handle-sw { bottom: -6px; left: -6px; cursor: sw-resize; }
+      .image-resize-handle-nw { top: -6px; left: -6px; cursor: nw-resize; }
+    `;
+    
+    // Lắng nghe sự kiện khi nhấp vào ảnh
     this.quill.root.addEventListener('click', this.handleClick.bind(this));
-    this.quill.root.addEventListener('mousedown', this.handleMousedown.bind(this));
-    window.addEventListener('mouseup', this.handleMouseup.bind(this));
-    window.addEventListener('mousemove', this.handleMousemove.bind(this));
+    
+    // Thêm overlay vào DOM
+    document.body.appendChild(this.overlay);
+    this.hideOverlay();
+    
+    // Khởi tạo các điểm điều chỉnh kích thước
+    this.createHandles();
   }
-
-  handleClick(e: MouseEvent) {
-    if (e.target && (e.target as HTMLElement).tagName === 'IMG') {
-      if (this.currentImg) {
-        this.hide();
+  
+  createHandles() {
+    const directions = ['nw', 'ne', 'se', 'sw'];
+    
+    directions.forEach(direction => {
+      const handle = document.createElement('div');
+      handle.classList.add('image-resize-handle', `image-resize-handle-${direction}`);
+      handle.addEventListener('mousedown', this.handleMousedown.bind(this, direction));
+      this.overlay.appendChild(handle);
+    });
+  }
+  
+  handleClick(event: MouseEvent) {
+    if (event.target && (event.target as HTMLElement).tagName === 'IMG') {
+      if (this.currentImage === event.target) {
+        // Đã chọn ảnh này rồi, không làm gì cả
+        return;
       }
-      this.show(e.target as HTMLElement);
-    } else if (this.currentImg && e.target !== this.handle) {
-      this.hide();
+      
+      // Thiết lập ảnh hiện tại
+      this.currentImage = event.target as HTMLElement;
+      this.showOverlay();
+    } else if (this.currentImage) {
+      // Nhấp ra ngoài ảnh, ẩn overlay
+      this.hideOverlay();
+      this.currentImage = null;
     }
   }
-
-  handleMousedown(e: MouseEvent) {
-    if (e.target === this.handle) {
-      e.preventDefault();
-      this.quill.root.setAttribute('contenteditable', 'false');
-      this.initialWidth = this.currentImg.width || this.currentImg.naturalWidth;
-      this.initialHeight = this.currentImg.height || this.currentImg.naturalHeight;
-      this.initialX = e.clientX;
-      this.initialY = e.clientY;
-      this.isResizing = true;
-    }
-  }
-
-  handleMouseup() {
-    if (this.isResizing) {
-      this.isResizing = false;
-      this.quill.root.setAttribute('contenteditable', 'true');
-      if (this.overlay && this.handle && this.currentImg) {
-        this.positionElements();
+  
+  handleMousedown(direction: string, event: MouseEvent) {
+    if (!this.currentImage) return;
+    
+    event.preventDefault();
+    
+    const imageRect = this.currentImage.getBoundingClientRect();
+    const startX = event.clientX;
+    const startY = event.clientY;
+    const startWidth = imageRect.width;
+    const startHeight = imageRect.height;
+    
+    const handleMousemove = (moveEvent: MouseEvent) => {
+      if (!this.currentImage) return;
+      
+      moveEvent.preventDefault();
+      
+      let newWidth = startWidth;
+      let newHeight = startHeight;
+      
+      // Tính toán kích thước mới dựa trên hướng kéo
+      if (direction.includes('e')) {
+        newWidth = startWidth + moveEvent.clientX - startX;
+      } else if (direction.includes('w')) {
+        newWidth = startWidth - (moveEvent.clientX - startX);
       }
-    }
-  }
-
-  handleMousemove(e: MouseEvent) {
-    if (this.isResizing && this.currentImg) {
-      const deltaX = e.clientX - this.initialX;
+      
+      if (direction.includes('s')) {
+        newHeight = startHeight + moveEvent.clientY - startY;
+      } else if (direction.includes('n')) {
+        newHeight = startHeight - (moveEvent.clientY - startY);
+      }
       
       // Giữ tỷ lệ khung hình
-      const aspectRatio = this.initialHeight / this.initialWidth;
-      let newWidth = this.initialWidth + deltaX;
-      let newHeight = newWidth * aspectRatio;
-      
-      // Giới hạn kích thước
-      newWidth = Math.max(50, Math.min(newWidth, this.quill.root.offsetWidth));
-      newHeight = newWidth * aspectRatio;
-      
-      // Cập nhật kích thước
-      this.currentImg.width = newWidth;
-      this.currentImg.height = newHeight;
-      
-      // Cập nhật vị trí handles
-      this.positionElements();
-    }
-  }
-
-  show(img: HTMLElement) {
-    this.currentImg = img;
-    
-    if (!this.overlay) {
-      this.overlay = document.createElement('div');
-      this.overlay.classList.add('image-resizer');
-      this.handle = document.createElement('div');
-      this.handle.classList.add('resize-handle', 'br');
-      this.overlay.appendChild(this.handle);
-      this.quill.root.appendChild(this.overlay);
-    }
-    
-    this.positionElements();
-    this.overlay.style.display = 'block';
-  }
-
-  hide() {
-    if (this.overlay) {
-      this.overlay.style.display = 'none';
-    }
-    this.currentImg = null;
-  }
-
-  positionElements() {
-    if (!this.currentImg || !this.overlay) return;
-    
-    const imgRect = this.currentImg.getBoundingClientRect();
-    const containerRect = this.quill.root.getBoundingClientRect();
-    
-    this.overlay.style.left = (imgRect.left - containerRect.left) + 'px';
-    this.overlay.style.top = (imgRect.top - containerRect.top) + 'px';
-    this.overlay.style.width = imgRect.width + 'px';
-    this.overlay.style.height = imgRect.height + 'px';
-  }
-}
-
-// Đăng ký module resize hình ảnh
-Quill.register('modules/imageResize', ImageResize);
-
-// Loại file được hỗ trợ để tải lên
-type SupportedFileType = 'txt' | 'doc' | 'docx' | 'pdf' | 'image';
-
-// Props cho Enhanced Rich Text Editor
-export interface EnhancedRichTextEditorProps {
-  id: string;
-  initialValue: string;
-  onChange: (content: string) => void;
-  placeholder?: string;
-  showSubmitButton?: boolean;
-  autosaveInterval?: number;
-  onFileUpload?: (file: File) => Promise<string>;
-}
-
-export default function EnhancedRichTextEditor({
-  id,
-  initialValue,
-  onChange,
-  placeholder = "Viết nội dung ở đây...",
-  showSubmitButton = false,
-  autosaveInterval = 0,
-  onFileUpload,
-}: EnhancedRichTextEditorProps) {
-  const [value, setValue] = useState<string>(initialValue || "");
-  const [isUploading, setIsUploading] = useState<boolean>(false);
-  const [uploadProgress, setUploadProgress] = useState<number>(0);
-  const [isProcessingDocument, setIsProcessingDocument] = useState<boolean>(false);
-  const quillRef = useRef<ReactQuill>(null);
-  const { toast } = useToast();
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  // Thêm CSS tùy chỉnh
-  useEffect(() => {
-    const styleElement = document.createElement('style');
-    styleElement.innerHTML = editorStyles;
-    document.head.appendChild(styleElement);
-
-    return () => {
-      document.head.removeChild(styleElement);
-    }
-  }, []);
-
-  // Thiết lập tự động lưu
-  useEffect(() => {
-    let intervalId: NodeJS.Timeout | null = null;
-    
-    if (autosaveInterval > 0) {
-      intervalId = setInterval(() => {
-        onChange(value);
-        toast({
-          title: "Đã tự động lưu",
-          description: "Nội dung đã được lưu tự động",
-        });
-      }, autosaveInterval * 1000);
-    }
-    
-    return () => {
-      if (intervalId) clearInterval(intervalId);
-    }
-  }, [value, onChange, autosaveInterval, toast]);
-
-  // Xác định loại file
-  const getFileType = (file: File): SupportedFileType | null => {
-    const extension = file.name.split('.').pop()?.toLowerCase();
-    
-    if (file.type.startsWith('image/')) return 'image';
-    if (extension === 'txt') return 'txt';
-    if (extension === 'docx' || file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') return 'docx';
-    if (extension === 'doc' || file.type === 'application/msword') return 'doc';
-    if (extension === 'pdf' || file.type === 'application/pdf') return 'pdf';
-    
-    return null;
-  };
-
-  // Xử lý tải lên hình ảnh
-  const uploadImage = async (file: File): Promise<string> => {
-    if (onFileUpload) {
-      setIsUploading(true);
-      setUploadProgress(10);
-      
-      try {
-        // Giả lập tiến trình tải lên
-        const progressInterval = setInterval(() => {
-          setUploadProgress(prev => {
-            const next = prev + 10;
-            return next < 90 ? next : prev;
-          });
-        }, 300);
-
-        const imageUrl = await onFileUpload(file);
-        
-        clearInterval(progressInterval);
-        setUploadProgress(100);
-        
-        // Reset sau khi hoàn thành
-        setTimeout(() => {
-          setIsUploading(false);
-          setUploadProgress(0);
-        }, 500);
-        
-        return imageUrl;
-      } catch (error) {
-        console.error('Error uploading image:', error);
-        toast({
-          title: "Lỗi tải lên",
-          description: "Không thể tải lên hình ảnh. Vui lòng thử lại.",
-          variant: "destructive",
-        });
-        setIsUploading(false);
-        setUploadProgress(0);
-        throw error;
-      }
-    }
-    
-    // Nếu không có hàm tải lên, sử dụng Data URL
-    return new Promise<string>((resolve) => {
-      const reader = new FileReader();
-      reader.onload = () => {
-        resolve(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-    });
-  };
-
-  // Xử lý tải lên tài liệu (docx, txt, pdf)
-  const processDocument = async (file: File) => {
-    setIsProcessingDocument(true);
-    
-    try {
-      const formData = new FormData();
-      formData.append('textFile', file);
-      
-      const response = await fetch('/api/chapters/text/process', {
-        method: 'POST',
-        body: formData,
-      });
-      
-      if (!response.ok) {
-        throw new Error('Lỗi xử lý tài liệu');
-      }
-      
-      const data = await response.json();
-      
-      if (data.content) {
-        // Chèn nội dung vào editor tại vị trí con trỏ
-        const editor = quillRef.current?.getEditor();
-        if (editor) {
-          const range = editor.getSelection() || { index: editor.getLength(), length: 0 };
-          editor.insertText(range.index, '\n', 'user');
-          editor.deleteText(range.index, 1);
-          editor.clipboard.dangerouslyPasteHTML(range.index, data.content, 'user');
-          editor.setSelection(range.index + 1, 0);
+      const ratio = startWidth / startHeight;
+      if (moveEvent.shiftKey) {
+        if (direction.includes('e') || direction.includes('w')) {
+          newHeight = newWidth / ratio;
+        } else {
+          newWidth = newHeight * ratio;
         }
       }
-    } catch (error) {
-      console.error('Error processing document:', error);
+      
+      // Cập nhật kích thước ảnh
+      this.currentImage.setAttribute('width', `${newWidth}px`);
+      this.currentImage.setAttribute('height', `${newHeight}px`);
+      
+      // Cập nhật vị trí overlay
+      this.showOverlay();
+    };
+    
+    const handleMouseup = () => {
+      document.removeEventListener('mousemove', handleMousemove);
+      document.removeEventListener('mouseup', handleMouseup);
+    };
+    
+    document.addEventListener('mousemove', handleMousemove);
+    document.addEventListener('mouseup', handleMouseup);
+  }
+  
+  showOverlay() {
+    if (!this.currentImage) return;
+    
+    const rect = this.currentImage.getBoundingClientRect();
+    const editorRect = this.quill.root.getBoundingClientRect();
+    
+    this.overlay.style.display = 'block';
+    this.overlay.style.left = `${rect.left - editorRect.left + this.quill.root.scrollLeft}px`;
+    this.overlay.style.top = `${rect.top - editorRect.top + this.quill.root.scrollTop}px`;
+    this.overlay.style.width = `${rect.width}px`;
+    this.overlay.style.height = `${rect.height}px`;
+  }
+  
+  hideOverlay() {
+    this.overlay.style.display = 'none';
+  }
+}
+
+// Đăng ký module ImageResize
+Quill.register('modules/imageResize', ImageResize);
+
+// Các định dạng được hỗ trợ
+const formats = [
+  'header',
+  'font',
+  'size',
+  'bold',
+  'italic',
+  'underline',
+  'strike',
+  'color',
+  'background',
+  'align',
+  'list',
+  'bullet',
+  'indent',
+  'blockquote',
+  'code-block',
+  'link',
+  'image',
+  'video',
+];
+
+// Cấu hình Quill
+const quillModules = {
+  toolbar: [
+    [{ header: [1, 2, 3, 4, 5, 6, false] }],
+    [{ font: fonts }],
+    [{ size: fontSizes }],
+    ['bold', 'italic', 'underline', 'strike'],
+    [{ color: [] }, { background: [] }],
+    [{ align: [] }],
+    [{ list: 'ordered' }, { list: 'bullet' }],
+    [{ indent: '-1' }, { indent: '+1' }],
+    ['blockquote', 'code-block'],
+    ['link', 'image', 'video'],
+    ['clean'],
+  ],
+  imageResize: {
+    displaySize: true,
+    modules: ['Resize', 'DisplaySize']
+  },
+};
+
+interface EnhancedRichTextEditorProps {
+  initialValue?: string;
+  onSave?: (content: string) => void;
+  readOnly?: boolean;
+  chapterId?: number;
+  contentId?: number;
+  autoSave?: boolean;
+}
+
+const EnhancedRichTextEditor: React.FC<EnhancedRichTextEditorProps> = ({
+  initialValue = '',
+  onSave,
+  readOnly = false,
+  chapterId,
+  contentId,
+  autoSave = true,
+}) => {
+  const [content, setContent] = useState<string>(initialValue);
+  const [file, setFile] = useState<File | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const [uploadInfo, setUploadInfo] = useState<string>('');
+  const [isAutoSaving, setIsAutoSaving] = useState<boolean>(false);
+  const quillRef = useRef<ReactQuill | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const { toast } = useToast();
+
+  // Xử lý thay đổi nội dung
+  const handleChange = (value: string) => {
+    setContent(value);
+  };
+
+  // Chức năng tự động lưu
+  useEffect(() => {
+    if (autoSave && content && content !== initialValue) {
+      // Clear timer cũ nếu có
+      if (autoSaveTimerRef.current) {
+        clearTimeout(autoSaveTimerRef.current);
+      }
+      
+      // Thiết lập timer mới (30 giây)
+      autoSaveTimerRef.current = setTimeout(() => {
+        if (content !== initialValue) {
+          handleAutoSave();
+        }
+      }, 30000); // 30 seconds
+    }
+    
+    return () => {
+      if (autoSaveTimerRef.current) {
+        clearTimeout(autoSaveTimerRef.current);
+      }
+    };
+  }, [content, initialValue, autoSave]);
+
+  // Xử lý tự động lưu
+  const handleAutoSave = async () => {
+    if (!chapterId || !contentId) return;
+    
+    try {
+      setIsAutoSaving(true);
+      
+      await apiRequest(`/api/chapters/${chapterId}`, {
+        method: 'PATCH',
+        data: {
+          content: content
+        }
+      });
+      
+      setLastSaved(new Date());
       toast({
-        title: "Lỗi xử lý tài liệu",
-        description: "Không thể xử lý tài liệu. Vui lòng thử lại.",
+        title: "Tự động lưu",
+        description: "Nội dung đã được lưu tự động",
+        variant: "default",
+      });
+    } catch (error) {
+      console.error('Error auto-saving content:', error);
+      toast({
+        title: "Lỗi lưu tự động",
+        description: "Không thể lưu nội dung tự động. Vui lòng lưu thủ công.",
         variant: "destructive",
       });
     } finally {
-      setIsProcessingDocument(false);
+      setIsAutoSaving(false);
     }
   };
 
-  // Xử lý tải lên file
-  const handleFileUpload = async (file: File) => {
-    const fileType = getFileType(file);
-    
-    if (!fileType) {
+  // Xử lý lưu thủ công
+  const handleSave = () => {
+    if (onSave) {
+      onSave(content);
+      setLastSaved(new Date());
       toast({
-        title: "Không hỗ trợ loại file",
-        description: "Chỉ hỗ trợ các file docx, doc, txt, pdf và hình ảnh.",
+        title: "Đã lưu",
+        description: "Nội dung đã được lưu thành công",
+        variant: "default",
+      });
+    }
+  };
+
+  // Xử lý tải file
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      const selectedFile = e.target.files[0];
+      setFile(selectedFile);
+      
+      // Hiển thị thông tin file
+      setUploadInfo(`File được chọn: ${selectedFile.name} (${(selectedFile.size / 1024).toFixed(2)} KB)`);
+    }
+  };
+
+  // Xử lý upload file
+  const handleFileUpload = async () => {
+    if (!file) {
+      toast({
+        title: "Không có file",
+        description: "Vui lòng chọn file trước khi tải lên",
         variant: "destructive",
       });
       return;
     }
     
-    if (fileType === 'image') {
-      const editor = quillRef.current?.getEditor();
-      if (!editor) return;
+    // Kiểm tra loại file
+    const fileExt = file.name.split('.').pop()?.toLowerCase();
+    const allowedExts = ['docx', 'doc', 'txt', 'pdf'];
+    
+    if (!fileExt || !allowedExts.includes(fileExt)) {
+      toast({
+        title: "Định dạng không hỗ trợ",
+        description: "Chỉ hỗ trợ file docx, doc, txt, pdf",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    setIsLoading(true);
+    
+    try {
+      // Tạo form data
+      const formData = new FormData();
+      formData.append('document', file);
       
-      try {
-        const imageUrl = await uploadImage(file);
-        const range = editor.getSelection() || { index: editor.getLength(), length: 0 };
-        editor.insertEmbed(range.index, 'image', imageUrl, 'user');
-        editor.setSelection(range.index + 1, 0);
-      } catch (error) {
-        console.error('Error embedding image:', error);
+      if (chapterId) {
+        formData.append('chapterId', chapterId.toString());
       }
-    } else {
-      await processDocument(file);
-    }
-  };
-
-  // Handler tải lên hình ảnh cho toolbar
-  const imageHandler = () => {
-    if (fileInputRef.current) {
-      fileInputRef.current.click();
-    }
-  };
-
-  // Xử lý thay đổi từ editor
-  const handleChange = (content: string) => {
-    if (content !== value) {
-      setValue(content);
-    }
-  };
-
-  // Xử lý lưu nội dung
-  const handleSave = () => {
-    onChange(value);
-    toast({
-      title: "Đã lưu",
-      description: "Nội dung đã được lưu thành công",
-    });
-  };
-
-  // Thiết lập modules cho Quill
-  const modules = useMemo(() => ({
-    toolbar: {
-      container: [
-        [{ header: [1, 2, 3, 4, 5, 6, false] }],
-        [{ font: fonts }],
-        [{ size: fontSizes }],
-        ['bold', 'italic', 'underline', 'strike'],
-        [{ color: [] }, { background: [] }],
-        [{ align: [] }],
-        [{ list: 'ordered' }, { list: 'bullet' }],
-        ['blockquote', 'code-block'],
-        ['link', 'image', 'video'],
-        ['clean'],
-      ],
-      handlers: {
-        image: imageHandler
+      
+      // Upload file
+      const response = await fetch('/api/upload/document', {
+        method: 'POST',
+        body: formData,
+      });
+      
+      if (!response.ok) {
+        throw new Error('Upload failed');
       }
-    },
-    clipboard: {
-      matchVisual: false,
-    },
-    imageResize: {},
-  }), []);
+      
+      const data = await response.json();
+      
+      // Đặt nội dung đã xử lý vào editor
+      setContent(data.content);
+      
+      toast({
+        title: "Tải file thành công",
+        description: "Nội dung file đã được chuyển đổi và đưa vào trình soạn thảo",
+        variant: "default",
+      });
+      
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+      setFile(null);
+      setUploadInfo('');
+      
+    } catch (error) {
+      console.error('Error uploading document:', error);
+      toast({
+        title: "Lỗi tải file",
+        description: "Không thể xử lý file. Vui lòng thử lại.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-  // Các định dạng được hỗ trợ
-  const formats = [
-    'header',
-    'font',
-    'size',
-    'bold',
-    'italic',
-    'underline',
-    'strike',
-    'color',
-    'background',
-    'align',
-    'list',
-    'bullet',
-    'indent',
-    'blockquote',
-    'code-block',
-    'link',
-    'image',
-    'video',
-  ];
+  // Xử lý thả file
+  const handleDrop = useCallback((event: React.DragEvent) => {
+    event.preventDefault();
+    
+    if (readOnly) return;
+    
+    if (event.dataTransfer.files && event.dataTransfer.files.length > 0) {
+      const file = event.dataTransfer.files[0];
+      const fileType = file.type;
+      
+      // Kiểm tra nếu là ảnh hoặc video
+      if (fileType.startsWith('image/') || fileType.startsWith('video/')) {
+        // Tải lên và chèn vào editor
+        handleMediaUpload(file);
+      } else {
+        // Nếu là file văn bản, xử lý như upload file thông thường
+        setFile(file);
+        setUploadInfo(`File được chọn: ${file.name} (${(file.size / 1024).toFixed(2)} KB)`);
+      }
+    }
+  }, [readOnly]);
 
-  // Thiết lập drag and drop cho hình ảnh
+  // Xử lý upload ảnh/video
+  const handleMediaUpload = async (file: File) => {
+    if (!quillRef.current) return;
+    
+    setIsLoading(true);
+    
+    try {
+      const formData = new FormData();
+      formData.append('media', file);
+      
+      if (chapterId) {
+        formData.append('chapterId', chapterId.toString());
+      }
+      
+      const response = await fetch('/api/upload/media', {
+        method: 'POST',
+        body: formData,
+      });
+      
+      if (!response.ok) {
+        throw new Error('Upload failed');
+      }
+      
+      const data = await response.json();
+      const quill = quillRef.current.getEditor();
+      const range = quill.getSelection(true);
+      
+      // Chèn ảnh hoặc video vào vị trí con trỏ
+      if (file.type.startsWith('image/')) {
+        quill.insertEmbed(range.index, 'image', data.url);
+      } else if (file.type.startsWith('video/')) {
+        quill.insertEmbed(range.index, 'video', data.url);
+      }
+      
+      // Di chuyển con trỏ đến vị trí sau ảnh/video
+      quill.setSelection(range.index + 1, 0);
+      
+      toast({
+        title: "Tải lên thành công",
+        description: `${file.type.startsWith('image/') ? 'Ảnh' : 'Video'} đã được chèn vào nội dung`,
+        variant: "default",
+      });
+      
+    } catch (error) {
+      console.error('Error uploading media:', error);
+      toast({
+        title: "Lỗi tải lên",
+        description: "Không thể tải lên tệp phương tiện. Vui lòng thử lại.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Thêm sự kiện ngăn chặn hành vi mặc định của trình duyệt khi thả file
   useEffect(() => {
-    const editor = quillRef.current?.getEditor();
-    if (!editor) return;
-
-    const editorContainer = document.querySelector(`#${id} .ql-editor`);
-    if (!editorContainer) return;
-
-    const handleDrop = async (e: Event) => {
-      const dragEvent = e as DragEvent;
-      dragEvent.preventDefault();
-      dragEvent.stopPropagation();
-
-      if (dragEvent.dataTransfer?.files && dragEvent.dataTransfer.files.length > 0) {
-        const files = Array.from(dragEvent.dataTransfer.files);
-        
-        // Xử lý từng file
-        for (const file of files) {
-          await handleFileUpload(file);
-        }
-      }
-      
-      // Xóa lớp active
-      editorContainer.classList.remove('file-drop-active');
-    };
-
-    const handleDragOver = (e: Event) => {
-      const dragEvent = e as DragEvent;
-      dragEvent.preventDefault();
-      dragEvent.stopPropagation();
-      editorContainer.classList.add('file-drop-active');
+    const preventDefault = (e: Event) => {
+      e.preventDefault();
     };
     
-    const handleDragLeave = (e: Event) => {
-      const dragEvent = e as DragEvent;
-      dragEvent.preventDefault();
-      dragEvent.stopPropagation();
-      editorContainer.classList.remove('file-drop-active');
-    };
-
-    const handlePaste = async (e: Event) => {
-      const clipboardEvent = e as ClipboardEvent;
-      if (clipboardEvent.clipboardData?.items) {
-        const items = Array.from(clipboardEvent.clipboardData.items);
-        const imageItems = items.filter(item => item.type.startsWith('image/'));
-
-        if (imageItems.length > 0) {
-          clipboardEvent.preventDefault();
-          
-          for (const item of imageItems) {
-            const file = item.getAsFile();
-            if (file) {
-              await handleFileUpload(file);
-            }
-          }
-        }
-      }
-    };
-
-    editorContainer.addEventListener('drop', handleDrop);
-    editorContainer.addEventListener('dragover', handleDragOver);
-    editorContainer.addEventListener('dragleave', handleDragLeave);
-    editorContainer.addEventListener('paste', handlePaste);
-
+    document.addEventListener('dragover', preventDefault);
+    document.addEventListener('drop', preventDefault);
+    
     return () => {
-      editorContainer.removeEventListener('drop', handleDrop);
-      editorContainer.removeEventListener('dragover', handleDragOver);
-      editorContainer.removeEventListener('dragleave', handleDragLeave);
-      editorContainer.removeEventListener('paste', handlePaste);
+      document.removeEventListener('dragover', preventDefault);
+      document.removeEventListener('drop', preventDefault);
     };
-  }, [id, quillRef]);
+  }, []);
 
   return (
-    <div className="relative w-full">
-      <Card id={id} className="relative w-full">
-        <div className="min-h-[300px]">
+    <Card className="w-full">
+      <CardContent className="p-4">
+        {!readOnly && (
+          <div className="mb-4 space-y-2">
+            <div className="flex items-center gap-2">
+              <Label htmlFor="file-upload">Tải lên tài liệu (DOCX, DOC, TXT, PDF):</Label>
+              <Input
+                id="file-upload"
+                type="file"
+                onChange={handleFileChange}
+                className="max-w-md"
+                ref={fileInputRef}
+                accept=".docx,.doc,.txt,.pdf"
+              />
+              <Button 
+                onClick={handleFileUpload} 
+                disabled={!file || isLoading}
+                variant="outline"
+              >
+                {isLoading ? <Spinner className="mr-2" /> : null}
+                Tải lên
+              </Button>
+            </div>
+            
+            {uploadInfo && (
+              <Alert className="bg-blue-50">
+                <AlertDescription>
+                  {uploadInfo}
+                </AlertDescription>
+              </Alert>
+            )}
+            
+            {lastSaved && (
+              <div className="text-sm text-gray-500">
+                Lần lưu cuối: {lastSaved.toLocaleTimeString()}
+              </div>
+            )}
+            
+            {isAutoSaving && (
+              <div className="text-sm text-blue-500 flex items-center">
+                <Spinner className="w-4 h-4 mr-2" />
+                Đang tự động lưu...
+              </div>
+            )}
+          </div>
+        )}
+        
+        <div
+          onDrop={handleDrop}
+          className={`border rounded-md ${readOnly ? 'bg-gray-50' : ''}`}
+        >
           <ReactQuill
             ref={quillRef}
             theme="snow"
-            value={value}
+            value={content}
             onChange={handleChange}
-            modules={modules}
+            modules={quillModules}
             formats={formats}
-            placeholder={placeholder}
-          />
-          <input
-            type="file"
-            ref={fileInputRef}
-            style={{ display: 'none' }}
-            accept=".txt,.doc,.docx,.pdf,image/*"
-            onChange={(e) => {
-              if (e.target.files && e.target.files[0]) {
-                handleFileUpload(e.target.files[0]);
-                e.target.value = ''; // Reset input
-              }
-            }}
+            readOnly={readOnly}
+            placeholder="Nhập nội dung ở đây hoặc kéo thả file ảnh/video..."
           />
         </div>
         
-        {/* Hiển thị trạng thái tải lên */}
-        {isUploading && (
-          <div className="p-2 bg-muted">
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              <span>Đang tải lên hình ảnh...</span>
-            </div>
-            <Progress value={uploadProgress} className="h-1 mt-1" />
-          </div>
-        )}
-        
-        {/* Hiển thị trạng thái xử lý tài liệu */}
-        {isProcessingDocument && (
-          <div className="p-2 bg-muted">
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              <span>Đang xử lý tài liệu...</span>
-            </div>
-          </div>
-        )}
-        
-        {showSubmitButton && (
-          <div className="p-2 bg-muted flex justify-end">
-            <Button
-              type="button"
-              onClick={handleSave}
-              className="mt-2"
-            >
+        {!readOnly && (
+          <div className="mt-4 flex justify-end">
+            <Button onClick={handleSave}>
               Lưu nội dung
             </Button>
           </div>
         )}
-      </Card>
-    </div>
+      </CardContent>
+    </Card>
   );
-}
+};
+
+export default EnhancedRichTextEditor;

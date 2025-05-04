@@ -18,32 +18,12 @@ import {
   cancelPayOSPayment,
 } from "./payos-utils";
 import { setupAuth } from "./auth";
+import { ensureAuthenticated, ensureAdmin } from "./auth-middleware";
 import { registerChapterRoutes } from "./chapter-routes"; // Import routes mới cho chapter
 import { db } from "./db";
 import { eq, and } from "drizzle-orm";
 
-const ensureAuthenticated = (
-  req: Request,
-  res: Response,
-  next: NextFunction,
-) => {
-  if (req.isAuthenticated()) {
-    return next();
-  }
-  res.status(401).json({ error: "Unauthorized" });
-};
-
-const ensureAdmin = (req: Request, res: Response, next: NextFunction) => {
-  if (!req.isAuthenticated() || !req.user) {
-    return res.status(401).json({ error: "Not authenticated" });
-  }
-
-  if (req.user.role === "admin") {
-    return next();
-  }
-
-  res.status(403).json({ error: "Forbidden" });
-};
+// No need to redefine - use the middleware imported from auth-middleware.ts
 
 const imageFilter = (req: any, file: Express.Multer.File, cb: Function) => {
   if (file.mimetype.startsWith("image/")) {

@@ -5,7 +5,7 @@ import { Request, Response, NextFunction } from 'express';
  * Middleware đảm bảo người dùng đã đăng nhập
  */
 export function ensureAuthenticated(req: Request, res: Response, next: NextFunction) {
-  if (req.isAuthenticated()) {
+  if (req.isAuthenticated && req.isAuthenticated()) {
     return next();
   }
   res.status(401).json({ error: 'Not authenticated' });
@@ -15,8 +15,14 @@ export function ensureAuthenticated(req: Request, res: Response, next: NextFunct
  * Middleware đảm bảo người dùng là admin
  */
 export function ensureAdmin(req: Request, res: Response, next: NextFunction) {
-  if (req.isAuthenticated() && req.user && (req.user as any).role === 'admin') {
-    return next();
+  // Kiểm tra cả hai điều kiện: đã đăng nhập và có quyền admin
+  if (!req.isAuthenticated || !req.isAuthenticated()) {
+    return res.status(401).json({ error: 'Not authenticated' });
   }
-  res.status(403).json({ error: 'Access forbidden. Admin role required' });
+  
+  if (!req.user || (req.user as any).role !== 'admin') {
+    return res.status(403).json({ error: 'Access forbidden. Admin role required' });
+  }
+  
+  return next();
 }

@@ -10,7 +10,7 @@ import * as schema from "@shared/schema";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { generateVietQRURL } from "./payment-utils";
-import { JSZip } from "jszip";
+import * as JSZip from "jszip";
 import {
   createPayOSPaymentLink,
   checkPayOSPaymentStatus,
@@ -18,6 +18,7 @@ import {
   cancelPayOSPayment,
 } from "./payos-utils";
 import { setupAuth } from "./auth";
+import { registerChapterRoutes } from "./chapter-routes"; // Import routes mới cho chapter
 import { db } from "./db";
 import { eq, and } from "drizzle-orm";
 
@@ -53,6 +54,8 @@ const imageFilter = (req: any, file: Express.Multer.File, cb: Function) => {
 };
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Đăng ký các routes cho chapter
+  registerChapterRoutes(app);
   // Setup static file serving for uploads directory
   app.use(
     "/uploads",

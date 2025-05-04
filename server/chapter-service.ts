@@ -2,12 +2,8 @@
 import { db } from './db';
 import { eq, and } from 'drizzle-orm';
 import * as schema from '@shared/schema';
-import { processNovelContent, hasProperFormatting } from './novel-content-processor';
+import { processNovelContent, hasProperFormatting, DEFAULT_FONT, DEFAULT_SIZE } from './novel-content-processor';
 import { cleanHTML } from './document-processor';
-
-// Các constants mặc định cho font và size
-const DEFAULT_FONT = 'merriweather'; 
-const DEFAULT_SIZE = 'large';
 
 // Interface định nghĩa các tham số cập nhật chapter
 export interface UpdateChapterParams {

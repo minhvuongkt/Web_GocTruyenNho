@@ -2,8 +2,8 @@
 import { cleanHTML } from './document-processor';
 
 // Cấu hình mặc định cho font và size
-const DEFAULT_FONT = 'merriweather';
-const DEFAULT_SIZE = 'large';
+export const DEFAULT_FONT = 'merriweather';
+export const DEFAULT_SIZE = 'large';
 
 // Các font được hỗ trợ
 export const SUPPORTED_FONTS = [

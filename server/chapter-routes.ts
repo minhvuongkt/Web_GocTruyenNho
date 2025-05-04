@@ -5,18 +5,10 @@ import { processInlineImages } from './document-processor';
 
 // Import middleware authentication
 const ensureAdmin = (req: Request, res: Response, next: Function) => {
-  // Kiểm tra nếu user đã đăng nhập (được xác thực)
-  if (!req.isAuthenticated() || !req.user) {
-    return res.status(401).json({ error: "Not authenticated" });
+  if (!req.user || (req.user as any).role !== "admin") {
+    return res.status(403).json({ error: "Forbidden. Admin access required." });
   }
-
-  // Kiểm tra nếu user có role admin
-  if ((req.user as any).role === "admin") {
-    return next();
-  }
-
-  // Nếu không phải admin thì từ chối truy cập
-  res.status(403).json({ error: "Forbidden" });
+  next();
 };
 
 // Middleware để xử lý hình ảnh nội tuyến trong nội dung
@@ -58,7 +50,7 @@ export function registerChapterRoutes(app: Express) {
       // Kiểm tra chapter bị khóa
       let isUnlocked = !chapterInfo.chapter.isLocked;
       
-      if (chapterInfo.chapter.isLocked && req.isAuthenticated()) {
+      if (chapterInfo.chapter.isLocked && req.user) {
         // TODO: Kiểm tra user đã mở khóa chapter chưa
         const userId = (req.user as any).id;
         // isUnlocked = await storage.isChapterUnlocked(userId, chapterInfo.chapter.id);
@@ -118,7 +110,7 @@ export function registerChapterRoutes(app: Express) {
       // Kiểm tra chapter bị khóa
       let isUnlocked = !chapterInfo.chapter.isLocked;
       
-      if (chapterInfo.chapter.isLocked && req.isAuthenticated()) {
+      if (chapterInfo.chapter.isLocked && req.user) {
         // TODO: Kiểm tra user đã mở khóa chapter chưa
         const userId = (req.user as any).id;
         // isUnlocked = await storage.isChapterUnlocked(userId, chapterInfo.chapter.id);

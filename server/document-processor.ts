@@ -35,7 +35,7 @@ function formatHTML(content: string, font = DEFAULT_FONT, size = DEFAULT_SIZE): 
  * @param html Chuỗi HTML đầu vào
  * @returns Chuỗi HTML đã được làm sạch
  */
-function cleanHTML(html: string): string {
+export function cleanHTML(html: string): string {
   let cleaned = html;
   
   // Loại bỏ các thẻ span và p lồng nhau không cần thiết

@@ -307,12 +307,11 @@ const EnhancedRichTextEditor: React.FC<EnhancedRichTextEditorProps> = ({
     try {
       setIsAutoSaving(true);
       
-      await apiRequest(`/api/chapters/${chapterId}`, {
-        method: 'PATCH',
-        data: {
-          content: content
-        }
-      });
+      await apiRequest(
+        'PATCH',
+        `/api/chapters/${chapterId}`, 
+        { content: content }
+      );
       
       setLastSaved(new Date());
       toast({

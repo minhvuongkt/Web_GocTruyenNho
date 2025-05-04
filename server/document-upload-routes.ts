@@ -1,79 +1,83 @@
-import express, { Request, Response } from 'express';
+import express from 'express';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 import { v4 as uuidv4 } from 'uuid';
-import { docxToHtml, docToHtml, txtToHtml, pdfToHtml, processInlineImages } from './document-processor';
 import { ensureAuthenticated, ensureAdmin } from './auth-middleware';
+import { processDocument, processInlineImages } from './document-processor';
 import { processNovelContent } from './novel-content-processor';
 
-// Đảm bảo thư mục tồn tại
-const createDirectoryIfNotExists = (dir: string) => {
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
+// Tạo thư mục uploads nếu chưa có
+const createUploadsDir = (dirPath: string) => {
+  if (!fs.existsSync(dirPath)) {
+    fs.mkdirSync(dirPath, { recursive: true });
   }
 };
 
-// Cấu hình lưu trữ tài liệu
+// Cấu hình lưu trữ cho document
 const documentStorage = multer.diskStorage({
   destination: (req, file, cb) => {
-    const uploadDir = 'public/uploads/documents';
-    createDirectoryIfNotExists(uploadDir);
+    const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'documents');
+    createUploadsDir(uploadDir);
     cb(null, uploadDir);
   },
   filename: (req, file, cb) => {
-    const uniqueFilename = `${Date.now()}-${uuidv4()}${path.extname(file.originalname)}`;
-    cb(null, uniqueFilename);
-  },
+    const uniqueSuffix = uuidv4();
+    const ext = path.extname(file.originalname);
+    cb(null, file.fieldname + '-' + uniqueSuffix + ext);
+  }
 });
 
-// Cấu hình lưu trữ media
+// Cấu hình lưu trữ cho media (ảnh/video)
 const mediaStorage = multer.diskStorage({
   destination: (req, file, cb) => {
-    const uploadDir = 'public/uploads/content-images';
-    createDirectoryIfNotExists(uploadDir);
+    const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'media');
+    createUploadsDir(uploadDir);
     cb(null, uploadDir);
   },
   filename: (req, file, cb) => {
-    const uniqueFilename = `${Date.now()}-${uuidv4()}${path.extname(file.originalname)}`;
-    cb(null, uniqueFilename);
-  },
+    const uniqueSuffix = uuidv4();
+    const ext = path.extname(file.originalname);
+    cb(null, file.fieldname + '-' + uniqueSuffix + ext);
+  }
 });
 
-// Filter cho tài liệu
+// Filter cho document
 const documentFilter = (req: any, file: Express.Multer.File, cb: Function) => {
-  const allowedExts = ['.docx', '.doc', '.txt', '.pdf'];
-  const ext = path.extname(file.originalname).toLowerCase();
+  const allowedMimes = [
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document', // docx
+    'application/msword', // doc
+    'text/plain', // txt
+    'application/pdf', // pdf
+  ];
   
-  if (allowedExts.includes(ext)) {
+  if (allowedMimes.includes(file.mimetype)) {
     cb(null, true);
   } else {
-    cb(new Error('Định dạng file không được hỗ trợ'), false);
+    cb(new Error('Unsupported file type! Only docx, doc, txt, and pdf are allowed.'), false);
   }
 };
 
 // Filter cho media
 const mediaFilter = (req: any, file: Express.Multer.File, cb: Function) => {
-  const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'video/mp4', 'video/webm'];
-  
-  if (allowedMimeTypes.includes(file.mimetype)) {
+  if (file.mimetype.startsWith('image/') || file.mimetype.startsWith('video/')) {
     cb(null, true);
   } else {
-    cb(new Error('Định dạng media không được hỗ trợ'), false);
+    cb(new Error('Unsupported file type! Only images and videos are allowed.'), false);
   }
 };
 
-// Khởi tạo multer
+// Tạo multer uploader
 const uploadDocument = multer({
   storage: documentStorage,
   fileFilter: documentFilter,
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
+  limits: { fileSize: 10 * 1024 * 1024 } // 10MB
 });
 
 const uploadMedia = multer({
   storage: mediaStorage,
   fileFilter: mediaFilter,
-  limits: { fileSize: 50 * 1024 * 1024 }, // 50MB
+  limits: { fileSize: 20 * 1024 * 1024 } // 20MB
 });
 
 /**
@@ -83,83 +87,74 @@ const uploadMedia = multer({
 export function registerUploadRoutes(app: express.Express) {
   console.log('Registering upload routes...');
   
-  // Route upload tài liệu
-  app.post('/api/upload/document', ensureAuthenticated, ensureAdmin, uploadDocument.single('document'), async (req: Request, res: Response) => {
+  // Route cho upload document
+  app.post('/api/upload/document', ensureAuthenticated, ensureAdmin, uploadDocument.single('document'), async (req: express.Request, res: express.Response) => {
     try {
       if (!req.file) {
-        return res.status(400).json({ error: 'Không tìm thấy file' });
+        return res.status(400).json({ error: 'No file uploaded' });
       }
       
-      const file = req.file;
-      const fileExt = path.extname(file.originalname).toLowerCase();
-      const filePath = file.path;
-      
-      console.log(`Processing document: ${file.originalname} (${fileExt})`);
-      
-      // Đọc file buffer
+      // Xử lý file document thành HTML
+      const filePath = req.file.path;
       const fileBuffer = fs.readFileSync(filePath);
-      let htmlContent = '';
       
-      // Chuyển đổi dựa trên loại file
-      if (fileExt === '.docx') {
-        htmlContent = await docxToHtml(fileBuffer);
-      } else if (fileExt === '.doc') {
-        htmlContent = await docToHtml(fileBuffer);
-      } else if (fileExt === '.txt') {
-        htmlContent = await txtToHtml(fileBuffer);
-      } else if (fileExt === '.pdf') {
-        htmlContent = await pdfToHtml(fileBuffer);
-      } else {
-        return res.status(400).json({ error: 'Định dạng file không được hỗ trợ' });
-      }
+      // Chuyển đổi document sang HTML
+      let htmlContent = await processDocument(fileBuffer, req.file.mimetype);
       
-      // Xử lý ảnh trong nội dung nếu có
+      // Xử lý ảnh inline trong HTML (nếu có)
       htmlContent = await processInlineImages(htmlContent);
       
-      // Xử lý nội dung truyện
+      // Định dạng nội dung novel
       const processedContent = processNovelContent(htmlContent, {
+        preserveHtml: true,
         autoClean: true
       });
       
-      // Xóa file tạm
-      fs.unlinkSync(filePath);
-      
-      return res.status(200).json({
+      // Trả về nội dung HTML đã xử lý
+      res.json({
         success: true,
-        content: processedContent
+        content: processedContent,
+        originalName: req.file.originalname
       });
       
-    } catch (error) {
+      // Xóa file tạm sau khi xử lý
+      fs.unlink(filePath, (err) => {
+        if (err) console.error('Error deleting temp file:', err);
+      });
+      
+    } catch (error: any) {
       console.error('Error processing document:', error);
-      return res.status(500).json({ error: 'Lỗi xử lý tài liệu' });
+      res.status(500).json({ 
+        error: 'Failed to process document', 
+        details: error.message 
+      });
     }
   });
   
-  // Route upload media
-  app.post('/api/upload/media', ensureAuthenticated, ensureAdmin, uploadMedia.single('media'), async (req: Request, res: Response) => {
+  // Route cho upload media
+  app.post('/api/upload/media', ensureAuthenticated, ensureAdmin, uploadMedia.single('media'), async (req: express.Request, res: express.Response) => {
     try {
       if (!req.file) {
-        return res.status(400).json({ error: 'Không tìm thấy file' });
+        return res.status(400).json({ error: 'No file uploaded' });
       }
       
-      const file = req.file;
-      const filePath = file.path;
-      const relativePath = filePath.replace('public', '');
+      // Tạo URL cho media
+      const mediaUrl = `/uploads/media/${req.file.filename}`;
       
-      // URL được sử dụng trong editor
-      const mediaUrl = relativePath;
-      
-      console.log(`Media uploaded: ${file.originalname}, URL: ${mediaUrl}`);
-      
-      return res.status(200).json({
+      // Trả về URL media
+      res.json({
         success: true,
         url: mediaUrl,
-        type: file.mimetype
+        originalName: req.file.originalname,
+        mimeType: req.file.mimetype
       });
       
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error uploading media:', error);
-      return res.status(500).json({ error: 'Lỗi tải lên media' });
+      res.status(500).json({ 
+        error: 'Failed to upload media', 
+        details: error.message 
+      });
     }
   });
   

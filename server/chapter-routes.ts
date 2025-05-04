@@ -4,12 +4,19 @@ import * as chapterService from './chapter-service';
 import { processInlineImages } from './document-processor';
 
 // Import middleware authentication
-const ensureAdmin = (req: Request, res: Response, next: Function) => {
-  if (!req.user || (req.user as any).role !== "admin") {
+function ensureAdmin(req: Request, res: Response, next: Function) {
+  // Kiểm tra nếu user đã đăng nhập (được xác thực)
+  if (!req.isAuthenticated || !req.isAuthenticated()) {
+    return res.status(401).json({ error: "Not authenticated" });
+  }
+
+  // Kiểm tra nếu user có role admin
+  if ((req.user as any).role !== "admin") {
     return res.status(403).json({ error: "Forbidden. Admin access required." });
   }
+
   next();
-};
+}
 
 // Middleware để xử lý hình ảnh nội tuyến trong nội dung
 async function processContentImages(req: Request, res: Response, next: Function) {
@@ -50,7 +57,7 @@ export function registerChapterRoutes(app: Express) {
       // Kiểm tra chapter bị khóa
       let isUnlocked = !chapterInfo.chapter.isLocked;
       
-      if (chapterInfo.chapter.isLocked && req.user) {
+      if (chapterInfo.chapter.isLocked && req.isAuthenticated && req.isAuthenticated()) {
         // TODO: Kiểm tra user đã mở khóa chapter chưa
         const userId = (req.user as any).id;
         // isUnlocked = await storage.isChapterUnlocked(userId, chapterInfo.chapter.id);
@@ -110,7 +117,7 @@ export function registerChapterRoutes(app: Express) {
       // Kiểm tra chapter bị khóa
       let isUnlocked = !chapterInfo.chapter.isLocked;
       
-      if (chapterInfo.chapter.isLocked && req.user) {
+      if (chapterInfo.chapter.isLocked && req.isAuthenticated && req.isAuthenticated()) {
         // TODO: Kiểm tra user đã mở khóa chapter chưa
         const userId = (req.user as any).id;
         // isUnlocked = await storage.isChapterUnlocked(userId, chapterInfo.chapter.id);
@@ -156,6 +163,13 @@ export function registerChapterRoutes(app: Express) {
       
       const { content, ...chapterData } = req.body;
       
+      // Log nhiều hơn để xem dữ liệu đầu vào
+      console.log('Creating new chapter with data:', {
+        contentId,
+        bodyData: req.body,
+        content: content ? `Content length: ${content.length}` : 'No content provided'
+      });
+      
       // Tạo chapter mới với service
       const newChapter = await chapterService.createChapter(
         {
@@ -165,6 +179,7 @@ export function registerChapterRoutes(app: Express) {
         content
       );
       
+      console.log('Chapter created successfully:', newChapter);
       res.status(201).json(newChapter);
     } catch (error) {
       console.error('Error creating chapter:', error);

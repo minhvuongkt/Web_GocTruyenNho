@@ -78,7 +78,6 @@ export async function docxToHtml(buffer: Buffer): Promise<string> {
         "strike => s",
         "p => p:fresh",
       ],
-      preserveClassNames: true,
       includeDefaultStyleMap: true,
     });
 
@@ -187,13 +186,17 @@ export async function pdfToHtml(buffer: Buffer): Promise<string> {
       // Cải thiện thuật toán phát hiện đoạn văn
       let lastY = null;
       let paragraphText = '';
-      let lastItem = null;
+      let lastItem: any = null;
       
-      for (const item of textContent.items) {
+      for (const textItem of textContent.items) {
+        // Tránh TypeScript errors bằng cách kiểm tra loại item
+        if (!('str' in textItem)) continue;
+        
+        const item = textItem as any; // Dùng any để tránh type errors
         const text = item.str;
         
         // Phát hiện đoạn văn dựa trên tọa độ Y và khoảng cách giữa các từ
-        const currentY = Math.round(item.transform[5]);
+        const currentY = Math.round(item.transform?.[5] || 0);
         
         // Tạo một đoạn văn mới khi có sự thay đổi đáng kể về vị trí Y
         if (lastY === null || Math.abs(currentY - lastY) > 3) {
@@ -202,12 +205,13 @@ export async function pdfToHtml(buffer: Buffer): Promise<string> {
             paragraphText = '';
           }
           lastY = currentY;
-        } else if (lastItem && item.transform[4] < lastItem.transform[4]) {
+        } else if (lastItem && item.transform?.[4] < lastItem.transform?.[4]) {
           // Nếu vị trí X giảm đáng kể, có thể là dòng mới trong cùng một đoạn
           paragraphText += ' ' + text;
         } else {
           // Thêm khoảng trắng phù hợp giữa các từ
-          const spaceWidth = lastItem ? Math.abs(item.transform[4] - (lastItem.transform[4] + lastItem.width)) : 0;
+          const spaceWidth = lastItem ? 
+            Math.abs((item.transform?.[4] || 0) - ((lastItem.transform?.[4] || 0) + (lastItem.width || 0))) : 0;
           if (spaceWidth > 5) {
             paragraphText += ' ' + text;
           } else {
@@ -302,8 +306,13 @@ export async function processInlineImages(html: string): Promise<string> {
     let match;
     let processedHtml = html;
     
-    const promises = [];
-    const replacements = [];
+    type Replacement = {
+      original: string;
+      replacement: string;
+    };
+    
+    const promises: Promise<void>[] = [];
+    const replacements: Replacement[] = [];
     
     // Tìm tất cả các Data URL và xử lý chúng
     while ((match = regex.exec(html)) !== null) {

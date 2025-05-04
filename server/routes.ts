@@ -1464,12 +1464,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(400).json({ error: "No text file uploaded" });
         }
 
-        // Import module xử lý tài liệu
-        const { processDocument } = await import('./document-processor.js');
+        // Import module xử lý tài liệu với các chức năng được cập nhật
+        const { processDocument, processInlineImages } = await import('./document-processor.js');
         
         try {
-          // Xử lý tài liệu bằng module chuyên dụng
-          const content = await processDocument(req.file.buffer, req.file.mimetype);
+          console.log(`Processing ${req.file.originalname} (${req.file.mimetype})`);
+          
+          // Xử lý tài liệu bằng module chuyên dụng được cải tiến
+          let content = await processDocument(req.file.buffer, req.file.mimetype);
+          
+          // Xử lý và lưu các hình ảnh base64 trong nội dung (nếu có)
+          if (content.includes('data:image')) {
+            console.log('Detected inline images in content, processing...');
+            content = await processInlineImages(content);
+          }
+          
+          // Trả về nội dung đã xử lý
           res.status(200).json({ content });
         } catch (processingError) {
           console.error("Error processing document:", processingError);

@@ -911,10 +911,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
             contentType: contentInfo.type,
             contentPreview: content.substring(0, 100) + (content.length > 100 ? '...' : '')
           });
-
+          
+          // Xử lý nội dung để đảm bảo font và size được giữ lại
+          let processedContent = content;
+          
+          // Kiểm tra nếu là novel và nội dung chưa có class font/size
+          if (contentInfo.type === "novel") {
+            // Import module xử lý tài liệu
+            const { cleanHTML } = await import('./document-processor.js');
+            
+            // Đảm bảo tất cả các HTML có định dạng font và size đúng
+            processedContent = cleanHTML(content);
+            
+            console.log("Content processed to preserve font/size formatting");
+          }
+          
           const newContent = await db
             .insert(schema.chapterContent)
-            .values({ chapterId: chapter.id, content })
+            .values({ chapterId: chapter.id, content: processedContent })
             .returning();
 
           console.log("Saved chapter content with ID:", newContent[0]?.id);
@@ -1142,10 +1156,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
             }
           }
 
-          // Create new content
+          // Xử lý nội dung để đảm bảo font và size được giữ lại
+          let processedContent = req.body.content || "";
+          
+          // Xử lý để đảm bảo định dạng font và size được giữ lại
+          const { cleanHTML } = await import('./document-processor.js');
+          processedContent = cleanHTML(processedContent);
+          
+          console.log("Content processed to preserve font/size formatting for new chapter content");
+          
+          // Tạo nội dung mới với định dạng đã được xử lý
           const newContent = await storage.createChapterContent({
             chapterId,
-            content: req.body.content || "",
+            content: processedContent,
           });
 
           return res.status(201).json(newContent);
@@ -1166,6 +1189,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const updateChapterContentHandler = async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
+      
+      // Nếu có nội dung mới, xử lý để đảm bảo định dạng font/size
+      if (req.body.content) {
+        // Import module xử lý tài liệu
+        const { cleanHTML } = await import('./document-processor.js');
+        
+        // Đảm bảo tất cả các HTML có định dạng font và size đúng
+        req.body.content = cleanHTML(req.body.content);
+        
+        console.log("Content processed to preserve font/size formatting in update handler");
+      }
+      
       const updatedContent = await storage.updateChapterContent(id, req.body);
 
       if (!updatedContent) {
@@ -1174,6 +1209,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json(updatedContent);
     } catch (error) {
+      console.error("Error updating chapter content:", error);
       res.status(500).json({ error: "Failed to update chapter content" });
     }
   };

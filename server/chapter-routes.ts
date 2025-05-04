@@ -6,7 +6,7 @@ import { processInlineImages } from './document-processor';
 // Import middleware authentication
 const ensureAdmin = (req: Request, res: Response, next: Function) => {
   // Kiểm tra nếu user đã đăng nhập (được xác thực)
-  if (!req.user) {
+  if (!req.isAuthenticated() || !req.user) {
     return res.status(401).json({ error: "Not authenticated" });
   }
 
@@ -58,7 +58,7 @@ export function registerChapterRoutes(app: Express) {
       // Kiểm tra chapter bị khóa
       let isUnlocked = !chapterInfo.chapter.isLocked;
       
-      if (chapterInfo.chapter.isLocked && req.user) {
+      if (chapterInfo.chapter.isLocked && req.isAuthenticated()) {
         // TODO: Kiểm tra user đã mở khóa chapter chưa
         const userId = (req.user as any).id;
         // isUnlocked = await storage.isChapterUnlocked(userId, chapterInfo.chapter.id);
@@ -118,7 +118,7 @@ export function registerChapterRoutes(app: Express) {
       // Kiểm tra chapter bị khóa
       let isUnlocked = !chapterInfo.chapter.isLocked;
       
-      if (chapterInfo.chapter.isLocked && req.user) {
+      if (chapterInfo.chapter.isLocked && req.isAuthenticated()) {
         // TODO: Kiểm tra user đã mở khóa chapter chưa
         const userId = (req.user as any).id;
         // isUnlocked = await storage.isChapterUnlocked(userId, chapterInfo.chapter.id);

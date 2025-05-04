@@ -5,6 +5,10 @@ import * as schema from '@shared/schema';
 import { processNovelContent, hasProperFormatting } from './novel-content-processor';
 import { cleanHTML } from './document-processor';
 
+// Các constants mặc định cho font và size
+const DEFAULT_FONT = 'merriweather'; 
+const DEFAULT_SIZE = 'large';
+
 // Interface định nghĩa các tham số cập nhật chapter
 export interface UpdateChapterParams {
   id: number;
@@ -174,9 +178,19 @@ export async function updateChapter(params: UpdateChapterParams) {
         // Kiểm tra xem nội dung đã có định dạng font/size chưa
         if (!hasProperFormatting(content)) {
           console.log('Content does not have proper formatting, cleaning HTML...');
-          processedContent = cleanHTML(content);
+          // Sử dụng processNovelContent thay vì cleanHTML trực tiếp
+          // để xử lý font và size một cách đúng đắn
+          processedContent = processNovelContent(content, {
+            font: DEFAULT_FONT,
+            size: DEFAULT_SIZE,
+            autoClean: true
+          });
         } else {
           console.log('Content already has proper formatting');
+          // Giữ lại định dạng hiện có nhưng vẫn đảm bảo nội dung được xử lý đúng cách
+          processedContent = processNovelContent(content, {
+            autoClean: false
+          });
         }
       }
 
@@ -251,9 +265,18 @@ export async function createChapter(
         // Kiểm tra xem nội dung đã có định dạng font/size chưa
         if (!hasProperFormatting(content)) {
           console.log('Content does not have proper formatting, cleaning HTML...');
-          processedContent = cleanHTML(content);
+          // Sử dụng processNovelContent thay vì cleanHTML trực tiếp
+          processedContent = processNovelContent(content, {
+            font: DEFAULT_FONT,
+            size: DEFAULT_SIZE,
+            autoClean: true
+          });
         } else {
           console.log('Content already has proper formatting');
+          // Giữ lại định dạng hiện có nhưng vẫn đảm bảo nội dung được xử lý đúng cách
+          processedContent = processNovelContent(content, {
+            autoClean: false
+          });
         }
       }
 

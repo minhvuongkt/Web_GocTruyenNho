@@ -60,9 +60,17 @@ export function registerChapterRoutes(app: Express) {
         // await storage.incrementChapterViews(chapterInfo.chapter.id);
       }
       
+      // Lấy nội dung chapter nếu có
       const chapterContent = chapterInfo.contents && chapterInfo.contents.length > 0
         ? chapterInfo.contents[0].content
         : '';
+      
+      console.log(`Sending chapter ${id} with content length: ${chapterContent.length}`);
+      if (chapterContent.length > 0) {
+        // Log sample của nội dung để debug
+        const sampleLength = Math.min(200, chapterContent.length);
+        console.log('Content sample:', chapterContent.substring(0, sampleLength));
+      }
       
       // Trả về dữ liệu chapter
       res.json({
@@ -120,9 +128,17 @@ export function registerChapterRoutes(app: Express) {
         // await storage.incrementChapterViews(chapterInfo.chapter.id);
       }
       
+      // Lấy nội dung chapter nếu có
       const chapterContent = chapterInfo.contents && chapterInfo.contents.length > 0
         ? chapterInfo.contents[0].content
         : '';
+      
+      console.log(`Sending chapter for content ${contentId}, number ${chapterNumber} with content length: ${chapterContent.length}`);
+      if (chapterContent.length > 0) {
+        // Log sample của nội dung để debug
+        const sampleLength = Math.min(200, chapterContent.length);
+        console.log('Content sample:', chapterContent.substring(0, sampleLength));
+      }
       
       // Trả về dữ liệu chapter
       res.json({
@@ -159,6 +175,11 @@ export function registerChapterRoutes(app: Express) {
         content: content ? `Content length: ${content.length}` : 'No content provided'
       });
       
+      if (content && content.length > 0) {
+        const sampleLength = Math.min(200, content.length);
+        console.log('Content sample:', content.substring(0, sampleLength));
+      }
+      
       // Tạo chapter mới với service
       const newChapter = await chapterService.createChapter(
         {
@@ -188,7 +209,14 @@ export function registerChapterRoutes(app: Express) {
         return res.status(400).json({ error: 'Invalid chapter ID' });
       }
       
-      console.log('Updating chapter with data:', req.body);
+      const { content, ...otherData } = req.body;
+      
+      console.log(`Updating chapter ${id} with data:`, otherData);
+      if (content) {
+        console.log(`Content length: ${content.length}`);
+        const sampleLength = Math.min(200, content.length);
+        console.log('Content sample:', content.substring(0, sampleLength));
+      }
       
       // Sử dụng service để cập nhật chapter
       const updatedChapter = await chapterService.updateChapter({
@@ -215,7 +243,14 @@ export function registerChapterRoutes(app: Express) {
         return res.status(400).json({ error: 'Invalid chapter ID' });
       }
       
-      console.log('Updating chapter with data:', req.body);
+      const { content, ...otherData } = req.body;
+      
+      console.log(`Updating chapter ${id} with data:`, otherData);
+      if (content) {
+        console.log(`Content length: ${content.length}`);
+        const sampleLength = Math.min(200, content.length);
+        console.log('Content sample:', content.substring(0, sampleLength));
+      }
       
       // Sử dụng service để cập nhật chapter
       const updatedChapter = await chapterService.updateChapter({
@@ -293,8 +328,14 @@ export function registerChapterRoutes(app: Express) {
         });
       }
       
-      const { title, content } = req.body;
-      console.log('Updating chapter by content and number:', req.body);
+      const { title, content, ...otherData } = req.body;
+      console.log(`Updating chapter for content ${contentId}, number ${chapterNumber}`);
+      
+      if (content) {
+        console.log(`Content length: ${content.length}`);
+        const sampleLength = Math.min(200, content.length);
+        console.log('Content sample:', content.substring(0, sampleLength));
+      }
       
       // Lấy thông tin chapter
       const chapterInfo = await chapterService.getChapterByContentAndNumber(contentId, chapterNumber);
@@ -307,7 +348,8 @@ export function registerChapterRoutes(app: Express) {
       const updatedChapter = await chapterService.updateChapter({
         id: chapterInfo.chapter.id,
         title,
-        content
+        content,
+        ...otherData
       });
       
       res.json(updatedChapter);

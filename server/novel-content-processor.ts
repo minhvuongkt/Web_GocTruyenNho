@@ -65,10 +65,30 @@ export function processNovelContent(
   // Tự động làm sạch HTML nếu được bật
   let processedContent = content;
   
+  console.log('Processing novel content with options:', {
+    font, size, autoClean, preserveHtml,
+    contentLength: content.length
+  });
+  
   // Đảm bảo định dạng font và size đúng
   if (autoClean) {
     processedContent = cleanHTML(content);
-    console.log('Novel content cleaned with font', font, 'size', size);
+    console.log('Novel content cleaned, new length:', processedContent.length);
+    
+    // Log mẫu của nội dung đã được xử lý
+    const sampleLength = Math.min(200, processedContent.length);
+    console.log('Processed content sample:', processedContent.substring(0, sampleLength));
+  }
+
+  // Đảm bảo các thẻ đều có lớp font và size
+  if (!hasProperFormatting(processedContent)) {
+    console.log('Adding font and size classes to content...');
+    
+    // Thêm font và size vào các phần tử không có
+    processedContent = processedContent
+      .replace(/<p(?![^>]*class=["'][^"']*ql-font)/g, `<p class="ql-font-${font} ql-size-${size}"`)
+      .replace(/<span(?![^>]*class=["'][^"']*ql-font)/g, `<span class="ql-font-${font} ql-size-${size}"`)
+      .replace(/<div(?![^>]*class=["'][^"']*ql-font)/g, `<div class="ql-font-${font} ql-size-${size}"`);
   }
 
   return processedContent;

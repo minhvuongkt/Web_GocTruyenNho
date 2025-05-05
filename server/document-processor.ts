@@ -36,10 +36,21 @@ function formatHTML(content: string, font = DEFAULT_FONT, size = DEFAULT_SIZE): 
  * @returns Chuỗi HTML đã được làm sạch
  */
 export function cleanHTML(html: string): string {
+  if (!html) return '';
+  
+  console.log("Original HTML length:", html.length);
+  
   let cleaned = html;
+  
+  // Loại bỏ các tag script và style
+  cleaned = cleaned.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+    .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, '');
   
   // Loại bỏ các thẻ span và p lồng nhau không cần thiết
   cleaned = cleaned.replace(/<p><span>(.*?)<\/span><\/p>/g, '<p>$1</p>');
+  
+  // Thay thế các đoạn trống bằng đoạn có khoảng trắng không phá vỡ
+  cleaned = cleaned.replace(/<p><\/p>/g, '<p>&nbsp;</p>');
   
   // Đảm bảo các thẻ p có class font và size đúng
   // Thêm classes vào các thẻ p nếu chúng không có
@@ -49,6 +60,15 @@ export function cleanHTML(html: string): string {
   // Thêm các thuộc tính font và size vào các thẻ span nếu chúng không có
   cleaned = cleaned.replace(/<span(?![^>]*class=["'][^"']*ql-font)/g, 
     `<span class="ql-font-${DEFAULT_FONT} ql-size-${DEFAULT_SIZE}"`);
+  
+  // Đảm bảo thẻ div cũng có định dạng
+  cleaned = cleaned.replace(/<div(?![^>]*class=["'][^"']*ql-font)/g, 
+    `<div class="ql-font-${DEFAULT_FONT} ql-size-${DEFAULT_SIZE}"`);
+  
+  // Chuẩn hóa các thẻ <br> để đảm bảo tính nhất quán
+  cleaned = cleaned.replace(/<br>/g, '<br />');
+  
+  console.log("Cleaned HTML length:", cleaned.length);
   
   return cleaned;
 }

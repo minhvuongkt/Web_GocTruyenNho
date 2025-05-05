@@ -148,10 +148,22 @@ export async function updateChapter(params: UpdateChapterParams) {
     }
 
     // Cập nhật thông tin chapter
-    const updateData = { ...chapterData };
+    const updateData: any = { ...chapterData };
     if (finalReleaseDate !== undefined) {
-      updateData.releaseDate = finalReleaseDate as Date | null;
+      // Nếu null, không cập nhật trường này để tránh lỗi type
+      if (finalReleaseDate === null) {
+        delete updateData.releaseDate;
+      } else {
+        updateData.releaseDate = finalReleaseDate as Date;
+      }
     }
+
+    // Loại bỏ các trường undefined để tránh lỗi type
+    Object.keys(updateData).forEach(key => {
+      if (updateData[key] === undefined) {
+        delete updateData[key];
+      }
+    });
 
     console.log(`Updating chapter ${id} with data:`, updateData);
     
@@ -169,25 +181,32 @@ export async function updateChapter(params: UpdateChapterParams) {
 
       // Xử lý nội dung dựa trên loại truyện
       if (contentType === 'novel') {
-        console.log('Processing novel content for chapter', id);
+        console.log('Processing novel content for chapter', id, 'content length:', content.length);
         
         // Kiểm tra xem nội dung đã có định dạng font/size chưa
         if (!hasProperFormatting(content)) {
-          console.log('Content does not have proper formatting, cleaning HTML...');
+          console.log('Content does not have proper formatting, processing novel content...');
           // Sử dụng processNovelContent thay vì cleanHTML trực tiếp
           // để xử lý font và size một cách đúng đắn
           processedContent = processNovelContent(content, {
             font: DEFAULT_FONT,
             size: DEFAULT_SIZE,
-            autoClean: true
+            autoClean: true,
+            preserveHtml: true
           });
+          console.log('Processed content length:', processedContent.length);
         } else {
           console.log('Content already has proper formatting');
           // Giữ lại định dạng hiện có nhưng vẫn đảm bảo nội dung được xử lý đúng cách
           processedContent = processNovelContent(content, {
-            autoClean: false
+            autoClean: false,
+            preserveHtml: true
           });
         }
+        
+        // Log sample của nội dung đã xử lý để debug
+        const sampleLength = Math.min(200, processedContent.length);
+        console.log('Processed content sample:', processedContent.substring(0, sampleLength));
       }
 
       // Xóa nội dung cũ
@@ -256,22 +275,25 @@ export async function createChapter(
 
       // Xử lý nội dung dựa trên loại truyện
       if (contentInfo.type === 'novel') {
-        console.log('Processing novel content for new chapter');
+        console.log('Processing novel content for new chapter, content length:', content.length);
         
         // Kiểm tra xem nội dung đã có định dạng font/size chưa
         if (!hasProperFormatting(content)) {
-          console.log('Content does not have proper formatting, cleaning HTML...');
+          console.log('Content does not have proper formatting, processing novel content...');
           // Sử dụng processNovelContent thay vì cleanHTML trực tiếp
           processedContent = processNovelContent(content, {
             font: DEFAULT_FONT,
             size: DEFAULT_SIZE,
-            autoClean: true
+            autoClean: true,
+            preserveHtml: true
           });
+          console.log('Processed content length:', processedContent.length);
         } else {
           console.log('Content already has proper formatting');
           // Giữ lại định dạng hiện có nhưng vẫn đảm bảo nội dung được xử lý đúng cách
           processedContent = processNovelContent(content, {
-            autoClean: false
+            autoClean: false,
+            preserveHtml: true
           });
         }
       }

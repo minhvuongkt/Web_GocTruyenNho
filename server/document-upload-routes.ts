@@ -43,6 +43,14 @@ const mediaStorage = multer.diskStorage({
   }
 });
 
+// Custom error for file type validation
+class FileTypeError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'FileTypeError';
+  }
+}
+
 // Filter cho document
 const documentFilter = (req: any, file: Express.Multer.File, cb: Function) => {
   const allowedMimes = [
@@ -55,7 +63,7 @@ const documentFilter = (req: any, file: Express.Multer.File, cb: Function) => {
   if (allowedMimes.includes(file.mimetype)) {
     cb(null, true);
   } else {
-    cb(new Error('Unsupported file type! Only docx, doc, txt, and pdf are allowed.'), false);
+    cb(new FileTypeError('Unsupported file type! Only docx, doc, txt, and pdf are allowed.'), false);
   }
 };
 
@@ -64,7 +72,7 @@ const mediaFilter = (req: any, file: Express.Multer.File, cb: Function) => {
   if (file.mimetype.startsWith('image/') || file.mimetype.startsWith('video/')) {
     cb(null, true);
   } else {
-    cb(new Error('Unsupported file type! Only images and videos are allowed.'), false);
+    cb(new FileTypeError('Unsupported file type! Only images and videos are allowed.'), false);
   }
 };
 

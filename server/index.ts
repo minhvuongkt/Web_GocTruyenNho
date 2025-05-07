@@ -40,6 +40,17 @@ app.use((req, res, next) => {
   const server = await registerRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+    // Handle specific error types
+    if (err.name === 'FileTypeError') {
+      // For file type validation errors, return 400 Bad Request
+      return res.status(400).json({ 
+        message: err.message,
+        error: 'validation_error',
+        type: 'file_type'
+      });
+    }
+    
+    // Default error status handling
     const status = err.status || err.statusCode || 500;
     const message = err.message || "Internal Server Error";
 

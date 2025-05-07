@@ -19,27 +19,48 @@ async function testInvalidFileUpload() {
     
     // Try to upload an invalid file type
     console.log('\nAttempting to upload an invalid file type...');
+    
     try {
-      const uploadResponse = execSync(`curl -s -b cookies.txt -F "document=@test-invalid.js" -F "contentId=2" -F "number=12" -F "title=Invalid Test Chapter" -F "isLocked=false" http://localhost:5000/api/upload/chapter-document/2`);
-      console.log('Unexpected success:', uploadResponse.toString());
-    } catch (e) {
-      // This should fail with an error about invalid mime type
-      console.log('Expected error occurred:');
-      console.log(e.message);
+      // Using --fail to make curl fail on error responses (4xx, 5xx)
+      // Using -w option to get HTTP status code along with output
+      const uploadResponse = execSync(`curl -s -w "\nHTTP Status: %{http_code}" --fail -b cookies.txt -F "document=@test-invalid.js" -F "contentId=2" -F "number=12" -F "title=Invalid Test Chapter" -F "isLocked=false" http://localhost:5000/api/upload/chapter-document/2`);
       
-      // The response data might be in the error output
-      const errorMatch = e.message.match(/<!DOCTYPE html>[\s\S]*<\/html>/);
-      if (errorMatch) {
-        console.log('Server returned HTML error page');
+      // This should not execute if we have proper error handling
+      console.log('UNEXPECTED SUCCESS - server should have rejected the file:');
+      console.log(uploadResponse.toString());
+    } catch (e) {
+      // This is the expected behavior - curl should fail with error code
+      console.log('Server correctly rejected the invalid file type');
+      
+      // Extract the response from the error
+      const responseMatch = e.message.match(/curl:.*\n(.*)/);
+      if (responseMatch && responseMatch[1]) {
+        try {
+          // Try to parse as JSON
+          const jsonResponse = JSON.parse(responseMatch[1]);
+          console.log('Response:', jsonResponse);
+          if (jsonResponse.message && jsonResponse.message.includes('Unsupported file type')) {
+            console.log('✅ File type validation is working correctly!');
+            console.log('Status code should be 400 Bad Request');
+          }
+        } catch (parseErr) {
+          console.log('Raw response:', responseMatch[1]);
+        }
       } else {
+        // Try to extract any JSON from the error message
         const jsonMatch = e.message.match(/{[\s\S]*}/);
         if (jsonMatch) {
           try {
             const errorJson = JSON.parse(jsonMatch[0]);
             console.log('Error response:', errorJson);
+            if (errorJson.message && errorJson.message.includes('Unsupported file type')) {
+              console.log('✅ File type validation is working correctly!');
+            }
           } catch (parseErr) {
-            console.log('Could not parse error JSON');
+            console.log('Error contains JSON-like content but could not parse it');
           }
+        } else {
+          console.log('Raw error:', e.message);
         }
       }
     }

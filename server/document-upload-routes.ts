@@ -6,6 +6,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { ensureAuthenticated, ensureAdmin } from './auth-middleware';
 import { processDocument, processInlineImages } from './document-processor';
 import { processNovelContent } from './novel-content-processor';
+import * as chapterService from './chapter-service';
 
 // Tạo thư mục uploads nếu chưa có
 const createUploadsDir = (dirPath: string) => {

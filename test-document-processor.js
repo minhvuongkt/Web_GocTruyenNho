@@ -1,18 +1,17 @@
 import fs from 'fs';
 import { execSync } from 'child_process';
 
-async function testDocumentProcessor() {
+// Simplified test function focusing on API verification
+async function testDocumentUploadAPI() {
   try {
-    // Create a test txt file
-    const txtContent = "This is a simple text file for testing.\n\nIt has multiple paragraphs.\n\nEach paragraph should be processed correctly.";
-    fs.writeFileSync('test-upload.txt', txtContent);
-    console.log('Created test-upload.txt');
-
-    // Process the text file
-    const txtBuffer = fs.readFileSync('test-upload.txt');
-    console.log('Processing text file...');
-    const txtHtml = await processDocument(txtBuffer, 'text/plain');
-    console.log('Processed text file to HTML:', txtHtml.substring(0, 100) + '...');
+    // Create a test txt file if it doesn't exist
+    if (!fs.existsSync('test-sample.txt')) {
+      const txtContent = "This is a simple text file for testing.\n\nIt has multiple paragraphs.\n\nEach paragraph should be processed correctly.";
+      fs.writeFileSync('test-sample.txt', txtContent);
+      console.log('Created test-sample.txt');
+    } else {
+      console.log('Using existing test-sample.txt');
+    }
 
     // Check if the chapter we created earlier exists in the database
     console.log('\nChecking for the chapter we created through the API...');
@@ -20,6 +19,9 @@ async function testDocumentProcessor() {
     
     // Login and get the chapter
     execSync('curl -s -c cookies.txt -H "Content-Type: application/json" -d \'{"username":"admin","password":"admin123"}\' http://localhost:5000/api/auth/login');
+    
+    // Test fetching the chapter we created
+    console.log('\nFetching chapter data for content 2, chapter 10...');
     const chapterResponse = execSync('curl -s -b cookies.txt http://localhost:5000/api/content/2/chapter/10');
     
     // Parse and display chapter info
@@ -42,8 +44,20 @@ async function testDocumentProcessor() {
       console.log('No content found for this chapter');
     }
     
+    // Test creating a new chapter from our document file
+    console.log('\nCreating a new chapter from document upload...');
+    const createChapterResponse = execSync(`curl -s -b cookies.txt -F "document=@test-sample.txt" -F "contentId=2" -F "number=11" -F "title=Another Test Chapter" -F "isLocked=false" http://localhost:5000/api/upload/chapter-document/2`);
+    
+    try {
+      const createResponseJson = JSON.parse(createChapterResponse.toString());
+      console.log(`New chapter created with ID: ${createResponseJson.chapter?.id}`);
+      console.log(`Content length: ${createResponseJson.contentLength}`);
+    } catch (e) {
+      console.error('Error parsing create response:', e);
+      console.log('Raw response:', createChapterResponse.toString());
+    }
+    
     // Cleanup
-    fs.unlinkSync('test-upload.txt');
     fs.unlinkSync('cookies.txt');
     console.log('\nTest completed and cleaned up');
 
@@ -53,4 +67,4 @@ async function testDocumentProcessor() {
 }
 
 // Run the test
-testDocumentProcessor();
+testDocumentUploadAPI();

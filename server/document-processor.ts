@@ -366,6 +366,23 @@ export async function processInlineImages(html: string): Promise<string> {
 }
 
 /**
+ * Class định nghĩa lỗi xử lý tài liệu với thông tin chi tiết
+ */
+export class DocumentProcessingError extends Error {
+  public code: string;
+  public details: any;
+  public mimeType: string;
+
+  constructor(message: string, code: string, mimeType: string, details?: any) {
+    super(message);
+    this.name = 'DocumentProcessingError';
+    this.code = code;
+    this.mimeType = mimeType;
+    this.details = details;
+  }
+}
+
+/**
  * Xử lý tài liệu và chuyển đổi thành HTML
  * @param buffer Buffer của tệp
  * @param mimeType Loại MIME
@@ -373,31 +390,113 @@ export async function processInlineImages(html: string): Promise<string> {
  */
 export async function processDocument(buffer: Buffer, mimeType: string): Promise<string> {
   try {
+    // Kiểm tra buffer có hợp lệ không
+    if (!buffer || buffer.length === 0) {
+      throw new DocumentProcessingError(
+        'Empty document buffer',
+        'EMPTY_BUFFER',
+        mimeType
+      );
+    }
+
     let content = '';
     
+    // Xử lý theo từng loại MIME
     switch (mimeType) {
       case 'text/plain':
-        content = await txtToHtml(buffer);
+        try {
+          content = await txtToHtml(buffer);
+        } catch (err) {
+          throw new DocumentProcessingError(
+            'Failed to process text file',
+            'TXT_PROCESSING_ERROR',
+            mimeType,
+            err
+          );
+        }
         break;
+        
       case 'application/msword':
-        content = await docToHtml(buffer);
+        try {
+          content = await docToHtml(buffer);
+        } catch (err) {
+          throw new DocumentProcessingError(
+            'Failed to process DOC file',
+            'DOC_PROCESSING_ERROR',
+            mimeType,
+            err
+          );
+        }
         break;
+        
       case 'application/vnd.openxmlformats-officedocument.wordprocessingml.document':
-        content = await docxToHtml(buffer);
+        try {
+          content = await docxToHtml(buffer);
+        } catch (err) {
+          throw new DocumentProcessingError(
+            'Failed to process DOCX file',
+            'DOCX_PROCESSING_ERROR',
+            mimeType,
+            err
+          );
+        }
         break;
+        
       case 'application/pdf':
-        content = await pdfToHtml(buffer);
+        try {
+          content = await pdfToHtml(buffer);
+        } catch (err) {
+          throw new DocumentProcessingError(
+            'Failed to process PDF file',
+            'PDF_PROCESSING_ERROR',
+            mimeType,
+            err
+          );
+        }
         break;
+        
       default:
-        throw new Error(`Unsupported file type: ${mimeType}`);
+        throw new DocumentProcessingError(
+          `Unsupported file type: ${mimeType}`,
+          'UNSUPPORTED_FILE_TYPE',
+          mimeType
+        );
+    }
+    
+    // Kiểm tra kết quả xử lý
+    if (!content || content.trim() === '') {
+      throw new DocumentProcessingError(
+        'Document processed successfully but produced empty content',
+        'EMPTY_CONTENT',
+        mimeType
+      );
     }
     
     // Làm sạch HTML cuối cùng và đảm bảo định dạng nhất quán
-    content = cleanHTML(content);
+    try {
+      content = cleanHTML(content);
+    } catch (err) {
+      throw new DocumentProcessingError(
+        'Failed to clean processed HTML content',
+        'HTML_CLEANING_ERROR',
+        mimeType,
+        err
+      );
+    }
     
     return content;
   } catch (error) {
-    console.error("Error in processDocument:", error);
-    throw error;
+    if (error instanceof DocumentProcessingError) {
+      console.error(`[${error.code}] Document processing error for ${error.mimeType}:`, error.message);
+      throw error;
+    } else {
+      console.error("Unexpected error in processDocument:", error);
+      throw new DocumentProcessingError(
+        'Unknown error during document processing',
+        'UNKNOWN_ERROR',
+        mimeType,
+        error
+      );
+    }
   }
 }

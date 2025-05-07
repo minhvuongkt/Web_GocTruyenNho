@@ -4,7 +4,7 @@ import path from 'path';
 import fs from 'fs';
 import { v4 as uuidv4 } from 'uuid';
 import { ensureAuthenticated, ensureAdmin } from './auth-middleware';
-import { processDocument, processInlineImages } from './document-processor';
+import { processDocument, processInlineImages, DocumentProcessingError } from './document-processor';
 import { processNovelContent } from './novel-content-processor';
 import * as chapterService from './chapter-service';
 
@@ -125,10 +125,19 @@ export function registerUploadRoutes(app: express.Express) {
       
     } catch (error: any) {
       console.error('Error processing document:', error);
-      res.status(500).json({ 
-        error: 'Failed to process document', 
-        details: error.message 
-      });
+      if (error instanceof DocumentProcessingError) {
+        res.status(400).json({
+          error: 'Document processing failed',
+          code: error.code,
+          mimeType: error.mimeType,
+          message: error.message
+        });
+      } else {
+        res.status(500).json({ 
+          error: 'Failed to process document', 
+          details: error.message 
+        });
+      }
     }
   });
   
@@ -203,10 +212,18 @@ export function registerUploadRoutes(app: express.Express) {
         
       } catch (error: any) {
         console.error('Error creating chapter from document:', error);
-        res.status(500).json({ 
-          error: 'Failed to create chapter from document', 
-          details: error.message 
-        });
+        if (error instanceof DocumentProcessingError) {
+          res.status(400).json({
+            error: `Document processing failed: ${error.message}`,
+            code: error.code,
+            mimeType: error.mimeType
+          });
+        } else {
+          res.status(500).json({ 
+            error: 'Failed to create chapter from document', 
+            details: error.message 
+          });
+        }
       }
     }
   );
@@ -280,10 +297,18 @@ export function registerUploadRoutes(app: express.Express) {
         
       } catch (error: any) {
         console.error('Error updating chapter with document:', error);
-        res.status(500).json({ 
-          error: 'Failed to update chapter with document', 
-          details: error.message 
-        });
+        if (error instanceof DocumentProcessingError) {
+          res.status(400).json({
+            error: `Document processing failed: ${error.message}`,
+            code: error.code,
+            mimeType: error.mimeType
+          });
+        } else {
+          res.status(500).json({ 
+            error: 'Failed to update chapter with document', 
+            details: error.message 
+          });
+        }
       }
     }
   );

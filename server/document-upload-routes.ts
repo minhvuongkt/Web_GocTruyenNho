@@ -132,6 +132,162 @@ export function registerUploadRoutes(app: express.Express) {
     }
   });
   
+  // Route cho upload document và lưu trực tiếp vào chapter mới
+  app.post(
+    '/api/upload/chapter-document/:contentId', 
+    ensureAuthenticated, 
+    ensureAdmin, 
+    uploadDocument.single('document'), 
+    async (req: express.Request, res: express.Response) => {
+      try {
+        if (!req.file) {
+          return res.status(400).json({ error: 'No file uploaded' });
+        }
+        
+        const contentId = parseInt(req.params.contentId);
+        if (isNaN(contentId)) {
+          return res.status(400).json({ error: 'Invalid content ID' });
+        }
+        
+        // Lấy các thông tin chapter từ body
+        const {
+          number,
+          title,
+          releaseDate,
+          isLocked,
+          unlockPrice
+        } = req.body;
+        
+        // Xử lý file document thành HTML
+        const filePath = req.file.path;
+        const fileBuffer = fs.readFileSync(filePath);
+        
+        // Log thông tin xử lý
+        console.log(`Processing document for content ${contentId}, chapter number ${number}`);
+        console.log(`File: ${req.file.originalname}, mime type: ${req.file.mimetype}`);
+        
+        // Chuyển đổi document sang HTML
+        let htmlContent = await processDocument(fileBuffer, req.file.mimetype);
+        
+        // Xử lý ảnh inline trong HTML (nếu có)
+        htmlContent = await processInlineImages(htmlContent);
+        
+        // Định dạng nội dung novel
+        const processedContent = processNovelContent(htmlContent, {
+          preserveHtml: true,
+          autoClean: true
+        });
+        
+        // Tạo chapter mới từ nội dung đã xử lý
+        const newChapter = await chapterService.createChapter({
+          contentId,
+          number: Number(number),
+          title: title || req.file.originalname.replace(/\.[^/.]+$/, ""), // Dùng tên file nếu không có title
+          releaseDate: releaseDate ? new Date(releaseDate) : new Date(),
+          isLocked: isLocked === 'true',
+          unlockPrice: unlockPrice ? Number(unlockPrice) : null
+        }, processedContent);
+        
+        // Trả về thông tin chapter đã tạo
+        res.status(201).json({
+          success: true,
+          chapter: newChapter,
+          contentLength: processedContent.length,
+          message: 'Chapter created successfully with document content'
+        });
+        
+        // Xóa file tạm sau khi xử lý
+        fs.unlink(filePath, (err) => {
+          if (err) console.error('Error deleting temp file:', err);
+        });
+        
+      } catch (error: any) {
+        console.error('Error creating chapter from document:', error);
+        res.status(500).json({ 
+          error: 'Failed to create chapter from document', 
+          details: error.message 
+        });
+      }
+    }
+  );
+  
+  // Route cho upload document và cập nhật chapter đã tồn tại
+  app.post(
+    '/api/upload/chapter-document/:chapterId/update', 
+    ensureAuthenticated, 
+    ensureAdmin, 
+    uploadDocument.single('document'), 
+    async (req: express.Request, res: express.Response) => {
+      try {
+        if (!req.file) {
+          return res.status(400).json({ error: 'No file uploaded' });
+        }
+        
+        const chapterId = parseInt(req.params.chapterId);
+        if (isNaN(chapterId)) {
+          return res.status(400).json({ error: 'Invalid chapter ID' });
+        }
+        
+        // Kiểm tra chapter tồn tại
+        const existingChapter = await chapterService.getChapterById(chapterId);
+        if (!existingChapter) {
+          return res.status(404).json({ error: 'Chapter not found' });
+        }
+        
+        // Xử lý file document thành HTML
+        const filePath = req.file.path;
+        const fileBuffer = fs.readFileSync(filePath);
+        
+        // Log thông tin xử lý
+        console.log(`Updating chapter ${chapterId} with document content`);
+        console.log(`File: ${req.file.originalname}, mime type: ${req.file.mimetype}`);
+        
+        // Chuyển đổi document sang HTML
+        let htmlContent = await processDocument(fileBuffer, req.file.mimetype);
+        
+        // Xử lý ảnh inline trong HTML (nếu có)
+        htmlContent = await processInlineImages(htmlContent);
+        
+        // Định dạng nội dung novel
+        const processedContent = processNovelContent(htmlContent, {
+          preserveHtml: true,
+          autoClean: true
+        });
+        
+        // Cập nhật chapter với nội dung đã xử lý
+        const updatedChapter = await chapterService.updateChapter({
+          id: chapterId,
+          content: processedContent,
+          // Cập nhật các trường khác nếu được cung cấp
+          title: req.body.title,
+          releaseDate: req.body.releaseDate ? new Date(req.body.releaseDate) : undefined,
+          isLocked: req.body.isLocked === 'true',
+          unlockPrice: req.body.unlockPrice ? Number(req.body.unlockPrice) : undefined
+        });
+        
+        // Trả về thông tin chapter đã cập nhật
+        res.json({
+          success: true,
+          chapter: updatedChapter,
+          contentLength: processedContent.length,
+          message: 'Chapter updated successfully with document content'
+        });
+        
+        // Xóa file tạm sau khi xử lý
+        fs.unlink(filePath, (err) => {
+          if (err) console.error('Error deleting temp file:', err);
+        });
+        
+      } catch (error: any) {
+        console.error('Error updating chapter with document:', error);
+        res.status(500).json({ 
+          error: 'Failed to update chapter with document', 
+          details: error.message 
+        });
+      }
+    }
+  );
+  
   // Route cho upload media
   app.post('/api/upload/media', ensureAuthenticated, ensureAdmin, uploadMedia.single('media'), async (req: express.Request, res: express.Response) => {
     try {

@@ -1,0 +1,5 @@
+Đây là nội dung chương truyện test.
+
+Chương này bao gồm nhiều đoạn văn bản để kiểm tra chức năng xử lý file.
+
+Lorem ipsum dolor sit amet, consectetur adipiscing elit. Phasellus at tortor in ligula hendrerit ultricies et at orci.

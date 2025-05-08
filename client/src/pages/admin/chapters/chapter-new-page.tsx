@@ -533,13 +533,24 @@ export default function ChapterNewPage({ contentId }: { contentId: number }) {
     }
 
     // Validate content based on content type
-    if (content?.type === "novel" && !chapter.content.trim()) {
-      toast({
-        title: "Thiếu nội dung",
-        description: "Vui lòng nhập nội dung chương truyện",
-        variant: "destructive",
-      });
-      return;
+    if (content?.type === "novel") {
+      // Kiểm tra nội dung trống với định dạng HTML từ React Quill
+      const contentText = chapter.content || '';
+      // Loại bỏ tất cả các thẻ HTML và khoảng trắng
+      const plainText = contentText
+        .replace(/<[^>]*>/g, '') // Loại bỏ tất cả các thẻ HTML
+        .replace(/&nbsp;/g, ' ') // Thay thế &nbsp; bằng khoảng trắng thường
+        .trim();
+        
+      // Kiểm tra nếu nội dung thực sự trống sau khi loại bỏ HTML
+      if (!plainText) {
+        toast({
+          title: "Thiếu nội dung",
+          description: "Vui lòng nhập nội dung chương truyện",
+          variant: "destructive",
+        });
+        return;
+      }
     }
 
     if (content?.type === "manga" && chapterImages.length === 0) {

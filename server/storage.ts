@@ -985,11 +985,27 @@ export class DatabaseStorage implements IStorage {
   async createChapterContent(
     chapterContentData: InsertChapterContent,
   ): Promise<ChapterContent> {
-    const [newContent] = await db
-      .insert(chapterContent)
-      .values(chapterContentData)
-      .returning();
-    return newContent;
+    console.log('Creating chapter content with data:', {
+      chapterId: chapterContentData.chapterId,
+      contentLength: chapterContentData.content ? chapterContentData.content.length : 0
+    });
+    
+    try {
+      const [newContent] = await db
+        .insert(chapterContent)
+        .values(chapterContentData)
+        .returning();
+      
+      console.log('Created chapter content successfully:', {
+        id: newContent.id,
+        chapterId: newContent.chapterId
+      });
+      
+      return newContent;
+    } catch (error) {
+      console.error('Error creating chapter content:', error);
+      throw new Error(`Failed to create chapter content: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   }
 
   async getChapterContentByChapter(

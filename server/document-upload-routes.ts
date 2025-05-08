@@ -195,6 +195,13 @@ export function registerUploadRoutes(app: express.Express) {
           autoClean: true
         });
         
+        // Log chi tiết quá trình xử lý
+        console.log('Document processed successfully:');
+        console.log(`- Content type: Novel`);
+        console.log(`- Original file: ${req.file.originalname}`); 
+        console.log(`- Processed content length: ${processedContent.length} characters`);
+        console.log(`- Content sample: ${processedContent.substring(0, Math.min(100, processedContent.length))}...`);
+        
         // Tạo chapter mới từ nội dung đã xử lý
         const newChapter = await chapterService.createChapter({
           contentId,
@@ -278,6 +285,14 @@ export function registerUploadRoutes(app: express.Express) {
           preserveHtml: true,
           autoClean: true
         });
+        
+        // Log chi tiết quá trình xử lý cập nhật
+        console.log('Document processed successfully for chapter update:');
+        console.log(`- Chapter ID: ${chapterId}`);
+        console.log(`- Content type: Novel`);
+        console.log(`- Original file: ${req.file.originalname}`); 
+        console.log(`- Processed content length: ${processedContent.length} characters`);
+        console.log(`- Content sample: ${processedContent.substring(0, Math.min(100, processedContent.length))}...`);
         
         // Cập nhật chapter với nội dung đã xử lý
         const updatedChapter = await chapterService.updateChapter({

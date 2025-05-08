@@ -1519,6 +1519,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         // Import module xử lý tài liệu với các chức năng được cập nhật
         const { processDocument, processInlineImages } = await import('./document-processor.js');
+        const { processNovelContent, DEFAULT_FONT, DEFAULT_SIZE, hasProperFormatting } = await import('./novel-content-processor.js');
         
         try {
           console.log(`Processing ${req.file.originalname} (${req.file.mimetype})`);
@@ -1530,6 +1531,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (content.includes('data:image')) {
             console.log('Detected inline images in content, processing...');
             content = await processInlineImages(content);
+          }
+          
+          // Xử lý nội dung theo định dạng novel
+          // Kiểm tra xem nội dung đã có định dạng font/size chưa
+          if (!hasProperFormatting(content)) {
+            console.log('Content does not have proper formatting, processing novel content...');
+            // Sử dụng processNovelContent để xử lý font và size
+            content = processNovelContent(content, {
+              font: DEFAULT_FONT,
+              size: DEFAULT_SIZE,
+              autoClean: true,
+              preserveHtml: true
+            });
+            console.log('Processed content length:', content.length);
+          } else {
+            console.log('Content already has proper formatting');
+            // Giữ lại định dạng hiện có nhưng vẫn đảm bảo nội dung được xử lý đúng cách
+            content = processNovelContent(content, {
+              autoClean: false,
+              preserveHtml: true
+            });
           }
           
           // Trả về nội dung đã xử lý

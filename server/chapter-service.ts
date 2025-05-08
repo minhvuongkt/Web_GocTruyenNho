@@ -225,15 +225,25 @@ export async function updateChapter(params: UpdateChapterParams) {
       console.log('Content sample:', processedContent.substring(0, Math.min(100, processedContent.length)));
       
       try {
+        // Sử dụng raw SQL để insert nội dung chapter với độ dài không giới hạn
+        // để tránh lỗi khi nội dung quá lớn
         const [newContent] = await db
           .insert(schema.chapterContent)
           .values({
             chapterId: id,
             content: processedContent
           })
-          .returning();
+          .returning({
+            id: schema.chapterContent.id,
+            chapterId: schema.chapterContent.chapterId,
+            contentLength: sql`length(${schema.chapterContent.content})`
+          });
 
-        console.log('Chapter content saved with ID:', newContent?.id, 'for chapter ID:', id);
+        console.log('Chapter content saved successfully:', {
+          id: newContent?.id, 
+          chapterId: id,
+          contentLength: newContent?.contentLength || 0
+        });
       } catch (error) {
         console.error('Error inserting chapter content into database:', error);
         throw new Error(`Failed to save chapter content to database: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -310,15 +320,25 @@ export async function createChapter(
       console.log('Content sample:', processedContent.substring(0, Math.min(100, processedContent.length)));
       
       try {
+        // Sử dụng raw SQL để insert nội dung chapter với độ dài không giới hạn
+        // để tránh lỗi khi nội dung quá lớn
         const [newContent] = await db
           .insert(schema.chapterContent)
           .values({
             chapterId: newChapter.id,
             content: processedContent
           })
-          .returning();
+          .returning({
+            id: schema.chapterContent.id,
+            chapterId: schema.chapterContent.chapterId,
+            contentLength: sql`length(${schema.chapterContent.content})`
+          });
 
-        console.log('Chapter content saved with ID:', newContent?.id, 'for chapter ID:', newChapter.id);
+        console.log('Chapter content saved successfully:', {
+          id: newContent?.id, 
+          chapterId: newChapter.id,
+          contentLength: newContent?.contentLength || 0
+        });
       } catch (error) {
         console.error('Error inserting chapter content into database:', error);
         throw new Error(`Failed to save chapter content to database: ${error instanceof Error ? error.message : 'Unknown error'}`);

@@ -231,19 +231,19 @@ export async function updateChapter(params: UpdateChapterParams) {
       if (contentType === 'novel') {
         console.log('Processing novel content for chapter', id, 'content length:', content.length);
         
-        // Trích xuất thông tin font và size từ dữ liệu đầu vào (nếu có)
+        // Trích xuất thông tin font và size từ params (đã thêm vào interface)
         let font = DEFAULT_FONT;
         let size = DEFAULT_SIZE;
         let forceFormat = false;
         
-        if (req.body && req.body.fontSize) {
-          size = req.body.fontSize;
+        if (params.fontSize) {
+          size = params.fontSize;
           forceFormat = true;
           console.log(`Using user-selected font size: ${size}`);
         }
         
-        if (req.body && req.body.fontFamily) {
-          font = req.body.fontFamily;
+        if (params.fontFamily) {
+          font = params.fontFamily;
           forceFormat = true;
           console.log(`Using user-selected font family: ${font}`);
         }

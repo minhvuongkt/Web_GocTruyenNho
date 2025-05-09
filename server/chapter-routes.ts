@@ -77,14 +77,16 @@ export function registerChapterRoutes(app: Express) {
         console.log(`Warning: No content available for chapter ${id}`);
       }
       
-      // Trả về dữ liệu chapter với thêm thông tin về độ dài nội dung
+      // Trả về dữ liệu chapter với thêm thông tin về độ dài nội dung và loại nội dung
       res.json({
         chapter: {
           ...chapterInfo.chapter,
           content: chapterContent,
           contentLength: contentLength,
           isUnlocked
-        }
+        },
+        chapterContent: chapterInfo.contents || [], // Trả về cả mảng chapterContent để frontend xử lý đúng
+        contentType: chapterInfo.contentType || 'novel' // Thêm thông tin loại nội dung
       });
     } catch (error) {
       console.error('Error getting chapter:', error);
@@ -151,14 +153,16 @@ export function registerChapterRoutes(app: Express) {
         console.log(`Warning: No content available for content ${contentId}, chapter ${chapterNumber}`);
       }
       
-      // Trả về dữ liệu chapter với thêm thông tin về độ dài nội dung
+      // Trả về dữ liệu chapter với thêm thông tin về độ dài nội dung và loại nội dung
       res.json({
         chapter: {
           ...chapterInfo.chapter,
           content: chapterContent,
           contentLength: contentLength,
           isUnlocked
-        }
+        },
+        chapterContent: chapterInfo.contents || [], // Trả về cả mảng chapterContent để frontend xử lý đúng
+        contentType: chapterInfo.contentType || 'novel' // Thêm thông tin loại nội dung
       });
     } catch (error) {
       console.error('Error getting chapter by content and number:', error);

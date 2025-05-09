@@ -26,9 +26,6 @@ const fonts = [
   'merriweather',
   'noto',
   'source',
-  'segoe-ui',
-  'noto-sans',
-  'serif',
 ];
 
 // Định nghĩa các kích cỡ font
@@ -296,8 +293,14 @@ const EnhancedRichTextEditor: React.FC<EnhancedRichTextEditorProps> = ({
     if (quillRef.current) {
       const editor = quillRef.current.getEditor();
       const container = editor.root as HTMLElement;
-      container.style.fontFamily = fontFamily;
-      container.style.fontSize = fontSize;
+      container.style.fontFamily = getFontFamilyValue(fontFamily);
+      container.style.fontSize = getFontSizeValue(fontSize);
+      
+      // Áp dụng font và size cho toàn bộ nội dung
+      editor.formatText(0, editor.getLength(), {
+        'font': fontFamily,
+        'size': fontSize
+      });
     }
   }, [fontFamily, fontSize]);
 

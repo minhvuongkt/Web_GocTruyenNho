@@ -1,6 +1,6 @@
 // Service xử lý các thao tác với chapter
 import { db } from './db';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, sql } from 'drizzle-orm';
 import * as schema from '@shared/schema';
 import { processNovelContent, hasProperFormatting, DEFAULT_FONT, DEFAULT_SIZE } from './novel-content-processor';
 import { cleanHTML } from './document-processor';
@@ -21,10 +21,25 @@ export interface UpdateChapterParams {
 /**
  * Lấy thông tin của một chapter theo ID
  * @param chapterId ID của chapter cần lấy
+ * @param options Tùy chọn lấy dữ liệu
  * @returns Thông tin chapter và nội dung của nó
  */
-export async function getChapterById(chapterId: number) {
+export async function getChapterById(
+  chapterId: number, 
+  options: { 
+    includeContent?: boolean; 
+    contentColumnOnly?: boolean;
+    checkContentLength?: boolean;
+  } = {}
+) {
   try {
+    // Mặc định cho các tùy chọn
+    const {
+      includeContent = true,       // Có lấy nội dung không
+      contentColumnOnly = false,   // Chỉ lấy cột content thay vì toàn bộ record
+      checkContentLength = false   // Có kiểm tra và trả về độ dài nội dung không
+    } = options;
+
     // Lấy thông tin chapter
     const [chapter] = await db
       .select()
@@ -35,23 +50,61 @@ export async function getChapterById(chapterId: number) {
       return null;
     }
 
-    // Lấy nội dung chapter
-    const chapterContents = await db
-      .select()
-      .from(schema.chapterContent)
-      .where(eq(schema.chapterContent.chapterId, chapterId));
-
     // Lấy thông tin content để biết loại truyện
     const [contentInfo] = await db
       .select()
       .from(schema.content)
       .where(eq(schema.content.id, chapter.contentId));
 
-    return {
+    // Kết quả trả về
+    const result: {
+      chapter: typeof chapter;
+      contentType: string | undefined;
+      contents?: any[];
+      content?: string;
+      contentLength?: number;
+    } = {
       chapter,
-      contents: chapterContents,
       contentType: contentInfo?.type
     };
+
+    // Nếu cần nội dung chapter
+    if (includeContent) {
+      if (contentColumnOnly) {
+        // Chỉ lấy cột content, tiết kiệm băng thông
+        const [contentData] = await db
+          .select({ content: schema.chapterContent.content })
+          .from(schema.chapterContent)
+          .where(eq(schema.chapterContent.chapterId, chapterId));
+        
+        result.content = contentData?.content || '';
+      } else if (checkContentLength) {
+        // Lấy cả nội dung và đo độ dài
+        const [contentData] = await db
+          .select({
+            id: schema.chapterContent.id,
+            content: schema.chapterContent.content,
+            contentLength: sql`length(${schema.chapterContent.content})`
+          })
+          .from(schema.chapterContent)
+          .where(eq(schema.chapterContent.chapterId, chapterId));
+        
+        if (contentData) {
+          result.content = contentData.content || '';
+          result.contentLength = Number(contentData.contentLength || 0);
+        }
+      } else {
+        // Truy vấn tiêu chuẩn - lấy tất cả các cột
+        const chapterContents = await db
+          .select()
+          .from(schema.chapterContent)
+          .where(eq(schema.chapterContent.chapterId, chapterId));
+        
+        result.contents = chapterContents;
+      }
+    }
+
+    return result;
   } catch (error) {
     console.error("Error getting chapter by ID:", error);
     throw error;
@@ -62,9 +115,18 @@ export async function getChapterById(chapterId: number) {
  * Lấy chapter theo content ID và số thứ tự chapter
  * @param contentId ID của content
  * @param chapterNumber Số thứ tự chapter
+ * @param options Tùy chọn lấy dữ liệu
  * @returns Thông tin chapter và nội dung
  */
-export async function getChapterByContentAndNumber(contentId: number, chapterNumber: number) {
+export async function getChapterByContentAndNumber(
+  contentId: number, 
+  chapterNumber: number,
+  options: { 
+    includeContent?: boolean; 
+    contentColumnOnly?: boolean;
+    checkContentLength?: boolean;
+  } = {}
+) {
   try {
     // Lấy thông tin chapter
     const [chapter] = await db
@@ -81,23 +143,8 @@ export async function getChapterByContentAndNumber(contentId: number, chapterNum
       return null;
     }
 
-    // Lấy nội dung chapter
-    const chapterContents = await db
-      .select()
-      .from(schema.chapterContent)
-      .where(eq(schema.chapterContent.chapterId, chapter.id));
-
-    // Lấy thông tin content để biết loại truyện
-    const [contentInfo] = await db
-      .select()
-      .from(schema.content)
-      .where(eq(schema.content.id, contentId));
-
-    return {
-      chapter,
-      contents: chapterContents,
-      contentType: contentInfo?.type
-    };
+    // Gọi lại getChapterById với tùy chọn đã cung cấp
+    return getChapterById(chapter.id, options);
   } catch (error) {
     console.error("Error getting chapter by content and number:", error);
     throw error;

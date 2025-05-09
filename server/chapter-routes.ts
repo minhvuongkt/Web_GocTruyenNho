@@ -37,7 +37,12 @@ export function registerChapterRoutes(app: Express) {
         return res.status(400).json({ error: 'Invalid chapter ID' });
       }
       
-      const chapterInfo = await chapterService.getChapterById(id);
+      // Sử dụng tùy chọn mới để tối ưu truy vấn và chỉ lấy dữ liệu cần thiết
+      const chapterInfo = await chapterService.getChapterById(id, {
+        includeContent: true,
+        contentColumnOnly: true,
+        checkContentLength: true // Trả về độ dài nội dung để gỡ lỗi
+      });
       
       if (!chapterInfo) {
         return res.status(404).json({ error: 'Chapter not found' });
@@ -60,23 +65,25 @@ export function registerChapterRoutes(app: Express) {
         // await storage.incrementChapterViews(chapterInfo.chapter.id);
       }
       
-      // Lấy nội dung chapter nếu có
-      const chapterContent = chapterInfo.contents && chapterInfo.contents.length > 0
-        ? chapterInfo.contents[0].content
-        : '';
+      // Lấy nội dung chapter từ kết quả mới
+      const chapterContent = chapterInfo.content || '';
       
-      console.log(`Sending chapter ${id} with content length: ${chapterContent.length}`);
+      // Sử dụng contentLength nếu có, nếu không thì dùng length của string
+      const contentLength = chapterInfo.contentLength || chapterContent.length;
+      console.log(`Sending chapter ${id} with content length: ${contentLength}`);
+      
       if (chapterContent.length > 0) {
         // Log sample của nội dung để debug
         const sampleLength = Math.min(200, chapterContent.length);
         console.log('Content sample:', chapterContent.substring(0, sampleLength));
       }
       
-      // Trả về dữ liệu chapter
+      // Trả về dữ liệu chapter với thêm thông tin về độ dài nội dung
       res.json({
         chapter: {
           ...chapterInfo.chapter,
           content: chapterContent,
+          contentLength: contentLength,
           isUnlocked
         }
       });

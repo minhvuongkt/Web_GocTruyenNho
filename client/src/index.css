@@ -1,6 +1,103 @@
+@import url('https://fonts.googleapis.com/css2?family=Roboto&family=Open+Sans&family=Merriweather&family=Source+Sans+Pro&family=Noticia+Text&family=Noto+Sans&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Font families */
+.ql-font-arial { font-family: Arial !important; }
+.ql-font-times-new-roman { font-family: "Times New Roman" !important; }
+.ql-font-tahoma { font-family: Tahoma !important; }
+.ql-font-verdana { font-family: Verdana !important; }
+.ql-font-open-sans { font-family: "Open Sans" !important; }
+.ql-font-roboto { font-family: Roboto !important; }
+.ql-font-merriweather { font-family: Merriweather !important; }
+.ql-font-source-sans-pro { font-family: "Source Sans Pro" !important; }
+.ql-font-noticia-text { font-family: "Noticia Text" !important; }
+.ql-font-segoe-ui { font-family: "Segoe UI" !important; }
+.ql-font-noto-sans { font-family: "Noto Sans" !important; }
+.ql-font-serif { font-family: Serif !important; }
+
+/* Font label display in dropdown */
+.ql-snow .ql-picker.ql-font .ql-picker-label[data-value="arial"]::before,
+.ql-snow .ql-picker.ql-font .ql-picker-item[data-value="arial"]::before { content: "Arial"; }
+
+.ql-snow .ql-picker.ql-font .ql-picker-label[data-value="times-new-roman"]::before,
+.ql-snow .ql-picker.ql-font .ql-picker-item[data-value="times-new-roman"]::before { content: "Times New Roman"; }
+
+.ql-snow .ql-picker.ql-font .ql-picker-label[data-value="tahoma"]::before,
+.ql-snow .ql-picker.ql-font .ql-picker-item[data-value="tahoma"]::before { content: "Tahoma"; }
+
+.ql-snow .ql-picker.ql-font .ql-picker-label[data-value="verdana"]::before,
+.ql-snow .ql-picker.ql-font .ql-picker-item[data-value="verdana"]::before { content: "Verdana"; }
+
+.ql-snow .ql-picker.ql-font .ql-picker-label[data-value="open-sans"]::before,
+.ql-snow .ql-picker.ql-font .ql-picker-item[data-value="open-sans"]::before { content: "Open Sans"; }
+
+.ql-snow .ql-picker.ql-font .ql-picker-label[data-value="roboto"]::before,
+.ql-snow .ql-picker.ql-font .ql-picker-item[data-value="roboto"]::before { content: "Roboto"; }
+
+.ql-snow .ql-picker.ql-font .ql-picker-label[data-value="merriweather"]::before,
+.ql-snow .ql-picker.ql-font .ql-picker-item[data-value="merriweather"]::before { content: "Merriweather"; }
+
+.ql-snow .ql-picker.ql-font .ql-picker-label[data-value="source-sans-pro"]::before,
+.ql-snow .ql-picker.ql-font .ql-picker-item[data-value="source-sans-pro"]::before { content: "Source Sans Pro"; }
+
+.ql-snow .ql-picker.ql-font .ql-picker-label[data-value="noticia-text"]::before,
+.ql-snow .ql-picker.ql-font .ql-picker-item[data-value="noticia-text"]::before { content: "Noticia Text"; }
+
+.ql-snow .ql-picker.ql-font .ql-picker-label[data-value="segoe-ui"]::before,
+.ql-snow .ql-picker.ql-font .ql-picker-item[data-value="segoe-ui"]::before { content: "Segoe UI"; }
+
+.ql-snow .ql-picker.ql-font .ql-picker-label[data-value="noto-sans"]::before,
+.ql-snow .ql-picker.ql-font .ql-picker-item[data-value="noto-sans"]::before { content: "Noto Sans"; }
+
+.ql-snow .ql-picker.ql-font .ql-picker-label[data-value="serif"]::before,
+.ql-snow .ql-picker.ql-font .ql-picker-item[data-value="serif"]::before { content: "Serif"; }
+
+/* Tối ưu dropdown */
+.ql-snow .ql-picker.ql-font {
+  width: 130px;
+}
+
+.ql-snow .ql-picker.ql-size {
+  width: 80px;
+}
+
+.ql-snow .ql-picker-options {
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+/* Tùy chỉnh hiển thị hình ảnh */
+.ql-editor img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin: 0 auto;
+  cursor: pointer;
+}
+
+/* Tùy chỉnh resize hình ảnh */
+.ql-editor .image-resizer {
+  position: relative;
+  display: inline-block;
+}
+
+.ql-editor .image-resizer .resize-handle {
+  position: absolute;
+  height: 12px;
+  width: 12px;
+  background: #1e88e5;
+  border-radius: 50%;
+  border: 1px solid white;
+}
+
+.ql-editor .image-resizer .resize-handle.br {
+  bottom: -6px;
+  right: -6px;
+  cursor: se-resize;
+}
 
 @layer base {
   :root {

@@ -1,15 +1,16 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import ReactQuill, { Quill } from 'react-quill';
+import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
+import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
-import { Card, CardContent } from './ui/card';
-import { Button } from './ui/button';
-import { Input } from './ui/input';
-import { Label } from './ui/label';
-import { Alert, AlertDescription } from './ui/alert';
-import { Spinner } from './ui/spinner';
-import { useToast } from '../hooks/use-toast';
-import { apiRequest } from '../lib/queryClient';
-import { 
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { useToast } from '@/hooks/use-toast';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import Quill from 'quill';
+import { apiRequest } from '@/lib/queryClient';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Spinner } from '@/components/ui/spinner';
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -33,179 +34,234 @@ const fonts = [
   'serif',
 ];
 
-// Tạo danh sách kích cỡ phông chữ từ 10px đến 48px
+// Tạo danh sách kích cỡ phông chữ từ 10px đến 28px
 const fontSizes: string[] = [];
-for (let i = 10; i <= 48; i += 2) {
+for (let i = 10; i <= 28; i += 2) {
   fontSizes.push(i + 'px');
 }
 
-// Đăng ký các font chữ cho Quill
-const fontAttributor = Quill.import('attributors/style/font');
-fontAttributor.whitelist = fonts;
-Quill.register(fontAttributor, true);
+// Đăng ký Font Format
+const Font = Quill.import('formats/font');
+Font.whitelist = fonts;
+Quill.register(Font, true);
 
-// Size Format
-const sizeAttributor = Quill.import('attributors/style/size');
-sizeAttributor.whitelist = fontSizes;
-Quill.register(sizeAttributor, true);
+// Đăng ký Size Format
+const Size = Quill.import('formats/size');
+Size.whitelist = fontSizes;
+Quill.register(Size, true);
 
-// Nhập lớp Quill Image Resize
+// CSS tùy chỉnh cho rich text editor
+const editorStyles = `
+  /* Import Google Fonts */
+  @import url('https://fonts.googleapis.com/css2?family=Roboto&family=Open+Sans&family=Merriweather&family=Source+Sans+Pro&family=Noticia+Text&family=Noto+Sans&display=swap');
+
+  /* Font families */
+  .ql-font-arial { font-family: Arial !important; }
+  .ql-font-times-new-roman { font-family: "Times New Roman" !important; }
+  .ql-font-tahoma { font-family: Tahoma !important; }
+  .ql-font-verdana { font-family: Verdana !important; }
+  .ql-font-open-sans { font-family: "Open Sans" !important; }
+  .ql-font-roboto { font-family: Roboto !important; }
+  .ql-font-merriweather { font-family: Merriweather !important; }
+  .ql-font-source-sans-pro { font-family: "Source Sans Pro" !important; }
+  .ql-font-noticia-text { font-family: "Noticia Text" !important; }
+  .ql-font-segoe-ui { font-family: "Segoe UI" !important; }
+  .ql-font-noto-sans { font-family: "Noto Sans" !important; }
+  .ql-font-serif { font-family: serif !important; }
+  
+  /* Font label display in dropdown */
+  .ql-snow .ql-picker.ql-font .ql-picker-label[data-value="arial"]::before,
+  .ql-snow .ql-picker.ql-font .ql-picker-item[data-value="arial"]::before { content: "Arial"; }
+  
+  .ql-snow .ql-picker.ql-font .ql-picker-label[data-value="times-new-roman"]::before,
+  .ql-snow .ql-picker.ql-font .ql-picker-item[data-value="times-new-roman"]::before { content: "Times New Roman"; }
+  
+  .ql-snow .ql-picker.ql-font .ql-picker-label[data-value="tahoma"]::before,
+  .ql-snow .ql-picker.ql-font .ql-picker-item[data-value="tahoma"]::before { content: "Tahoma"; }
+  
+  .ql-snow .ql-picker.ql-font .ql-picker-label[data-value="verdana"]::before,
+  .ql-snow .ql-picker.ql-font .ql-picker-item[data-value="verdana"]::before { content: "Verdana"; }
+  
+  .ql-snow .ql-picker.ql-font .ql-picker-label[data-value="open-sans"]::before,
+  .ql-snow .ql-picker.ql-font .ql-picker-item[data-value="open-sans"]::before { content: "Open Sans"; }
+  
+  .ql-snow .ql-picker.ql-font .ql-picker-label[data-value="roboto"]::before,
+  .ql-snow .ql-picker.ql-font .ql-picker-item[data-value="roboto"]::before { content: "Roboto"; }
+  
+  .ql-snow .ql-picker.ql-font .ql-picker-label[data-value="merriweather"]::before,
+  .ql-snow .ql-picker.ql-font .ql-picker-item[data-value="merriweather"]::before { content: "Merriweather"; }
+  
+  .ql-snow .ql-picker.ql-font .ql-picker-label[data-value="source-sans-pro"]::before,
+  .ql-snow .ql-picker.ql-font .ql-picker-item[data-value="source-sans-pro"]::before { content: "Source Sans Pro"; }
+  
+  .ql-snow .ql-picker.ql-font .ql-picker-label[data-value="noticia-text"]::before,
+  .ql-snow .ql-picker.ql-font .ql-picker-item[data-value="noticia-text"]::before { content: "Noticia Text"; }
+  
+  .ql-snow .ql-picker.ql-font .ql-picker-label[data-value="segoe-ui"]::before,
+  .ql-snow .ql-picker.ql-font .ql-picker-item[data-value="segoe-ui"]::before { content: "Segoe UI"; }
+  
+  .ql-snow .ql-picker.ql-font .ql-picker-label[data-value="noto-sans"]::before,
+  .ql-snow .ql-picker.ql-font .ql-picker-item[data-value="noto-sans"]::before { content: "Noto Sans"; }
+  
+  .ql-snow .ql-picker.ql-font .ql-picker-label[data-value="serif"]::before,
+  .ql-snow .ql-picker.ql-font .ql-picker-item[data-value="serif"]::before { content: "Serif"; }
+  
+  /* Kích thước phông chữ */
+  ${fontSizes.map(size => `
+  .ql-snow .ql-picker.ql-size .ql-picker-label[data-value="${size}"]::before,
+  .ql-snow .ql-picker.ql-size .ql-picker-item[data-value="${size}"]::before {
+    content: "${size}";
+    font-size: 14px;
+  }`).join('\n')}
+  
+  /* Tối ưu dropdown */
+  .ql-snow .ql-picker.ql-font {
+    width: 130px;
+  }
+
+  .ql-snow .ql-picker.ql-size {
+    width: 80px;
+  }
+
+  .ql-snow .ql-picker-options {
+    max-height: 300px;
+    overflow-y: auto;
+  }
+
+  /* Tùy chỉnh hiển thị hình ảnh */
+  .ql-editor img {
+    max-width: 100%;
+    height: auto;
+    display: block;
+    margin: 0 auto;
+    cursor: pointer;
+  }
+`;
+
+// Tạo module resize hình ảnh tùy chỉnh
 class ImageResize {
   quill: any;
   options: any;
-  currentImage: HTMLElement | null;
-  overlay: HTMLElement;
-  
+  currentImg: any;
+  overlay: any;
+  handle: any;
+  initialWidth: number;
+  initialHeight: number;
+  initialX: number;
+  initialY: number;
+  isResizing: boolean;
+
   constructor(quill: any, options: any) {
     this.quill = quill;
     this.options = options;
-    this.currentImage = null;
+    this.currentImg = null;
+    this.overlay = null;
+    this.handle = null;
     
-    // Tạo overlay để bọc ảnh khi chỉnh sửa
-    this.overlay = document.createElement('div');
-    this.overlay.classList.add('image-resize-overlay');
+    this.initialWidth = 0;
+    this.initialHeight = 0;
+    this.initialX = 0;
+    this.initialY = 0;
+    this.isResizing = false;
     
-    // Thêm style cho overlay
-    document.head.appendChild(document.createElement('style')).textContent = `
-      .image-resize-overlay {
-        position: absolute;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        border: 1px dashed #3498db;
-        z-index: 100;
-      }
-      .image-resize-handle {
-        position: absolute;
-        height: 12px;
-        width: 12px;
-        background: white;
-        border: 1px solid #3498db;
-        z-index: 101;
-      }
-      .image-resize-handle-ne { top: -6px; right: -6px; cursor: ne-resize; }
-      .image-resize-handle-se { bottom: -6px; right: -6px; cursor: se-resize; }
-      .image-resize-handle-sw { bottom: -6px; left: -6px; cursor: sw-resize; }
-      .image-resize-handle-nw { top: -6px; left: -6px; cursor: nw-resize; }
-    `;
-    
-    // Lắng nghe sự kiện khi nhấp vào ảnh
     this.quill.root.addEventListener('click', this.handleClick.bind(this));
-    
-    // Thêm overlay vào DOM
-    document.body.appendChild(this.overlay);
-    this.hideOverlay();
-    
-    // Khởi tạo các điểm điều chỉnh kích thước
-    this.createHandles();
+    this.quill.root.addEventListener('mousedown', this.handleMousedown.bind(this));
+    window.addEventListener('mouseup', this.handleMouseup.bind(this));
+    window.addEventListener('mousemove', this.handleMousemove.bind(this));
   }
-  
-  createHandles() {
-    const directions = ['nw', 'ne', 'se', 'sw'];
-    
-    directions.forEach(direction => {
-      const handle = document.createElement('div');
-      handle.classList.add('image-resize-handle', `image-resize-handle-${direction}`);
-      handle.addEventListener('mousedown', this.handleMousedown.bind(this, direction));
-      this.overlay.appendChild(handle);
-    });
-  }
-  
-  handleClick(event: MouseEvent) {
-    if (event.target && (event.target as HTMLElement).tagName === 'IMG') {
-      if (this.currentImage === event.target) {
-        // Đã chọn ảnh này rồi, không làm gì cả
-        return;
+
+  handleClick(e: MouseEvent) {
+    if (e.target && (e.target as HTMLElement).tagName === 'IMG') {
+      if (this.currentImg) {
+        this.hide();
       }
-      
-      // Thiết lập ảnh hiện tại
-      this.currentImage = event.target as HTMLElement;
-      this.showOverlay();
-    } else if (this.currentImage) {
-      // Nhấp ra ngoài ảnh, ẩn overlay
-      this.hideOverlay();
-      this.currentImage = null;
+      this.show(e.target as HTMLElement);
+    } else if (this.currentImg && e.target !== this.handle) {
+      this.hide();
     }
   }
-  
-  handleMousedown(direction: string, event: MouseEvent) {
-    if (!this.currentImage) return;
-    
-    event.preventDefault();
-    
-    const imageRect = this.currentImage.getBoundingClientRect();
-    const startX = event.clientX;
-    const startY = event.clientY;
-    const startWidth = imageRect.width;
-    const startHeight = imageRect.height;
-    
-    const handleMousemove = (moveEvent: MouseEvent) => {
-      if (!this.currentImage) return;
-      
-      moveEvent.preventDefault();
-      
-      let newWidth = startWidth;
-      let newHeight = startHeight;
-      
-      // Tính toán kích thước mới dựa trên hướng kéo
-      if (direction.includes('e')) {
-        newWidth = startWidth + moveEvent.clientX - startX;
-      } else if (direction.includes('w')) {
-        newWidth = startWidth - (moveEvent.clientX - startX);
+
+  handleMousedown(e: MouseEvent) {
+    if (e.target === this.handle) {
+      e.preventDefault();
+      this.quill.root.setAttribute('contenteditable', 'false');
+      this.initialWidth = this.currentImg.width || this.currentImg.naturalWidth;
+      this.initialHeight = this.currentImg.height || this.currentImg.naturalHeight;
+      this.initialX = e.clientX;
+      this.initialY = e.clientY;
+      this.isResizing = true;
+    }
+  }
+
+  handleMouseup() {
+    if (this.isResizing) {
+      this.isResizing = false;
+      this.quill.root.setAttribute('contenteditable', 'true');
+      if (this.overlay && this.handle && this.currentImg) {
+        this.positionElements();
       }
-      
-      if (direction.includes('s')) {
-        newHeight = startHeight + moveEvent.clientY - startY;
-      } else if (direction.includes('n')) {
-        newHeight = startHeight - (moveEvent.clientY - startY);
-      }
+    }
+  }
+
+  handleMousemove(e: MouseEvent) {
+    if (this.isResizing && this.currentImg) {
+      const deltaX = e.clientX - this.initialX;
       
       // Giữ tỷ lệ khung hình
-      const ratio = startWidth / startHeight;
-      if (moveEvent.shiftKey) {
-        if (direction.includes('e') || direction.includes('w')) {
-          newHeight = newWidth / ratio;
-        } else {
-          newWidth = newHeight * ratio;
-        }
-      }
+      const aspectRatio = this.initialHeight / this.initialWidth;
+      let newWidth = this.initialWidth + deltaX;
+      let newHeight = newWidth * aspectRatio;
       
-      // Cập nhật kích thước ảnh
-      this.currentImage.setAttribute('width', `${newWidth}px`);
-      this.currentImage.setAttribute('height', `${newHeight}px`);
+      // Giới hạn kích thước
+      newWidth = Math.max(50, Math.min(newWidth, this.quill.root.offsetWidth));
+      newHeight = newWidth * aspectRatio;
       
-      // Cập nhật vị trí overlay
-      this.showOverlay();
-    };
-    
-    const handleMouseup = () => {
-      document.removeEventListener('mousemove', handleMousemove);
-      document.removeEventListener('mouseup', handleMouseup);
-    };
-    
-    document.addEventListener('mousemove', handleMousemove);
-    document.addEventListener('mouseup', handleMouseup);
+      // Cập nhật kích thước
+      this.currentImg.width = newWidth;
+      this.currentImg.height = newHeight;
+      
+      // Cập nhật vị trí handles
+      this.positionElements();
+    }
   }
-  
-  showOverlay() {
-    if (!this.currentImage) return;
+
+  show(img: HTMLElement) {
+    this.currentImg = img;
     
-    const rect = this.currentImage.getBoundingClientRect();
-    const editorRect = this.quill.root.getBoundingClientRect();
+    if (!this.overlay) {
+      this.overlay = document.createElement('div');
+      this.overlay.classList.add('image-resizer');
+      this.handle = document.createElement('div');
+      this.handle.classList.add('resize-handle', 'br');
+      this.overlay.appendChild(this.handle);
+      this.quill.root.appendChild(this.overlay);
+    }
     
+    this.positionElements();
     this.overlay.style.display = 'block';
-    this.overlay.style.left = `${rect.left - editorRect.left + this.quill.root.scrollLeft}px`;
-    this.overlay.style.top = `${rect.top - editorRect.top + this.quill.root.scrollTop}px`;
-    this.overlay.style.width = `${rect.width}px`;
-    this.overlay.style.height = `${rect.height}px`;
   }
-  
-  hideOverlay() {
-    this.overlay.style.display = 'none';
+
+  hide() {
+    if (this.overlay) {
+      this.overlay.style.display = 'none';
+    }
+    this.currentImg = null;
+  }
+
+  positionElements() {
+    if (!this.currentImg || !this.overlay) return;
+    
+    const imgRect = this.currentImg.getBoundingClientRect();
+    const containerRect = this.quill.root.getBoundingClientRect();
+    
+    this.overlay.style.left = (imgRect.left - containerRect.left) + 'px';
+    this.overlay.style.top = (imgRect.top - containerRect.top) + 'px';
+    this.overlay.style.width = imgRect.width + 'px';
+    this.overlay.style.height = imgRect.height + 'px';
   }
 }
 
-// Đăng ký module ImageResize
+// Đăng ký module resize hình ảnh
 Quill.register('modules/imageResize', ImageResize);
 
 // Các định dạng được hỗ trợ
@@ -251,19 +307,20 @@ const quillModules = {
   },
 };
 
+// Props cho component editor
 interface EnhancedRichTextEditorProps {
   initialValue?: string;
   onSave?: (content: string) => void;
-  onChange?: (content: string) => void; // Thêm hàm callback để thông báo khi nội dung thay đổi
+  onChange?: (content: string) => void;
   readOnly?: boolean;
   chapterId?: number;
   contentId?: number;
   autoSave?: boolean;
-  fontFamily?: string; // Thêm font family hiện tại
-  fontSize?: string;   // Thêm font size hiện tại
-  placeholder?: string; // Placeholder text cho editor
-  showSubmitButton?: boolean; // Hiển thị nút submit hay không
-  autosaveInterval?: number; // Thời gian tự động lưu (tính bằng giây)
+  fontFamily?: string;
+  fontSize?: string;
+  placeholder?: string;
+  showSubmitButton?: boolean;
+  autosaveInterval?: number;
 }
 
 const EnhancedRichTextEditor: React.FC<EnhancedRichTextEditorProps> = ({
@@ -275,7 +332,8 @@ const EnhancedRichTextEditor: React.FC<EnhancedRichTextEditorProps> = ({
   contentId,
   autoSave = true,
   fontFamily = 'merriweather',
-  fontSize = 'large',
+  fontSize = '14px',
+  placeholder = "Nhập nội dung ở đây...",
 }) => {
   const [content, setContent] = useState<string>(initialValue);
   const [file, setFile] = useState<File | null>(null);
@@ -289,6 +347,17 @@ const EnhancedRichTextEditor: React.FC<EnhancedRichTextEditorProps> = ({
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
   const { toast } = useToast();
+
+  // Thêm CSS tùy chỉnh
+  useEffect(() => {
+    const styleElement = document.createElement('style');
+    styleElement.innerHTML = editorStyles;
+    document.head.appendChild(styleElement);
+
+    return () => {
+      document.head.removeChild(styleElement);
+    }
+  }, []);
   
   // Cập nhật font và size khi props thay đổi
   useEffect(() => {
@@ -298,9 +367,6 @@ const EnhancedRichTextEditor: React.FC<EnhancedRichTextEditorProps> = ({
     // Cập nhật font và size trong trình soạn thảo
     if (quillRef.current) {
       const editor = quillRef.current.getEditor();
-      const container = editor.root as HTMLElement;
-      container.style.fontFamily = getFontFamilyValue(fontFamily);
-      container.style.fontSize = getFontSizeValue(fontSize);
       
       // Áp dụng font và size cho toàn bộ nội dung
       editor.formatText(0, editor.getLength(), {
@@ -313,7 +379,6 @@ const EnhancedRichTextEditor: React.FC<EnhancedRichTextEditorProps> = ({
   // Xử lý thay đổi nội dung
   const handleChange = (value: string) => {
     setContent(value);
-    // Gọi callback onChange nếu được cung cấp
     if (onChange) {
       onChange(value);
     }
@@ -396,10 +461,6 @@ const EnhancedRichTextEditor: React.FC<EnhancedRichTextEditorProps> = ({
     setCurrentFont(fontName);
     if (quillRef.current) {
       const editor = quillRef.current.getEditor();
-      const container = editor.root as HTMLElement;
-      
-      // Áp dụng font chữ cho toàn bộ editor
-      container.style.fontFamily = getFontFamilyValue(fontName);
       
       // Áp dụng class font cho nội dung được chọn
       const range = editor.getSelection();
@@ -424,10 +485,6 @@ const EnhancedRichTextEditor: React.FC<EnhancedRichTextEditorProps> = ({
     setCurrentSize(size);
     if (quillRef.current) {
       const editor = quillRef.current.getEditor();
-      const container = editor.root as HTMLElement;
-      
-      // Áp dụng kích thước chữ cho toàn bộ editor
-      container.style.fontSize = getFontSizeValue(size);
       
       // Áp dụng class size cho nội dung được chọn
       const range = editor.getSelection();
@@ -447,42 +504,6 @@ const EnhancedRichTextEditor: React.FC<EnhancedRichTextEditorProps> = ({
     }
   };
   
-  // Chuyển đổi tên font sang giá trị CSS thực tế
-  const getFontFamilyValue = (fontName: string): string => {
-    switch (fontName) {
-      case 'arial': return 'Arial, sans-serif';
-      case 'times-new-roman': return '"Times New Roman", serif';
-      case 'tahoma': return 'Tahoma, sans-serif';
-      case 'verdana': return 'Verdana, sans-serif';
-      case 'open-sans': return '"Open Sans", sans-serif';
-      case 'roboto': return 'Roboto, sans-serif';
-      case 'merriweather': return 'Merriweather, serif';
-      case 'source-sans-pro': return '"Source Sans Pro", sans-serif';
-      case 'noticia-text': return '"Noticia Text", serif';
-      case 'segoe-ui': return '"Segoe UI", sans-serif';
-      case 'noto-sans': return '"Noto Sans", sans-serif';
-      case 'serif': return 'serif';
-      default: return '"Merriweather", serif';
-    }
-  };
-  
-  // Chuyển đổi tên size sang giá trị CSS thực tế
-  const getFontSizeValue = (size: string): string => {
-    // Kiểm tra nếu size đã là dạng Npx
-    if (size.endsWith('px')) {
-      return size;
-    }
-    
-    // Xử lý các giá trị cũ
-    switch (size) {
-      case 'small': return '14px';
-      case 'normal': return '16px';
-      case 'large': return '18px';
-      case 'huge': return '24px';
-      default: return '16px';
-    }
-  };
-  
   // Trả về tên hiển thị cho font
   const getFontDisplayName = (fontName: string): string => {
     switch (fontName) {
@@ -498,24 +519,7 @@ const EnhancedRichTextEditor: React.FC<EnhancedRichTextEditorProps> = ({
       case 'segoe-ui': return 'Segoe UI';
       case 'noto-sans': return 'Noto Sans';
       case 'serif': return 'Serif';
-      default: return fontName.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-    }
-  };
-  
-  // Trả về tên hiển thị cho kích thước
-  const getSizeDisplayName = (size: string): string => {
-    // Nếu size đã ở định dạng 'Npx', trả về trực tiếp
-    if (size.endsWith('px')) {
-      return size;
-    }
-    
-    // Xử lý các giá trị cũ
-    switch (size) {
-      case 'small': return 'Nhỏ (14px)';
-      case 'normal': return 'Vừa (16px)';
-      case 'large': return 'Lớn (18px)';
-      case 'huge': return 'Rất lớn (24px)';
-      default: return size;
+      default: return fontName.charAt(0).toUpperCase() + fontName.slice(1);
     }
   };
 
@@ -688,43 +692,52 @@ const EnhancedRichTextEditor: React.FC<EnhancedRichTextEditorProps> = ({
       e.preventDefault();
     };
     
-    document.addEventListener('dragover', preventDefault);
-    document.addEventListener('drop', preventDefault);
+    // Thêm các event listener
+    window.addEventListener('dragover', preventDefault);
+    window.addEventListener('drop', preventDefault);
     
     return () => {
-      document.removeEventListener('dragover', preventDefault);
-      document.removeEventListener('drop', preventDefault);
+      // Xóa các event listener khi component unmount
+      window.removeEventListener('dragover', preventDefault);
+      window.removeEventListener('drop', preventDefault);
     };
   }, []);
-
+  
+  // Render component
   return (
     <Card className="w-full">
-      <CardContent className="p-4">
+      <CardContent className="pt-6">
         {!readOnly && (
           <div className="mb-4 space-y-4">
-            {/* File upload controls */}
-            <div className="flex items-center gap-2">
-              <Label htmlFor="file-upload">Tải lên tài liệu (DOCX, DOC, TXT, PDF):</Label>
-              <Input
-                id="file-upload"
-                type="file"
-                onChange={handleFileChange}
-                className="max-w-md"
-                ref={fileInputRef}
-                accept=".docx,.doc,.txt,.pdf"
-              />
-              <Button 
-                onClick={handleFileUpload} 
-                disabled={!file || isLoading}
-                variant="outline"
-              >
-                {isLoading ? <Spinner className="mr-2" /> : null}
-                Tải lên
-              </Button>
+            <div className="flex flex-wrap gap-4">
+              <div className="flex-1">
+                <Label htmlFor="file-upload" className="block mb-2">Tải lên file:</Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="file-upload"
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleFileChange}
+                    accept=".doc,.docx,.txt,.pdf"
+                    disabled={isLoading || readOnly}
+                  />
+                  <Button 
+                    onClick={handleFileUpload}
+                    disabled={!file || isLoading}
+                    className="whitespace-nowrap"
+                  >
+                    {isLoading ? (
+                      <>
+                        <Spinner className="mr-2 h-4 w-4" />
+                        Đang tải...
+                      </>
+                    ) : 'Tải lên'}
+                  </Button>
+                </div>
+              </div>
             </div>
             
-            {/* Font controls */}
-            <div className="flex items-center gap-4">
+            <div className="flex flex-wrap gap-4 items-center">
               <div className="flex items-center gap-2">
                 <Label htmlFor="font-family">Font chữ:</Label>
                 <Select 
@@ -753,7 +766,7 @@ const EnhancedRichTextEditor: React.FC<EnhancedRichTextEditorProps> = ({
                   </SelectTrigger>
                   <SelectContent>
                     {fontSizes.map(size => (
-                      <SelectItem key={size} value={size}>{getSizeDisplayName(size)}</SelectItem>
+                      <SelectItem key={size} value={size}>{size}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -786,7 +799,6 @@ const EnhancedRichTextEditor: React.FC<EnhancedRichTextEditorProps> = ({
         <div
           onDrop={handleDrop}
           className={`border rounded-md ${readOnly ? 'bg-gray-50' : ''}`}
-          style={{ fontFamily: getFontFamilyValue(currentFont), fontSize: getFontSizeValue(currentSize) }}
         >
           <ReactQuill
             ref={quillRef}
@@ -796,14 +808,14 @@ const EnhancedRichTextEditor: React.FC<EnhancedRichTextEditorProps> = ({
             modules={quillModules}
             formats={formats}
             readOnly={readOnly}
-            placeholder="Nhập nội dung ở đây hoặc kéo thả file ảnh/video..."
+            placeholder={placeholder}
           />
         </div>
         
         {!readOnly && (
           <div className="mt-4 flex justify-between">
             <div className="text-sm text-muted-foreground">
-              Font: {getFontDisplayName(currentFont)}, Size: {getSizeDisplayName(currentSize)}
+              Font: {getFontDisplayName(currentFont)}, Size: {currentSize}
             </div>
             <Button onClick={handleSave} className="bg-red-600 hover:bg-red-700 text-white">
               Lưu nội dung

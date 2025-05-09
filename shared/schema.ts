@@ -107,7 +107,7 @@ export const chapters = pgTable("chapters", {
 export const chapterContent = pgTable("chapter_content", {
   id: serial("id").primaryKey(),
   chapterId: integer("chapter_id").notNull(),
-  content: text("content", { length: 'unlimited' }), // Explicitly set unlimited length for large text content
+  content: text("content"), // PostgreSQL text type has no practical length limitation
 });
 
 // User Activity Tables

@@ -16,6 +16,8 @@ export interface UpdateChapterParams {
   unlockPrice?: number | null;
   views?: number;
   content?: string;
+  fontFamily?: string; // Font family cho nội dung novel
+  fontSize?: string;   // Font size cho nội dung novel
 }
 
 /**
@@ -229,26 +231,31 @@ export async function updateChapter(params: UpdateChapterParams) {
       if (contentType === 'novel') {
         console.log('Processing novel content for chapter', id, 'content length:', content.length);
         
-        // Kiểm tra xem nội dung đã có định dạng font/size chưa
-        if (!hasProperFormatting(content)) {
-          console.log('Content does not have proper formatting, processing novel content...');
-          // Sử dụng processNovelContent thay vì cleanHTML trực tiếp
-          // để xử lý font và size một cách đúng đắn
-          processedContent = processNovelContent(content, {
-            font: DEFAULT_FONT,
-            size: DEFAULT_SIZE,
-            autoClean: true,
-            preserveHtml: true
-          });
-          console.log('Processed content length:', processedContent.length);
-        } else {
-          console.log('Content already has proper formatting');
-          // Giữ lại định dạng hiện có nhưng vẫn đảm bảo nội dung được xử lý đúng cách
-          processedContent = processNovelContent(content, {
-            autoClean: false,
-            preserveHtml: true
-          });
+        // Trích xuất thông tin font và size từ dữ liệu đầu vào (nếu có)
+        let font = DEFAULT_FONT;
+        let size = DEFAULT_SIZE;
+        let forceFormat = false;
+        
+        if (req.body && req.body.fontSize) {
+          size = req.body.fontSize;
+          forceFormat = true;
+          console.log(`Using user-selected font size: ${size}`);
         }
+        
+        if (req.body && req.body.fontFamily) {
+          font = req.body.fontFamily;
+          forceFormat = true;
+          console.log(`Using user-selected font family: ${font}`);
+        }
+        
+        // Sử dụng processNovelContent với font và size tùy chỉnh
+        processedContent = processNovelContent(content, {
+          font: font,
+          size: size,
+          autoClean: false, // Không làm sạch HTML từ editor
+          preserveHtml: true, 
+          forceFormat: forceFormat // Áp dụng font/size mới nếu người dùng đã chọn
+        });
         
         // Log sample của nội dung đã xử lý để debug
         const sampleLength = Math.min(200, processedContent.length);

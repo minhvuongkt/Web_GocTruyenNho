@@ -32,6 +32,7 @@ export interface NovelFormatConfig {
   size?: string;  // Kích thước chữ mặc định
   preserveHtml?: boolean; // Giữ nguyên HTML (true) hoặc chuyển đổi sang chuỗi (false)
   autoClean?: boolean; // Tự động làm sạch HTML
+  forceFormat?: boolean; // Bắt buộc áp dụng font và size, ngay cả khi đã có định dạng
 }
 
 /**
@@ -49,6 +50,7 @@ export function processNovelContent(
   const size = config.size || DEFAULT_SIZE;
   const preserveHtml = config.preserveHtml !== undefined ? config.preserveHtml : true;
   const autoClean = config.autoClean !== undefined ? config.autoClean : true;
+  const forceFormat = config.forceFormat !== undefined ? config.forceFormat : false;
 
   // Kiểm tra nếu không có nội dung hoặc không phải chuỗi
   if (!content || typeof content !== 'string') {
@@ -66,7 +68,7 @@ export function processNovelContent(
   let processedContent = content;
   
   console.log('Processing novel content with options:', {
-    font, size, autoClean, preserveHtml,
+    font, size, autoClean, preserveHtml, forceFormat,
     contentLength: content.length
   });
   
@@ -81,17 +83,78 @@ export function processNovelContent(
   }
 
   // Đảm bảo các thẻ đều có lớp font và size
-  if (!hasProperFormatting(processedContent)) {
-    console.log('Adding font and size classes to content...');
+  if (forceFormat || !hasProperFormatting(processedContent)) {
+    console.log(`${forceFormat ? 'Force formatting enabled' : 'No proper formatting detected'}, adding font and size classes to content...`);
     
-    // Thêm font và size vào các phần tử không có
-    processedContent = processedContent
-      .replace(/<p(?![^>]*class=["'][^"']*ql-font)/g, `<p class="ql-font-${font} ql-size-${size}"`)
-      .replace(/<span(?![^>]*class=["'][^"']*ql-font)/g, `<span class="ql-font-${font} ql-size-${size}"`)
-      .replace(/<div(?![^>]*class=["'][^"']*ql-font)/g, `<div class="ql-font-${font} ql-size-${size}"`);
+    // Nếu forceFormat = true, xóa tất cả class ql-font và ql-size hiện có
+    if (forceFormat) {
+      // Đầu tiên xóa các class ql-font-* và ql-size-* hiện có
+      processedContent = processedContent
+        .replace(/\s*ql-font-[a-zA-Z0-9_-]+\s*/g, ' ')
+        .replace(/\s*ql-size-[a-zA-Z0-9_-]+\s*/g, ' ');
+    }
+    
+    // Thêm font và size mới vào các phần tử
+    processedContent = addFormatClasses(processedContent, font, size);
   }
 
   return processedContent;
+}
+
+/**
+ * Thêm lớp định dạng font và size vào nội dung HTML
+ * @param content Nội dung HTML
+ * @param font Font chữ
+ * @param size Kích thước chữ
+ * @returns Nội dung đã thêm lớp định dạng
+ */
+function addFormatClasses(content: string, font: string, size: string): string {
+  if (!content) return '';
+  
+  let result = content;
+  
+  // Chuẩn bị các class để thêm vào
+  const fontClass = `ql-font-${font}`;
+  const sizeClass = `ql-size-${size}`;
+  
+  // Xử lý các thẻ p không có class
+  result = result.replace(/<p(?![^>]*class=)/g, `<p class="${fontClass} ${sizeClass}"`);
+  
+  // Xử lý các thẻ p có class nhưng không có ql-font
+  result = result.replace(/<p([^>]*) class=["']([^"']*)["']([^>]*)>/g, (match, before, classes, after) => {
+    if (!classes.includes('ql-font-')) {
+      classes += ` ${fontClass}`;
+    }
+    if (!classes.includes('ql-size-')) {
+      classes += ` ${sizeClass}`;
+    }
+    return `<p${before} class="${classes}"${after}>`;
+  });
+  
+  // Tương tự với các thẻ span và div
+  result = result.replace(/<span(?![^>]*class=)/g, `<span class="${fontClass} ${sizeClass}"`);
+  result = result.replace(/<span([^>]*) class=["']([^"']*)["']([^>]*)>/g, (match, before, classes, after) => {
+    if (!classes.includes('ql-font-')) {
+      classes += ` ${fontClass}`;
+    }
+    if (!classes.includes('ql-size-')) {
+      classes += ` ${sizeClass}`;
+    }
+    return `<span${before} class="${classes}"${after}>`;
+  });
+  
+  result = result.replace(/<div(?![^>]*class=)/g, `<div class="${fontClass} ${sizeClass}"`);
+  result = result.replace(/<div([^>]*) class=["']([^"']*)["']([^>]*)>/g, (match, before, classes, after) => {
+    if (!classes.includes('ql-font-')) {
+      classes += ` ${fontClass}`;
+    }
+    if (!classes.includes('ql-size-')) {
+      classes += ` ${sizeClass}`;
+    }
+    return `<div${before} class="${classes}"${after}>`;
+  });
+  
+  return result;
 }
 
 /**

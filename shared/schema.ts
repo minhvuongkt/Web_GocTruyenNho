@@ -102,6 +102,8 @@ export const chapters = pgTable("chapters", {
   isLocked: boolean("is_locked").notNull().default(false),
   unlockPrice: integer("unlock_price"),
   views: integer("views").notNull().default(0),
+  fontFamily: text("font_family"),
+  fontSize: text("font_size"),
 });
 
 export const chapterContent = pgTable("chapter_content", {
@@ -252,6 +254,8 @@ export const insertChapterSchema = createInsertSchema(chapters)
     releaseDate: true,
     isLocked: true,
     unlockPrice: true,
+    fontFamily: true,
+    fontSize: true,
   })
   .extend({
     releaseDate: z.preprocess(
@@ -261,6 +265,8 @@ export const insertChapterSchema = createInsertSchema(chapters)
         .optional()
         .default(() => new Date()),
     ),
+    fontFamily: z.string().optional(),
+    fontSize: z.string().optional(),
   });
 
 export const insertChapterContentSchema = createInsertSchema(

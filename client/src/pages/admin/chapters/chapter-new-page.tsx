@@ -63,6 +63,8 @@ export default function ChapterNewPage({ contentId }: { contentId: number }) {
     content: "",
     isLocked: false,
     unlockPrice: 0,
+    fontFamily: 'merriweather', // Default font family
+    fontSize: 'large', // Default font size
   });
 
   // Update contentId when the prop changes (without causing infinite updates)
@@ -920,8 +922,9 @@ export default function ChapterNewPage({ contentId }: { contentId: number }) {
                   </div>
 
                   <EnhancedRichTextEditor
-                    id="chapter-content"
                     initialValue={chapter.content}
+                    fontFamily={chapter.fontFamily || 'merriweather'}
+                    fontSize={chapter.fontSize || 'large'}
                     onChange={(content) => {
                       setChapter((prev: any) => ({
                         ...prev,

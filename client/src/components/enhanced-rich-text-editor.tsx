@@ -391,7 +391,25 @@ const EnhancedRichTextEditor: React.FC<EnhancedRichTextEditorProps> = ({
     if (quillRef.current) {
       const editor = quillRef.current.getEditor();
       const container = editor.root as HTMLElement;
-      container.style.fontFamily = fontName;
+      
+      // Áp dụng font chữ cho toàn bộ editor
+      container.style.fontFamily = getFontFamilyValue(fontName);
+      
+      // Áp dụng class font cho nội dung được chọn
+      const range = editor.getSelection();
+      if (range && range.length > 0) {
+        editor.format('font', fontName);
+      } else {
+        // Nếu không có vùng chọn, áp dụng font cho toàn văn bản
+        editor.formatText(0, editor.getLength(), 'font', fontName);
+      }
+      
+      // Thông báo thay đổi nội dung
+      const updatedContent = editor.root.innerHTML;
+      setContent(updatedContent);
+      if (onChange) {
+        onChange(updatedContent);
+      }
     }
   };
   
@@ -401,7 +419,50 @@ const EnhancedRichTextEditor: React.FC<EnhancedRichTextEditorProps> = ({
     if (quillRef.current) {
       const editor = quillRef.current.getEditor();
       const container = editor.root as HTMLElement;
-      container.style.fontSize = size;
+      
+      // Áp dụng kích thước chữ cho toàn bộ editor
+      container.style.fontSize = getFontSizeValue(size);
+      
+      // Áp dụng class size cho nội dung được chọn
+      const range = editor.getSelection();
+      if (range && range.length > 0) {
+        editor.format('size', size);
+      } else {
+        // Nếu không có vùng chọn, áp dụng size cho toàn văn bản
+        editor.formatText(0, editor.getLength(), 'size', size);
+      }
+      
+      // Thông báo thay đổi nội dung
+      const updatedContent = editor.root.innerHTML;
+      setContent(updatedContent);
+      if (onChange) {
+        onChange(updatedContent);
+      }
+    }
+  };
+  
+  // Chuyển đổi tên font sang giá trị CSS thực tế
+  const getFontFamilyValue = (fontName: string): string => {
+    switch (fontName) {
+      case 'serif': return 'serif';
+      case 'sans': return 'sans-serif';
+      case 'monospace': return 'monospace';
+      case 'roboto': return 'Roboto, sans-serif';
+      case 'merriweather': return 'Merriweather, serif';
+      case 'noto': return 'Noto Sans, sans-serif';
+      case 'source': return 'Source Sans Pro, sans-serif';
+      default: return 'serif';
+    }
+  };
+  
+  // Chuyển đổi tên size sang giá trị CSS thực tế
+  const getFontSizeValue = (size: string): string => {
+    switch (size) {
+      case 'small': return '0.875rem';
+      case 'normal': return '1rem';
+      case 'large': return '1.125rem';
+      case 'huge': return '1.5rem';
+      default: return '1rem';
     }
   };
 

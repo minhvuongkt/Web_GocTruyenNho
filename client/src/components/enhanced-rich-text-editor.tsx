@@ -247,19 +247,25 @@ const quillModules = {
 interface EnhancedRichTextEditorProps {
   initialValue?: string;
   onSave?: (content: string) => void;
+  onChange?: (content: string) => void; // Thêm hàm callback để thông báo khi nội dung thay đổi
   readOnly?: boolean;
   chapterId?: number;
   contentId?: number;
   autoSave?: boolean;
+  fontFamily?: string; // Thêm font family hiện tại
+  fontSize?: string;   // Thêm font size hiện tại
 }
 
 const EnhancedRichTextEditor: React.FC<EnhancedRichTextEditorProps> = ({
   initialValue = '',
   onSave,
+  onChange,
   readOnly = false,
   chapterId,
   contentId,
   autoSave = true,
+  fontFamily = 'merriweather',
+  fontSize = 'large',
 }) => {
   const [content, setContent] = useState<string>(initialValue);
   const [file, setFile] = useState<File | null>(null);
@@ -267,6 +273,8 @@ const EnhancedRichTextEditor: React.FC<EnhancedRichTextEditorProps> = ({
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [uploadInfo, setUploadInfo] = useState<string>('');
   const [isAutoSaving, setIsAutoSaving] = useState<boolean>(false);
+  const [currentFont, setCurrentFont] = useState(fontFamily);
+  const [currentSize, setCurrentSize] = useState(fontSize);
   const quillRef = useRef<ReactQuill | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);

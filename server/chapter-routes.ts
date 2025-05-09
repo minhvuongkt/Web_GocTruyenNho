@@ -109,7 +109,12 @@ export function registerChapterRoutes(app: Express) {
         });
       }
       
-      const chapterInfo = await chapterService.getChapterByContentAndNumber(contentId, chapterNumber);
+      // Sử dụng tùy chọn mới để tối ưu truy vấn và chỉ lấy dữ liệu cần thiết
+      const chapterInfo = await chapterService.getChapterByContentAndNumber(contentId, chapterNumber, {
+        includeContent: true,
+        contentColumnOnly: true,
+        checkContentLength: true // Trả về độ dài nội dung để gỡ lỗi
+      });
       
       if (!chapterInfo) {
         return res.status(404).json({
@@ -135,23 +140,25 @@ export function registerChapterRoutes(app: Express) {
         // await storage.incrementChapterViews(chapterInfo.chapter.id);
       }
       
-      // Lấy nội dung chapter nếu có
-      const chapterContent = chapterInfo.contents && chapterInfo.contents.length > 0
-        ? chapterInfo.contents[0].content
-        : '';
+      // Lấy nội dung chapter từ kết quả mới
+      const chapterContent = chapterInfo.content || '';
       
-      console.log(`Sending chapter for content ${contentId}, number ${chapterNumber} with content length: ${chapterContent.length}`);
+      // Sử dụng contentLength nếu có, nếu không thì dùng length của string
+      const contentLength = chapterInfo.contentLength || chapterContent.length;
+      console.log(`Sending chapter for content ${contentId}, number ${chapterNumber} with content length: ${contentLength}`);
+      
       if (chapterContent.length > 0) {
         // Log sample của nội dung để debug
         const sampleLength = Math.min(200, chapterContent.length);
         console.log('Content sample:', chapterContent.substring(0, sampleLength));
       }
       
-      // Trả về dữ liệu chapter
+      // Trả về dữ liệu chapter với thêm thông tin về độ dài nội dung
       res.json({
         chapter: {
           ...chapterInfo.chapter,
           content: chapterContent,
+          contentLength: contentLength,
           isUnlocked
         }
       });
@@ -344,8 +351,10 @@ export function registerChapterRoutes(app: Express) {
         console.log('Content sample:', content.substring(0, sampleLength));
       }
       
-      // Lấy thông tin chapter
-      const chapterInfo = await chapterService.getChapterByContentAndNumber(contentId, chapterNumber);
+      // Lấy thông tin chapter với cải tiến mới
+      const chapterInfo = await chapterService.getChapterByContentAndNumber(contentId, chapterNumber, {
+        includeContent: false // Không cần lấy nội dung vì chỉ cần id của chapter
+      });
       
       if (!chapterInfo) {
         return res.status(404).json({ error: 'Chapter not found' });

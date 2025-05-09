@@ -412,14 +412,12 @@ export async function deleteChapter(chapterId: number) {
       throw new Error(`Chapter with ID ${chapterId} not found`);
     }
 
-    // Xóa nội dung chapter trước
-    if (chapterInfo.contents && chapterInfo.contents.length > 0) {
-      for (const item of chapterInfo.contents) {
-        await db
-          .delete(schema.chapterContent)
-          .where(eq(schema.chapterContent.id, item.id));
-      }
-    }
+    // Xóa nội dung chapter trước - dùng cách mới để tránh lỗi
+    await db
+      .delete(schema.chapterContent)
+      .where(eq(schema.chapterContent.chapterId, chapterId));
+      
+    console.log(`Deleted content for chapter ID: ${chapterId}`);
 
     // Xóa chapter
     await db

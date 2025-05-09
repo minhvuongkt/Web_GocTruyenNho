@@ -37,12 +37,8 @@ export function registerChapterRoutes(app: Express) {
         return res.status(400).json({ error: 'Invalid chapter ID' });
       }
       
-      // Sử dụng tùy chọn mới để tối ưu truy vấn và chỉ lấy dữ liệu cần thiết
-      const chapterInfo = await chapterService.getChapterById(id, {
-        includeContent: true,
-        contentColumnOnly: true,
-        checkContentLength: true // Trả về độ dài nội dung để gỡ lỗi
-      });
+      // Gọi service đã cải tiến - bây giờ luôn lấy nội dung
+      const chapterInfo = await chapterService.getChapterById(id);
       
       if (!chapterInfo) {
         return res.status(404).json({ error: 'Chapter not found' });
@@ -55,7 +51,7 @@ export function registerChapterRoutes(app: Express) {
         // TODO: Kiểm tra user đã mở khóa chapter chưa
         const userId = (req.user as any).id;
         // isUnlocked = await storage.isChapterUnlocked(userId, chapterInfo.chapter.id);
-        // TODO: Implement this in the future, temporarily setting to true for development
+        // Tạm thời set true cho development
         isUnlocked = true;
       }
       
@@ -66,16 +62,19 @@ export function registerChapterRoutes(app: Express) {
       }
       
       // Lấy nội dung chapter từ kết quả mới
+      // Đảm bảo luôn có nội dung, ngay cả khi không tìm thấy trong DB
       const chapterContent = chapterInfo.content || '';
       
-      // Sử dụng contentLength nếu có, nếu không thì dùng length của string
+      // Sử dụng contentLength từ service
       const contentLength = chapterInfo.contentLength || chapterContent.length;
       console.log(`Sending chapter ${id} with content length: ${contentLength}`);
       
-      if (chapterContent.length > 0) {
+      if (chapterContent && chapterContent.length > 0) {
         // Log sample của nội dung để debug
         const sampleLength = Math.min(200, chapterContent.length);
         console.log('Content sample:', chapterContent.substring(0, sampleLength));
+      } else {
+        console.log(`Warning: No content available for chapter ${id}`);
       }
       
       // Trả về dữ liệu chapter với thêm thông tin về độ dài nội dung
@@ -109,12 +108,8 @@ export function registerChapterRoutes(app: Express) {
         });
       }
       
-      // Sử dụng tùy chọn mới để tối ưu truy vấn và chỉ lấy dữ liệu cần thiết
-      const chapterInfo = await chapterService.getChapterByContentAndNumber(contentId, chapterNumber, {
-        includeContent: true,
-        contentColumnOnly: true,
-        checkContentLength: true // Trả về độ dài nội dung để gỡ lỗi
-      });
+      // Gọi service đã cải tiến - không cần tùy chọn nữa vì đã luôn lấy nội dung
+      const chapterInfo = await chapterService.getChapterByContentAndNumber(contentId, chapterNumber);
       
       if (!chapterInfo) {
         return res.status(404).json({
@@ -130,7 +125,7 @@ export function registerChapterRoutes(app: Express) {
         // TODO: Kiểm tra user đã mở khóa chapter chưa
         const userId = (req.user as any).id;
         // isUnlocked = await storage.isChapterUnlocked(userId, chapterInfo.chapter.id);
-        // TODO: Implement this in the future, temporarily setting to true for development
+        // Tạm thời set true cho development
         isUnlocked = true;
       }
       
@@ -141,16 +136,19 @@ export function registerChapterRoutes(app: Express) {
       }
       
       // Lấy nội dung chapter từ kết quả mới
+      // Đảm bảo luôn có nội dung, ngay cả khi không tìm thấy trong DB
       const chapterContent = chapterInfo.content || '';
       
-      // Sử dụng contentLength nếu có, nếu không thì dùng length của string
+      // Sử dụng contentLength từ service
       const contentLength = chapterInfo.contentLength || chapterContent.length;
       console.log(`Sending chapter for content ${contentId}, number ${chapterNumber} with content length: ${contentLength}`);
       
-      if (chapterContent.length > 0) {
+      if (chapterContent && chapterContent.length > 0) {
         // Log sample của nội dung để debug
         const sampleLength = Math.min(200, chapterContent.length);
         console.log('Content sample:', chapterContent.substring(0, sampleLength));
+      } else {
+        console.log(`Warning: No content available for content ${contentId}, chapter ${chapterNumber}`);
       }
       
       // Trả về dữ liệu chapter với thêm thông tin về độ dài nội dung

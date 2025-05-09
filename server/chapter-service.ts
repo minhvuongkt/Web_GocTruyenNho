@@ -68,40 +68,39 @@ export async function getChapterById(
       contentType: contentInfo?.type
     };
 
-    // Nếu cần nội dung chapter
-    if (includeContent) {
-      if (contentColumnOnly) {
-        // Chỉ lấy cột content, tiết kiệm băng thông
-        const [contentData] = await db
-          .select({ content: schema.chapterContent.content })
-          .from(schema.chapterContent)
-          .where(eq(schema.chapterContent.chapterId, chapterId));
+    // Luôn lấy nội dung chapter - đảm bảo cả novel và manga đều có nội dung
+    try {
+      // Lấy nội dung chap, thêm thông tin độ dài
+      const [contentData] = await db
+        .select({
+          id: schema.chapterContent.id,
+          content: schema.chapterContent.content,
+          contentLength: sql`length(${schema.chapterContent.content})`
+        })
+        .from(schema.chapterContent)
+        .where(eq(schema.chapterContent.chapterId, chapterId));
+      
+      if (contentData) {
+        // Lưu cả vào contents (cho khả năng tương thích ngược) và content (cho API mới)
+        result.content = contentData.content || '';
+        result.contentLength = Number(contentData.contentLength || 0);
+        result.contents = [contentData];
         
-        result.content = contentData?.content || '';
-      } else if (checkContentLength) {
-        // Lấy cả nội dung và đo độ dài
-        const [contentData] = await db
-          .select({
-            id: schema.chapterContent.id,
-            content: schema.chapterContent.content,
-            contentLength: sql`length(${schema.chapterContent.content})`
-          })
-          .from(schema.chapterContent)
-          .where(eq(schema.chapterContent.chapterId, chapterId));
-        
-        if (contentData) {
-          result.content = contentData.content || '';
-          result.contentLength = Number(contentData.contentLength || 0);
-        }
+        console.log(`Loaded chapter ${chapterId} content successfully with length: ${result.contentLength}`);
       } else {
-        // Truy vấn tiêu chuẩn - lấy tất cả các cột
-        const chapterContents = await db
-          .select()
-          .from(schema.chapterContent)
-          .where(eq(schema.chapterContent.chapterId, chapterId));
+        // Nếu không có dữ liệu, đặt giá trị mặc định
+        result.content = '';
+        result.contentLength = 0;
+        result.contents = [];
         
-        result.contents = chapterContents;
+        console.log(`No content found for chapter ${chapterId}. Setting empty content.`);
       }
+    } catch (error) {
+      // Nếu có lỗi khi truy vấn, vẫn tiếp tục nhưng ghi log và đặt giá trị trống
+      console.error(`Error fetching content for chapter ${chapterId}:`, error);
+      result.content = '';
+      result.contentLength = 0;
+      result.contents = [];
     }
 
     return result;

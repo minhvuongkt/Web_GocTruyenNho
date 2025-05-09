@@ -914,17 +914,15 @@ export default function ChapterEditPage({
                   </div>
 
                   <EnhancedRichTextEditor
-                    id="chapter-content"
                     initialValue={chapter.content}
+                    fontFamily={chapter.fontFamily || 'merriweather'}
+                    fontSize={chapter.fontSize || 'large'}
                     onChange={(content) => {
                       setChapter((prev: any) => ({
                         ...prev,
                         content: content,
                       }));
                     }}
-                    placeholder="Nhập nội dung chương truyện..."
-                    showSubmitButton={false}
-                    autosaveInterval={30}
                   />
                 </div>
               ) : (

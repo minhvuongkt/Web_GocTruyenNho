@@ -286,6 +286,20 @@ const EnhancedRichTextEditor: React.FC<EnhancedRichTextEditorProps> = ({
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
   const { toast } = useToast();
+  
+  // Cập nhật font và size khi props thay đổi
+  useEffect(() => {
+    setCurrentFont(fontFamily);
+    setCurrentSize(fontSize);
+    
+    // Cập nhật font và size trong trình soạn thảo
+    if (quillRef.current) {
+      const editor = quillRef.current.getEditor();
+      const container = editor.root as HTMLElement;
+      container.style.fontFamily = fontFamily;
+      container.style.fontSize = fontSize;
+    }
+  }, [fontFamily, fontSize]);
 
   // Xử lý thay đổi nội dung
   const handleChange = (value: string) => {

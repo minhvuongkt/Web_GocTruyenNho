@@ -261,6 +261,9 @@ interface EnhancedRichTextEditorProps {
   autoSave?: boolean;
   fontFamily?: string; // Thêm font family hiện tại
   fontSize?: string;   // Thêm font size hiện tại
+  placeholder?: string; // Placeholder text cho editor
+  showSubmitButton?: boolean; // Hiển thị nút submit hay không
+  autosaveInterval?: number; // Thời gian tự động lưu (tính bằng giây)
 }
 
 const EnhancedRichTextEditor: React.FC<EnhancedRichTextEditorProps> = ({

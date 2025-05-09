@@ -96,6 +96,71 @@ const uploadMedia = multer({
 export function registerUploadRoutes(app: express.Express) {
   console.log('Registering upload routes...');
   
+  // Route cho xử lý file văn bản và chuyển đổi thành HTML cho chapter
+  app.post('/api/chapters/text/process', ensureAuthenticated, ensureAdmin, uploadDocument.single('textFile'), async (req: express.Request, res: express.Response) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: 'No file uploaded' });
+      }
+      
+      // Xử lý file văn bản thành HTML
+      const filePath = req.file.path;
+      const fileBuffer = fs.readFileSync(filePath);
+      
+      console.log(`Processing text file: ${req.file.originalname}, mime type: ${req.file.mimetype}`);
+      
+      // Chuyển đổi văn bản sang HTML
+      let htmlContent = await processDocument(fileBuffer, req.file.mimetype);
+      
+      // Xử lý ảnh inline trong HTML (nếu có)
+      htmlContent = await processInlineImages(htmlContent);
+      
+      // Định dạng nội dung novel
+      const processedContent = processNovelContent(htmlContent, {
+        preserveHtml: true,
+        autoClean: true,
+        fontFamily: req.body.fontFamily || 'merriweather',
+        fontSize: req.body.fontSize || 'large'
+      });
+      
+      // Trả về nội dung đã xử lý
+      return res.json({
+        success: true,
+        content: processedContent,
+        originalName: req.file.originalname,
+        mimeType: req.file.mimetype
+      });
+      
+    } catch (error) {
+      console.error('Error processing text file:', error);
+      let errorMessage = 'Failed to process text file';
+      let errorDetails = {};
+      
+      if (error instanceof DocumentProcessingError) {
+        errorMessage = error.message;
+        errorDetails = {
+          code: error.code,
+          mimeType: error.mimeType,
+          details: error.details
+        };
+      }
+      
+      return res.status(500).json({ 
+        error: errorMessage,
+        details: errorDetails
+      });
+    } finally {
+      // Xóa file tạm nếu tồn tại
+      if (req.file && req.file.path) {
+        try {
+          fs.unlinkSync(req.file.path);
+        } catch (err) {
+          console.error('Error deleting temporary file:', err);
+        }
+      }
+    }
+  });
+  
   // Route cho upload document
   app.post('/api/upload/document', ensureAuthenticated, ensureAdmin, uploadDocument.single('document'), async (req: express.Request, res: express.Response) => {
     try {

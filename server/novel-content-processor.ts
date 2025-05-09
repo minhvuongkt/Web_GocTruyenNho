@@ -30,6 +30,8 @@ export const SUPPORTED_SIZES = [
 export interface NovelFormatConfig {
   font?: string;  // Font chữ mặc định
   size?: string;  // Kích thước chữ mặc định
+  fontFamily?: string; // Alias cho font để tương thích với tham số từ API
+  fontSize?: string;   // Alias cho size để tương thích với tham số từ API
   preserveHtml?: boolean; // Giữ nguyên HTML (true) hoặc chuyển đổi sang chuỗi (false)
   autoClean?: boolean; // Tự động làm sạch HTML
   forceFormat?: boolean; // Bắt buộc áp dụng font và size, ngay cả khi đã có định dạng
@@ -46,8 +48,8 @@ export function processNovelContent(
   config: NovelFormatConfig = {}
 ): string {
   // Thiết lập cấu hình mặc định
-  const font = config.font || DEFAULT_FONT;
-  const size = config.size || DEFAULT_SIZE;
+  const font = config.font || config.fontFamily || DEFAULT_FONT;
+  const size = config.size || config.fontSize || DEFAULT_SIZE;
   const preserveHtml = config.preserveHtml !== undefined ? config.preserveHtml : true;
   const autoClean = config.autoClean !== undefined ? config.autoClean : true;
   const forceFormat = config.forceFormat !== undefined ? config.forceFormat : false;

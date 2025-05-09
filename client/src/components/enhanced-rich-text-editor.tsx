@@ -723,43 +723,6 @@ const EnhancedRichTextEditor: React.FC<EnhancedRichTextEditorProps> = ({
               </Button>
             </div>
             
-            {/* Font controls */}
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2">
-                <Label htmlFor="font-family">Font chữ:</Label>
-                <Select 
-                  value={currentFont} 
-                  onValueChange={handleFontChange}
-                >
-                  <SelectTrigger className="w-40" id="font-family">
-                    <SelectValue placeholder="Font chữ" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {fonts.map(font => (
-                      <SelectItem key={font} value={font}>{getFontDisplayName(font)}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div className="flex items-center gap-2">
-                <Label htmlFor="font-size">Kích thước:</Label>
-                <Select 
-                  value={currentSize} 
-                  onValueChange={handleSizeChange}
-                >
-                  <SelectTrigger className="w-32" id="font-size">
-                    <SelectValue placeholder="Kích thước" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {fontSizes.map(size => (
-                      <SelectItem key={size} value={size}>{getSizeDisplayName(size)}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            
             {uploadInfo && (
               <Alert className="bg-blue-50">
                 <AlertDescription>

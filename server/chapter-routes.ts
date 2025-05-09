@@ -48,11 +48,10 @@ export function registerChapterRoutes(app: Express) {
       let isUnlocked = !chapterInfo.chapter.isLocked;
       
       if (chapterInfo.chapter.isLocked && req.isAuthenticated && req.isAuthenticated()) {
-        // TODO: Kiểm tra user đã mở khóa chapter chưa
+        // Kiểm tra user đã mở khóa chapter chưa
         const userId = (req.user as any).id;
-        // isUnlocked = await storage.isChapterUnlocked(userId, chapterInfo.chapter.id);
-        // Tạm thời set true cho development
-        isUnlocked = true;
+        const { storage } = await import('./storage');
+        isUnlocked = await storage.isChapterUnlocked(userId, chapterInfo.chapter.id);
       }
       
       // Chỉ tăng lượt xem nếu chapter không bị khóa hoặc đã được mở khóa
@@ -124,11 +123,10 @@ export function registerChapterRoutes(app: Express) {
       let isUnlocked = !chapterInfo.chapter.isLocked;
       
       if (chapterInfo.chapter.isLocked && req.isAuthenticated && req.isAuthenticated()) {
-        // TODO: Kiểm tra user đã mở khóa chapter chưa
+        // Kiểm tra user đã mở khóa chapter chưa
         const userId = (req.user as any).id;
-        // isUnlocked = await storage.isChapterUnlocked(userId, chapterInfo.chapter.id);
-        // Tạm thời set true cho development
-        isUnlocked = true;
+        const { storage } = await import('./storage');
+        isUnlocked = await storage.isChapterUnlocked(userId, chapterInfo.chapter.id);
       }
       
       // Chỉ tăng lượt xem nếu chapter không bị khóa hoặc đã được mở khóa

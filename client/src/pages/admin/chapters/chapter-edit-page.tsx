@@ -646,7 +646,7 @@ export default function ChapterEditPage({
       console.log("Updating manga chapter with JSON image data:", imageJson);
       updateChapterMutation.mutate(chapterUpdateData);
     } else if (content?.type === "novel") {
-      // Format data for novel
+      // Format data for novel including font and size
       // Chuẩn bị dữ liệu cập nhật
       const chapterUpdateData = {
         ...chapter,
@@ -654,9 +654,12 @@ export default function ChapterEditPage({
         releaseDate: chapter.releaseDate
           ? new Date(chapter.releaseDate).toISOString().split("T")[0] // Chỉ lấy phần ngày YYYY-MM-DD
           : null,
+        // Thêm font và size
+        fontFamily: chapter.fontFamily || 'merriweather',
+        fontSize: chapter.fontSize || 'large',
       };
 
-      console.log("Updating novel chapter with content:", chapterUpdateData);
+      console.log("Updating novel chapter with content and formatting:", chapterUpdateData);
       updateChapterMutation.mutate(chapterUpdateData);
     } else {
       // Fallback for other content types

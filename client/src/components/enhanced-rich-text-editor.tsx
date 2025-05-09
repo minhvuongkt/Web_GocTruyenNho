@@ -9,6 +9,13 @@ import { Alert, AlertDescription } from './ui/alert';
 import { Spinner } from './ui/spinner';
 import { useToast } from '../hooks/use-toast';
 import { apiRequest } from '../lib/queryClient';
+import { 
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 // Định nghĩa các font chữ
 const fonts = [
@@ -283,6 +290,10 @@ const EnhancedRichTextEditor: React.FC<EnhancedRichTextEditorProps> = ({
   // Xử lý thay đổi nội dung
   const handleChange = (value: string) => {
     setContent(value);
+    // Gọi callback onChange nếu được cung cấp
+    if (onChange) {
+      onChange(value);
+    }
   };
 
   // Chức năng tự động lưu
@@ -318,7 +329,11 @@ const EnhancedRichTextEditor: React.FC<EnhancedRichTextEditorProps> = ({
       await apiRequest(
         'PATCH',
         `/api/chapters/${chapterId}`, 
-        { content: content }
+        { 
+          content: content,
+          fontFamily: currentFont,
+          fontSize: currentSize
+        }
       );
       
       setLastSaved(new Date());
@@ -342,6 +357,7 @@ const EnhancedRichTextEditor: React.FC<EnhancedRichTextEditorProps> = ({
   // Xử lý lưu thủ công
   const handleSave = () => {
     if (onSave) {
+      // Truyền content cùng với font và size hiện tại
       onSave(content);
       setLastSaved(new Date());
       toast({
@@ -349,6 +365,26 @@ const EnhancedRichTextEditor: React.FC<EnhancedRichTextEditorProps> = ({
         description: "Nội dung đã được lưu thành công",
         variant: "default",
       });
+    }
+  };
+  
+  // Xử lý thay đổi font
+  const handleFontChange = (fontName: string) => {
+    setCurrentFont(fontName);
+    if (quillRef.current) {
+      const editor = quillRef.current.getEditor();
+      const container = editor.root as HTMLElement;
+      container.style.fontFamily = fontName;
+    }
+  };
+  
+  // Xử lý thay đổi size
+  const handleSizeChange = (size: string) => {
+    setCurrentSize(size);
+    if (quillRef.current) {
+      const editor = quillRef.current.getEditor();
+      const container = editor.root as HTMLElement;
+      container.style.fontSize = size;
     }
   };
 
@@ -534,7 +570,8 @@ const EnhancedRichTextEditor: React.FC<EnhancedRichTextEditorProps> = ({
     <Card className="w-full">
       <CardContent className="p-4">
         {!readOnly && (
-          <div className="mb-4 space-y-2">
+          <div className="mb-4 space-y-4">
+            {/* File upload controls */}
             <div className="flex items-center gap-2">
               <Label htmlFor="file-upload">Tải lên tài liệu (DOCX, DOC, TXT, PDF):</Label>
               <Input
@@ -553,6 +590,43 @@ const EnhancedRichTextEditor: React.FC<EnhancedRichTextEditorProps> = ({
                 {isLoading ? <Spinner className="mr-2" /> : null}
                 Tải lên
               </Button>
+            </div>
+            
+            {/* Font controls */}
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <Label htmlFor="font-family">Font chữ:</Label>
+                <Select 
+                  value={currentFont} 
+                  onValueChange={handleFontChange}
+                >
+                  <SelectTrigger className="w-40" id="font-family">
+                    <SelectValue placeholder="Font chữ" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {fonts.map(font => (
+                      <SelectItem key={font} value={font}>{font}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="flex items-center gap-2">
+                <Label htmlFor="font-size">Kích thước:</Label>
+                <Select 
+                  value={currentSize} 
+                  onValueChange={handleSizeChange}
+                >
+                  <SelectTrigger className="w-32" id="font-size">
+                    <SelectValue placeholder="Kích thước" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {['small', 'medium', 'large', 'x-large', 'xx-large'].map(size => (
+                      <SelectItem key={size} value={size}>{size}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
             
             {uploadInfo && (
@@ -581,6 +655,7 @@ const EnhancedRichTextEditor: React.FC<EnhancedRichTextEditorProps> = ({
         <div
           onDrop={handleDrop}
           className={`border rounded-md ${readOnly ? 'bg-gray-50' : ''}`}
+          style={{ fontFamily: currentFont, fontSize: currentSize }}
         >
           <ReactQuill
             ref={quillRef}
@@ -595,7 +670,10 @@ const EnhancedRichTextEditor: React.FC<EnhancedRichTextEditorProps> = ({
         </div>
         
         {!readOnly && (
-          <div className="mt-4 flex justify-end">
+          <div className="mt-4 flex justify-between">
+            <div className="text-sm text-muted-foreground">
+              Font: {currentFont}, Size: {currentSize}
+            </div>
             <Button onClick={handleSave}>
               Lưu nội dung
             </Button>

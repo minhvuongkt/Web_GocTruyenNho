@@ -121,6 +121,9 @@ export function NovelReaderPage({
   useEffect(() => {
     if (data && data.chapter && data.chapter.isLocked && !data.isUnlocked) {
       setShowUnlockModal(true);
+    } else {
+      // Ensure modal is closed when data changes and chapter is unlocked
+      setShowUnlockModal(false);
     }
   }, [data]);
 

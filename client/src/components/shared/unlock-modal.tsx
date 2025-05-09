@@ -41,7 +41,7 @@ export function UnlockModal({
   });
 
   // Get user balance
-  const userBalance = userData?.balance || user?.balance || 0;
+  const userBalance = (userData as any)?.balance || (user as any)?.balance || 0;
   
   // Check if user has enough balance
   const hasEnoughBalance = userBalance >= (chapter.unlockPrice || 0);
@@ -62,6 +62,16 @@ export function UnlockModal({
       // Invalidate queries to refetch data
       queryClient.invalidateQueries({ queryKey: ["/api/user"] });
       queryClient.invalidateQueries({ queryKey: [`/api/chapters/${chapter.id}`] });
+      
+      // Invalidate content/chapter query to update isUnlocked status
+      const contentId = chapter.contentId;
+      const chapterNumber = chapter.number;
+      if (contentId && chapterNumber) {
+        queryClient.invalidateQueries({ 
+          queryKey: [`/api/content/${contentId}/chapter/${chapterNumber}`] 
+        });
+      }
+      
       onUnlockSuccess();
       onClose();
     },

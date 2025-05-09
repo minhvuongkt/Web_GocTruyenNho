@@ -19,24 +19,21 @@ import {
 
 // Định nghĩa các font chữ
 const fonts = [
-  'arial',
-  'times-new-roman',
-  'tahoma',
-  'verdana',
-  'open-sans',
+  'serif',
+  'sans',
+  'monospace',
   'roboto',
   'merriweather',
-  'source-sans-pro',
-  'noticia-text',
+  'noto',
+  'source',
   'segoe-ui',
   'noto-sans',
   'serif',
 ];
 
-// Định nghĩa các kích cỡ từ 10px đến 48px
+// Định nghĩa các kích cỡ font
 const fontSizes = [
-  '10px', '11px', '12px', '14px', '16px', '18px', '20px', 
-  '22px', '24px', '26px', '28px', '32px', '36px', '40px', '44px', '48px'
+  'small', 'normal', 'large', 'huge'
 ];
 
 // Đăng ký các font chữ cho Quill
@@ -465,6 +462,31 @@ const EnhancedRichTextEditor: React.FC<EnhancedRichTextEditorProps> = ({
       default: return '1rem';
     }
   };
+  
+  // Trả về tên hiển thị cho font
+  const getFontDisplayName = (fontName: string): string => {
+    switch (fontName) {
+      case 'serif': return 'Serif';
+      case 'sans': return 'Sans Serif';
+      case 'monospace': return 'Monospace';
+      case 'roboto': return 'Roboto';
+      case 'merriweather': return 'Merriweather';
+      case 'noto': return 'Noto Sans';
+      case 'source': return 'Source Sans Pro';
+      default: return fontName.charAt(0).toUpperCase() + fontName.slice(1);
+    }
+  };
+  
+  // Trả về tên hiển thị cho kích thước
+  const getSizeDisplayName = (size: string): string => {
+    switch (size) {
+      case 'small': return 'Nhỏ';
+      case 'normal': return 'Vừa';
+      case 'large': return 'Lớn';
+      case 'huge': return 'Rất lớn';
+      default: return size.charAt(0).toUpperCase() + size.slice(1);
+    }
+  };
 
   // Xử lý tải file
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -683,7 +705,7 @@ const EnhancedRichTextEditor: React.FC<EnhancedRichTextEditorProps> = ({
                   </SelectTrigger>
                   <SelectContent>
                     {fonts.map(font => (
-                      <SelectItem key={font} value={font}>{font}</SelectItem>
+                      <SelectItem key={font} value={font}>{getFontDisplayName(font)}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -699,8 +721,8 @@ const EnhancedRichTextEditor: React.FC<EnhancedRichTextEditorProps> = ({
                     <SelectValue placeholder="Kích thước" />
                   </SelectTrigger>
                   <SelectContent>
-                    {['small', 'medium', 'large', 'x-large', 'xx-large'].map(size => (
-                      <SelectItem key={size} value={size}>{size}</SelectItem>
+                    {fontSizes.map(size => (
+                      <SelectItem key={size} value={size}>{getSizeDisplayName(size)}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -733,7 +755,7 @@ const EnhancedRichTextEditor: React.FC<EnhancedRichTextEditorProps> = ({
         <div
           onDrop={handleDrop}
           className={`border rounded-md ${readOnly ? 'bg-gray-50' : ''}`}
-          style={{ fontFamily: currentFont, fontSize: currentSize }}
+          style={{ fontFamily: getFontFamilyValue(currentFont), fontSize: getFontSizeValue(currentSize) }}
         >
           <ReactQuill
             ref={quillRef}
@@ -750,9 +772,9 @@ const EnhancedRichTextEditor: React.FC<EnhancedRichTextEditorProps> = ({
         {!readOnly && (
           <div className="mt-4 flex justify-between">
             <div className="text-sm text-muted-foreground">
-              Font: {currentFont}, Size: {currentSize}
+              Font: {getFontDisplayName(currentFont)}, Size: {getSizeDisplayName(currentSize)}
             </div>
-            <Button onClick={handleSave}>
+            <Button onClick={handleSave} className="bg-red-600 hover:bg-red-700 text-white">
               Lưu nội dung
             </Button>
           </div>

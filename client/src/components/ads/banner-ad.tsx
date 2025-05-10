@@ -1,117 +1,92 @@
 import React from 'react';
-import { AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
-
-export type BannerAdPosition = 'top' | 'bottom' | 'left' | 'right';
+import { useAds } from './ads-provider';
 
 export interface BannerAdProps {
-  position: BannerAdPosition;
   className?: string;
-  adCode?: string; // Mã quảng cáo từ ad network
-  adImage?: string; // Ảnh quảng cáo
-  adLink?: string; // Link khi click vào quảng cáo
+  adCode?: string;
+  adImage?: string;
+  adLink?: string;
   width?: number | string;
   height?: number | string;
+  position?: 'top' | 'bottom' | 'left' | 'right' | 'sidebar';
 }
 
 export function BannerAd({
-  position,
   className,
   adCode,
   adImage,
-  adLink,
-  width,
-  height
+  adLink = '#',
+  width = '100%',
+  height = 'auto',
+  position = 'top',
 }: BannerAdProps) {
-  // Xác định style dựa trên vị trí
-  const getPositionStyle = () => {
-    switch(position) {
-      case 'top':
-        return 'w-full max-h-[100px] flex justify-center items-center mb-4';
-      case 'bottom':
-        return 'w-full max-h-[100px] flex justify-center items-center mt-4';
-      case 'left':
-        return 'h-full max-w-[160px] fixed left-0 top-0 flex flex-col justify-center items-center';
-      case 'right':
-        return 'h-full max-w-[160px] fixed right-0 top-0 flex flex-col justify-center items-center';
-      default:
-        return '';
-    }
-  };
+  const { showAds, shouldShowAds } = useAds();
+  
+  // Nếu không hiển thị quảng cáo, return null
+  if (!showAds || !shouldShowAds('banner')) {
+    return null;
+  }
 
-  const getDefaultSize = () => {
-    switch(position) {
+  // Xác định kích thước dựa trên vị trí
+  const getDefaultDimensions = () => {
+    switch (position) {
       case 'top':
       case 'bottom':
-        return { width: '728px', height: '90px' };
+        return { width: '100%', height: '90px' };
       case 'left':
       case 'right':
+      case 'sidebar':
         return { width: '160px', height: '600px' };
       default:
-        return { width: '300px', height: '250px' };
+        return { width: '100%', height: '90px' };
     }
   };
 
-  const defaultSize = getDefaultSize();
-  const finalWidth = width || defaultSize.width;
-  const finalHeight = height || defaultSize.height;
+  const defaultDimensions = getDefaultDimensions();
+  const bannerWidth = width || defaultDimensions.width;
+  const bannerHeight = height || defaultDimensions.height;
 
-  // Render quảng cáo từ mã script (AdSense, etc.)
+  // Nếu có adCode, ưu tiên hiển thị
   if (adCode) {
     return (
-      <div 
-        className={cn(getPositionStyle(), className)}
-        style={{ width: finalWidth, height: finalHeight }}
+      <div
+        className={cn('ad-container', className)}
+        style={{ width: bannerWidth, height: bannerHeight }}
         dangerouslySetInnerHTML={{ __html: adCode }}
       />
     );
   }
 
-  // Render quảng cáo từ ảnh
+  // Nếu có adImage, hiển thị ảnh
   if (adImage) {
     return (
-      <div className={cn(getPositionStyle(), className)}>
-        {adLink ? (
-          <a 
-            href={adLink} 
-            target="_blank" 
-            rel="noopener noreferrer"
-            style={{ width: finalWidth, height: finalHeight }}
-            className="block"
-          >
-            <img 
-              src={adImage} 
-              alt="Advertisement" 
-              className="w-full h-full object-cover"
-              style={{ width: finalWidth, height: finalHeight }}
-            />
-          </a>
-        ) : (
-          <img 
-            src={adImage} 
-            alt="Advertisement" 
-            className="w-full h-full object-cover"
-            style={{ width: finalWidth, height: finalHeight }}
-          />
-        )}
-      </div>
+      <a
+        href={adLink}
+        target="_blank"
+        rel="noopener noreferrer"
+        className={cn('ad-container block overflow-hidden', className)}
+        style={{ width: bannerWidth, height: bannerHeight }}
+      >
+        <img
+          src={adImage}
+          alt="Advertisement"
+          className="w-full h-full object-contain"
+        />
+      </a>
     );
   }
 
-  // Placeholder khi không có quảng cáo
+  // Nếu không có dữ liệu quảng cáo, hiển thị vùng trống với border
   return (
-    <div 
+    <div
       className={cn(
-        getPositionStyle(),
-        "bg-slate-100 dark:bg-slate-800 border border-dashed border-slate-300 dark:border-slate-600 rounded-md flex flex-col items-center justify-center p-4",
+        'ad-container flex items-center justify-center border border-dashed border-gray-300 bg-gray-50 dark:bg-gray-800 dark:border-gray-700',
         className
       )}
-      style={{ width: finalWidth, height: finalHeight }}
+      style={{ width: bannerWidth, height: bannerHeight }}
     >
-      <AlertTriangle className="h-6 w-6 text-yellow-500 mb-2" />
-      <p className="text-xs text-center text-slate-500 dark:text-slate-400">Đang tải quảng cáo...</p>
+      <p className="text-sm text-gray-500 dark:text-gray-400">Quảng cáo</p>
     </div>
   );
 }
-
-export default BannerAd;

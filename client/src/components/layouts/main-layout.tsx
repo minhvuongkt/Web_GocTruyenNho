@@ -20,12 +20,17 @@ import {
   Settings,
   Heart,
   History,
-  CreditCard
+  CreditCard,
+  BanIcon
 } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useState } from "react";
 import { SearchModal } from "@/components/shared/search-modal";
 import { formatCurrency } from "@/lib/utils";
+import { useAds } from "@/components/ads/ads-provider";
+import { BannerAd } from "@/components/ads/banner-ad";
+import { PopupAd } from "@/components/ads/popup-ad";
+import { OverlayAd } from "@/components/ads/overlay-ad";
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -36,6 +41,7 @@ export function MainLayout({ children }: MainLayoutProps) {
   const { user, logoutMutation } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchModalOpen, setSearchModalOpen] = useState(false);
+  const { showAds, showBanners, toggleAds } = useAds();
 
   const handleLogout = () => {
     logoutMutation.mutate();
@@ -81,6 +87,17 @@ export function MainLayout({ children }: MainLayoutProps) {
             {/* User actions */}
             <div className="flex items-center space-x-4">
               <ToggleTheme />
+              
+              {/* Nút bật/tắt quảng cáo */}
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={toggleAds}
+                title={showAds ? "Tắt quảng cáo" : "Bật quảng cáo"}
+                className="text-foreground/70 hover:text-primary"
+              >
+                <BanIcon className={`h-5 w-5 ${!showAds ? 'text-red-500' : ''}`} />
+              </Button>
               
               {user ? (
                 <DropdownMenu>
@@ -222,8 +239,28 @@ export function MainLayout({ children }: MainLayoutProps) {
       <SearchModal isOpen={searchModalOpen} onClose={() => setSearchModalOpen(false)} />
 
       {/* Main content */}
-      <main className="flex-grow">
+      <main className="flex-grow relative">
+        {/* Banner quảng cáo trên */}
+        {showAds && showBanners && (
+          <div className="container mx-auto px-4 mt-4">
+            <BannerAd 
+              position="top" 
+              className="mx-auto"
+            />
+          </div>
+        )}
+        
         {children}
+        
+        {/* Banner quảng cáo dưới */}
+        {showAds && showBanners && (
+          <div className="container mx-auto px-4 mb-4">
+            <BannerAd 
+              position="bottom" 
+              className="mx-auto"
+            />
+          </div>
+        )}
       </main>
 
       {/* Footer */}

@@ -435,8 +435,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Content not found" });
       }
 
-      // Increment view count
-      await storage.incrementContentViews(id);
+      // View count increment will be handled by client-side after reading time is reached
 
       res.json(content);
     } catch (error) {

@@ -67,8 +67,14 @@ export function UnlockModal({
       const contentId = chapter.contentId;
       const chapterNumber = chapter.number;
       if (contentId && chapterNumber) {
+        // Invalidate specific chapter data
         queryClient.invalidateQueries({ 
           queryKey: [`/api/content/${contentId}/chapter/${chapterNumber}`] 
+        });
+        
+        // Invalidate unlocked chapters list
+        queryClient.invalidateQueries({
+          queryKey: [`/api/user/unlocked-chapters/${contentId}`]
         });
       }
       

@@ -38,6 +38,7 @@ import {
   BookOpen,
   ArrowUp,
   ChevronRight,
+  Check,
   Edit2,
 } from "lucide-react";
 
@@ -619,8 +620,19 @@ function ChapterListSidebar({
                         {ch.views > 0 && (
                           <EyeIcon className="h-3 w-3 text-gray-500" />
                         )}
-                        {ch.isLocked && (
-                          <LockIcon className="h-3 w-3 text-amber-500" />
+                        {/* Hiển thị biểu tượng khóa cho chương chưa mở khóa */}
+                        {ch.isLocked && !ch.isUnlocked && (
+                          <div className="flex items-center">
+                            <LockIcon className="h-3 w-3 text-amber-500" />
+                            <span className="text-xs text-amber-500 ml-1">{ch.unlockPrice} xu</span>
+                          </div>
+                        )}
+                        {/* Hiển thị biểu tượng mở khóa cho chương đã mở khóa */}
+                        {ch.isLocked && ch.isUnlocked && (
+                          <div className="flex items-center">
+                            <Check className="h-3 w-3 text-green-500" />
+                            <span className="text-xs text-green-500 ml-1">Đã mở khóa</span>
+                          </div>
                         )}
                       </div>
                     </div>

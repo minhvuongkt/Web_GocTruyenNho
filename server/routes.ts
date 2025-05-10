@@ -49,6 +49,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Đăng ký các routes cho upload document và media
   registerUploadRoutes(app);
+  
+  // API để lấy các chapters đã unlock của user
+  app.get(
+    '/api/user/unlocked-chapters/:contentId',
+    ensureAuthenticated,
+    async (req, res) => {
+      try {
+        const userId = (req.user as any).id;
+        const contentId = parseInt(req.params.contentId);
+        
+        if (isNaN(contentId)) {
+          return res.status(400).json({ error: 'Invalid content ID' });
+        }
+        
+        console.log(`Getting unlocked chapters for user ${userId} and content ${contentId}`);
+        
+        // Lấy danh sách ID của các chapters thuộc content này
+        const contentChapters = await storage.getChaptersByContent(contentId);
+        const chapterIds = contentChapters.map(chapter => chapter.id);
+        
+        if (chapterIds.length === 0) {
+          console.log(`No chapters found for content ${contentId}`);
+          return res.json([]);
+        }
+        
+        // Lọc ra các chapters đã unlock
+        const unlockedChapterIds = [];
+        for (const chapterId of chapterIds) {
+          const isUnlocked = await storage.isChapterUnlocked(userId, chapterId);
+          if (isUnlocked) {
+            unlockedChapterIds.push(chapterId);
+          }
+        }
+        
+        console.log(`Found ${unlockedChapterIds.length} unlocked chapters for user ${userId} and content ${contentId}: ${unlockedChapterIds.join(', ')}`);
+        
+        res.json(unlockedChapterIds);
+      } catch (error) {
+        console.error('Error getting unlocked chapters:', error);
+        res.status(500).json({ error: 'Failed to get unlocked chapters' });
+      }
+    }
+  );
 
   // Setup multer for file uploads
   const upload = multer({
@@ -1581,28 +1624,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
       try {
         const chapterId = parseInt(req.params.id);
         const userId = (req.user as any).id;
+        
+        console.log(`Attempting to unlock chapter ${chapterId} for user ${userId}`);
 
         const chapter = await storage.getChapter(chapterId);
         if (!chapter) {
+          console.log(`Chapter ${chapterId} not found`);
           return res.status(404).json({ error: "Chapter not found" });
         }
 
         if (!chapter.isLocked) {
+          console.log(`Chapter ${chapterId} is already unlocked in database`);
           return res.status(400).json({ error: "Chapter is already unlocked" });
         }
 
         const user = await storage.getUser(userId);
         if (!user) {
+          console.log(`User ${userId} not found`);
           return res.status(404).json({ error: "User not found" });
         }
 
         if (!chapter.unlockPrice) {
+          console.log(`Chapter ${chapterId} does not have an unlock price`);
           return res
             .status(400)
             .json({ error: "Chapter does not have an unlock price" });
         }
 
         if (user.balance < chapter.unlockPrice) {
+          console.log(`User ${userId} has insufficient balance: ${user.balance} < ${chapter.unlockPrice}`);
           return res.status(400).json({ error: "Insufficient balance" });
         }
 
@@ -1612,20 +1662,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
           chapterId,
         );
         if (alreadyUnlocked) {
+          console.log(`Chapter ${chapterId} already unlocked by user ${userId}`);
           return res
             .status(400)
             .json({ error: "Chapter already unlocked by this user" });
         }
 
         // Unlock the chapter and deduct balance
+        console.log(`Unlocking chapter ${chapterId} for user ${userId} and deducting ${chapter.unlockPrice} from balance`);
         await storage.unlockChapter(userId, chapterId);
         await storage.updateUserBalance(
           userId,
           user.balance - chapter.unlockPrice,
         );
-
+        
+        // Invalidate related queries
+        console.log(`Chapter ${chapterId} unlocked successfully for user ${userId}`);
+        
         res.json({ success: true, message: "Chapter unlocked successfully" });
       } catch (error) {
+        console.error(`Error unlocking chapter:`, error);
         res.status(500).json({ error: "Failed to unlock chapter" });
       }
     },

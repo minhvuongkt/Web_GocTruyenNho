@@ -370,12 +370,18 @@ export function MangaDetailPage({ id }: MangaDetailPageProps) {
 
               {/* Chapters tab */}
               <TabsContent value="chapters">
-                <ChapterList
-                  chapters={chapters}
-                  contentId={id}
-                  contentType="manga"
-                  userUnlockedChapters={unlockedChapters}
-                />
+                {chapters ? (
+                  <ChapterList
+                    chapters={chapters}
+                    contentId={id}
+                    contentType="manga"
+                    userUnlockedChapters={unlockedChapters}
+                  />
+                ) : (
+                  <div className="py-4 text-center text-muted-foreground">
+                    Đang tải danh sách chương...
+                  </div>
+                )}
                 {/* {chapters && chapters.length > 0 ? (
                   <ChapterList
                     chapters={chapters}

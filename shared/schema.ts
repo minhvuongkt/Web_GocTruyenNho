@@ -29,11 +29,12 @@ export const paymentStatusEnum = pgEnum("payment_status", [
   "failed",
 ]);
 export const adPositionEnum = pgEnum("ad_position", [
-  "banner",
-  "sidebar_left",
-  "sidebar_right",
-  "popup",
-  "overlay",
+  "top",         // Quảng cáo ở phía trên
+  "bottom",      // Quảng cáo ở phía dưới
+  "left",        // Quảng cáo ở bên trái
+  "right",       // Quảng cáo ở bên phải
+  "popup",       // Quảng cáo dạng pop-up
+  "overlay",     // Quảng cáo dạng lớp phủ
 ]);
 
 // Users Table

@@ -4,6 +4,40 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer utilities {
+  .transition-height {
+    transition-property: height, max-height, min-height;
+  }
+  
+  /* Additional ad-related utilities */
+  .ad-content-padding {
+    transition-property: padding, margin;
+    transition-duration: 300ms;
+    transition-timing-function: ease-in-out;
+  }
+  
+  /* Content padding when ads are present */
+  .has-left-ad {
+    padding-left: 160px;
+  }
+  
+  .has-right-ad {
+    padding-right: 160px;
+  }
+  
+  /* Hide ad but keep space with opacity transition */
+  .ad-fade-out {
+    opacity: 0;
+    pointer-events: none;
+  }
+  
+  /* Transparent overlay */
+  .ad-overlay-bg {
+    background-color: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(4px);
+  }
+}
+
 /* Font families */
 .ql-font-arial { font-family: Arial !important; }
 .ql-font-times-new-roman { font-family: "Times New Roman" !important; }

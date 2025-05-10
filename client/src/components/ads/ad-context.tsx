@@ -183,6 +183,23 @@ export function AdProvider({ children }: { children: ReactNode }) {
       };
       return updated;
     });
+    
+    // Set a timer to show popup/overlay ads again after 5 minutes
+    if (position === 'popup' || position === 'overlay') {
+      const reopenDelay = 5 * 60 * 1000; // 5 minutes in milliseconds
+      setTimeout(() => {
+        setPositions(current => {
+          // Only reopen if it's still closed
+          if (!current[position]?.show) {
+            return {
+              ...current,
+              [position]: { ...current[position], show: true }
+            };
+          }
+          return current;
+        });
+      }, reopenDelay);
+    }
   };
 
   const clickAd = async (adId: number, position: string) => {
@@ -214,6 +231,23 @@ export function AdProvider({ children }: { children: ReactNode }) {
         }
         return updated;
       });
+      
+      // Set a timer to show popup/overlay ads again after 15 minutes (when clicked)
+      if (position === 'popup' || position === 'overlay') {
+        const reopenDelay = 15 * 60 * 1000; // 15 minutes in milliseconds
+        setTimeout(() => {
+          setPositions(current => {
+            // Only reopen if it's still closed
+            if (!current[position]?.show) {
+              return {
+                ...current,
+                [position]: { ...current[position], show: true }
+              };
+            }
+            return current;
+          });
+        }, reopenDelay);
+      }
     } catch (error) {
       console.error('Error recording ad click:', error);
     }

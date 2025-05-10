@@ -9,14 +9,15 @@ export function TopAd() {
   const topAds = ads.top || [];
   
   if (!positions.top?.show || topAds.length === 0 || isReading) {
-    return null;
+    // Return an empty div with height transition for smooth collapsing/expanding
+    return <div className="h-0 transition-height duration-300 ease-in-out overflow-hidden" data-ad-position="top"></div>;
   }
   
   // Display the first ad in the array
   const ad = topAds[0];
   
   return (
-    <div className="w-full bg-background border-b mb-4 px-2 pt-1">
+    <div className="w-full bg-background border-b mb-4 px-2 pt-1 transition-height duration-300 ease-in-out" data-ad-position="top">
       <div className="relative max-w-7xl mx-auto">
         <a 
           href={ad.targetUrl} 
@@ -25,7 +26,7 @@ export function TopAd() {
           onClick={() => clickAd(ad.id, 'top')}
           className="block"
         >
-          <div className="text-xs text-muted-foreground mb-1">Advertisement</div>
+          <div className="text-xs text-muted-foreground mb-1">Quảng cáo</div>
           <img 
             src={ad.imageUrl} 
             alt={ad.title} 
@@ -50,14 +51,15 @@ export function BottomAd() {
   const bottomAds = ads.bottom || [];
   
   if (!positions.bottom?.show || bottomAds.length === 0 || isReading) {
-    return null;
+    // Return an empty div with height transition for smooth collapsing/expanding
+    return <div className="h-0 transition-height duration-300 ease-in-out overflow-hidden" data-ad-position="bottom"></div>;
   }
   
   // Display the first ad in the array
   const ad = bottomAds[0];
   
   return (
-    <div className="w-full bg-background border-t mt-4 px-2 pt-1 sticky bottom-0">
+    <div className="w-full bg-background border-t mt-4 px-2 pt-1 sticky bottom-0 transition-height duration-300 ease-in-out z-10" data-ad-position="bottom">
       <div className="relative max-w-7xl mx-auto">
         <a 
           href={ad.targetUrl} 
@@ -66,7 +68,7 @@ export function BottomAd() {
           onClick={() => clickAd(ad.id, 'bottom')}
           className="block"
         >
-          <div className="text-xs text-muted-foreground mb-1">Advertisement</div>
+          <div className="text-xs text-muted-foreground mb-1">Quảng cáo</div>
           <img 
             src={ad.imageUrl} 
             alt={ad.title} 
@@ -91,14 +93,15 @@ export function LeftAd() {
   const leftAds = ads.left || [];
   
   if (!positions.left?.show || leftAds.length === 0 || isReading) {
-    return null;
+    // Return an empty div with width transition for smooth collapsing/expanding
+    return <div className="hidden lg:block fixed left-0 top-1/4 w-0 transition-all duration-300 ease-in-out overflow-hidden" data-ad-position="left"></div>;
   }
   
   // Display the first ad in the array
   const ad = leftAds[0];
   
   return (
-    <div className="hidden lg:block fixed left-0 top-1/4 w-[160px] bg-background border-r p-2">
+    <div className="hidden lg:block fixed left-0 top-1/4 w-[160px] bg-background border-r p-2 transition-all duration-300 ease-in-out" data-ad-position="left">
       <div className="relative">
         <a 
           href={ad.targetUrl} 
@@ -107,7 +110,7 @@ export function LeftAd() {
           onClick={() => clickAd(ad.id, 'left')}
           className="block"
         >
-          <div className="text-xs text-muted-foreground mb-1">Advertisement</div>
+          <div className="text-xs text-muted-foreground mb-1">Quảng cáo</div>
           <img 
             src={ad.imageUrl} 
             alt={ad.title} 
@@ -132,14 +135,15 @@ export function RightAd() {
   const rightAds = ads.right || [];
   
   if (!positions.right?.show || rightAds.length === 0 || isReading) {
-    return null;
+    // Return an empty div with width transition for smooth collapsing/expanding
+    return <div className="hidden lg:block fixed right-0 top-1/4 w-0 transition-all duration-300 ease-in-out overflow-hidden" data-ad-position="right"></div>;
   }
   
   // Display the first ad in the array
   const ad = rightAds[0];
   
   return (
-    <div className="hidden lg:block fixed right-0 top-1/4 w-[160px] bg-background border-l p-2">
+    <div className="hidden lg:block fixed right-0 top-1/4 w-[160px] bg-background border-l p-2 transition-all duration-300 ease-in-out" data-ad-position="right">
       <div className="relative">
         <a 
           href={ad.targetUrl} 
@@ -148,7 +152,7 @@ export function RightAd() {
           onClick={() => clickAd(ad.id, 'right')}
           className="block"
         >
-          <div className="text-xs text-muted-foreground mb-1">Advertisement</div>
+          <div className="text-xs text-muted-foreground mb-1">Quảng cáo</div>
           <img 
             src={ad.imageUrl} 
             alt={ad.title} 
@@ -180,9 +184,9 @@ export function PopupAd() {
   const ad = popupAds[0];
   
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
-      <div className="bg-background rounded-lg shadow-lg max-w-md w-full p-4 relative">
-        <div className="text-sm font-medium mb-2">Advertisement</div>
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center animate-in fade-in duration-300">
+      <div className="bg-background rounded-lg shadow-lg max-w-md w-full p-4 relative animate-in slide-in-from-bottom-4 duration-300">
+        <div className="text-sm font-medium mb-2">Quảng cáo</div>
         <a 
           href={ad.targetUrl} 
           target="_blank" 
@@ -222,14 +226,14 @@ export function OverlayAd() {
   const ad = overlayAds[0];
   
   return (
-    <div className="fixed inset-0 z-40 flex items-center justify-center pointer-events-none">
-      <div className="pointer-events-auto max-w-[320px] relative">
+    <div className="fixed inset-0 z-40 flex items-center justify-center pointer-events-none animate-in fade-in duration-300">
+      <div className="pointer-events-auto max-w-[320px] relative animate-in slide-in-from-top-4 duration-300">
         <a 
           href={ad.targetUrl} 
           target="_blank" 
           rel="noopener noreferrer"
           onClick={() => clickAd(ad.id, 'overlay')}
-          className="block relative rounded-lg overflow-hidden shadow-lg"
+          className="block relative rounded-lg overflow-hidden shadow-lg bg-background/60 backdrop-blur-sm"
         >
           <img 
             src={ad.imageUrl} 

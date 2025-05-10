@@ -35,7 +35,7 @@ export function registerAdRoutes(app: express.Express, storage: Storage) {
     try {
       const now = new Date();
       const ads = await storage.getActiveAds(now);
-      res.json({ ads });
+      res.json(ads);
     } catch (error) {
       console.error('Error fetching active advertisements:', error);
       res.status(500).json({ error: 'Failed to fetch active advertisements' });

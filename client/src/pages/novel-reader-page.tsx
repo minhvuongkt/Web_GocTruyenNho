@@ -119,11 +119,19 @@ export function NovelReaderPage({
 
   // Show unlock modal when chapter is locked
   useEffect(() => {
-    if (data && data.chapter && data.chapter.isLocked && !data.isUnlocked) {
-      setShowUnlockModal(true);
-    } else {
-      // Ensure modal is closed when data changes and chapter is unlocked
-      setShowUnlockModal(false);
+    if (data && data.chapter) {
+      // Kiểm tra nếu chapter bị khóa và chưa được mở khóa
+      const isLocked = data.chapter.isLocked;
+      const isUnlocked = data.chapter.isUnlocked;
+      
+      console.log(`Chapter status: isLocked=${isLocked}, isUnlocked=${isUnlocked}`);
+      
+      if (isLocked && !isUnlocked) {
+        setShowUnlockModal(true);
+      } else {
+        // Ensure modal is closed when data changes and chapter is unlocked
+        setShowUnlockModal(false);
+      }
     }
   }, [data]);
 
@@ -257,7 +265,7 @@ export function NovelReaderPage({
   };
 
   // Chapter locked state
-  if (chapter.isLocked && !isUnlocked) {
+  if (chapter.isLocked && !chapter.isUnlocked) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-background">
         <div className="max-w-md p-6 text-center">

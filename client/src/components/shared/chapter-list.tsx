@@ -23,15 +23,20 @@ export function ChapterList({
   const [sortAscending, setSortAscending] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
 
+  // Check if chapters is valid array
+  const chaptersArray = Array.isArray(chapters) ? chapters : [];
+  
   // Sort chapters
-  const sortedChapters = [...chapters].sort((a, b) => {
+  const sortedChapters = [...chaptersArray].sort((a, b) => {
     return sortAscending ? a.number - b.number : b.number - a.number;
   });
 
   // Filter chapters based on search term
   const filteredChapters = sortedChapters.filter((chapter) => {
+    if (!searchTerm) return true;
+    
     const searchLower = searchTerm.toLowerCase();
-    const titleMatches = chapter.title?.toLowerCase().includes(searchLower);
+    const titleMatches = chapter.title?.toLowerCase()?.includes(searchLower) || false;
     const numberMatches = chapter.number.toString().includes(searchTerm);
     return titleMatches || numberMatches;
   });

@@ -64,8 +64,12 @@ export function UnlockedChaptersList({ contentId }: UnlockedChaptersListProps) {
     );
   }
   
+  // Ensure we have arrays to work with
+  const chapterIdArray = Array.isArray(unlockedChapterIds) ? unlockedChapterIds : [];
+  const chaptersArray = Array.isArray(chapters) ? chapters : [];
+  
   // No unlocked chapters
-  if (!unlockedChapterIds || unlockedChapterIds.length === 0) {
+  if (chapterIdArray.length === 0) {
     return (
       <Card>
         <CardContent className="p-4">
@@ -79,16 +83,16 @@ export function UnlockedChaptersList({ contentId }: UnlockedChaptersListProps) {
   }
   
   // Filter chapters to only show unlocked ones
-  const unlockedChapters = chapters?.filter((chapter: any) => 
-    unlockedChapterIds.includes(chapter.id)
-  ) || [];
+  const unlockedChapters = chaptersArray.filter((chapter: any) => 
+    chapterIdArray.includes(chapter.id)
+  );
   
   return (
     <Card>
       <CardContent className="p-4">
         <h3 className="text-sm font-medium mb-2 flex items-center gap-2">
           <Unlock size={16} className="text-primary" />
-          Chương đã mở khóa ({unlockedChapterIds.length})
+          Chương đã mở khóa ({unlockedChapters.length})
         </h3>
         
         <div className="flex flex-wrap gap-2">

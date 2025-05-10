@@ -53,12 +53,13 @@ export function UnlockModal({
       const response = await apiRequest("POST", `/api/chapters/${chapter.id}/unlock`);
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       setIsUnlocking(false);
       toast({
         title: "Mở khóa thành công",
         description: "Bạn đã mở khóa chương này thành công.",
       });
+      
       // Invalidate queries to refetch data
       queryClient.invalidateQueries({ queryKey: ["/api/user"] });
       queryClient.invalidateQueries({ queryKey: [`/api/chapters/${chapter.id}`] });
@@ -72,6 +73,18 @@ export function UnlockModal({
         });
       }
       
+      // Also invalidate user's unlocked chapters list
+      if (contentId) {
+        queryClient.invalidateQueries({
+          queryKey: [`/api/user/unlocked-chapters/${contentId}`]
+        });
+      }
+      
+      // Update user balance 
+      if (data.userBalance !== undefined) {
+        console.log("Updating user balance to:", data.userBalance);
+      }
+      
       onUnlockSuccess();
       onClose();
     },
@@ -79,7 +92,7 @@ export function UnlockModal({
       setIsUnlocking(false);
       toast({
         title: "Mở khóa thất bại",
-        description: error.message || "Đã xảy ra lỗi khi mở khóa chương.",
+        description: error.message || "Đã xảy ra lỗi khi mở khóa chương. Có thể số dư của bạn không đủ.",
         variant: "destructive",
       });
     }

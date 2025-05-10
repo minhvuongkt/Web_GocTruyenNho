@@ -1,79 +1,117 @@
-import { useEffect, useState } from 'react';
-import { apiRequest } from '@/lib/queryClient';
+import React from 'react';
+import { AlertTriangle } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
-interface BannerAdProps {
+export type BannerAdPosition = 'top' | 'bottom' | 'left' | 'right';
+
+export interface BannerAdProps {
+  position: BannerAdPosition;
   className?: string;
+  adCode?: string; // Mã quảng cáo từ ad network
+  adImage?: string; // Ảnh quảng cáo
+  adLink?: string; // Link khi click vào quảng cáo
+  width?: number | string;
+  height?: number | string;
 }
 
-interface AdData {
-  id: number;
-  title: string;
-  imageUrl: string;
-  targetUrl: string;
-}
-
-export function BannerAd({ className = '' }: BannerAdProps) {
-  const [ad, setAd] = useState<AdData | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    async function fetchBannerAd() {
-      try {
-        setLoading(true);
-        const response = await fetch('/api/ads?position=banner');
-        if (!response.ok) {
-          throw new Error('Failed to fetch banner ad');
-        }
-        
-        const data = await response.json();
-        if (data && data.length > 0) {
-          // Get first active banner ad
-          setAd(data[0]);
-          // Record view
-          await apiRequest('POST', `/api/ads/${data[0].id}/view`);
-        }
-      } catch (error) {
-        console.error('Error fetching banner ad:', error);
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    fetchBannerAd();
-  }, []);
-
-  const handleAdClick = async () => {
-    if (ad) {
-      try {
-        // Record click
-        await apiRequest('POST', `/api/ads/${ad.id}/click`);
-        // Open ad target in new tab
-        window.open(ad.targetUrl, '_blank');
-      } catch (error) {
-        console.error('Error recording ad click:', error);
-      }
+export function BannerAd({
+  position,
+  className,
+  adCode,
+  adImage,
+  adLink,
+  width,
+  height
+}: BannerAdProps) {
+  // Xác định style dựa trên vị trí
+  const getPositionStyle = () => {
+    switch(position) {
+      case 'top':
+        return 'w-full max-h-[100px] flex justify-center items-center mb-4';
+      case 'bottom':
+        return 'w-full max-h-[100px] flex justify-center items-center mt-4';
+      case 'left':
+        return 'h-full max-w-[160px] fixed left-0 top-0 flex flex-col justify-center items-center';
+      case 'right':
+        return 'h-full max-w-[160px] fixed right-0 top-0 flex flex-col justify-center items-center';
+      default:
+        return '';
     }
   };
 
-  if (loading || !ad) {
-    return null; // Don't show anything while loading or if no ad
+  const getDefaultSize = () => {
+    switch(position) {
+      case 'top':
+      case 'bottom':
+        return { width: '728px', height: '90px' };
+      case 'left':
+      case 'right':
+        return { width: '160px', height: '600px' };
+      default:
+        return { width: '300px', height: '250px' };
+    }
+  };
+
+  const defaultSize = getDefaultSize();
+  const finalWidth = width || defaultSize.width;
+  const finalHeight = height || defaultSize.height;
+
+  // Render quảng cáo từ mã script (AdSense, etc.)
+  if (adCode) {
+    return (
+      <div 
+        className={cn(getPositionStyle(), className)}
+        style={{ width: finalWidth, height: finalHeight }}
+        dangerouslySetInnerHTML={{ __html: adCode }}
+      />
+    );
   }
 
-  return (
-    <div className={`banner-ad w-full my-4 ${className}`}>
-      <div 
-        onClick={handleAdClick} 
-        className="cursor-pointer relative rounded-lg overflow-hidden shadow-md border border-gray-200"
-      >
-        <img 
-          src={ad.imageUrl} 
-          alt={ad.title} 
-          className="w-full h-auto object-cover" 
-        />
-        <div className="absolute bottom-0 left-0 right-0 bg-black/30 text-white text-xs p-1 text-center">
-          Quảng cáo
-        </div>
+  // Render quảng cáo từ ảnh
+  if (adImage) {
+    return (
+      <div className={cn(getPositionStyle(), className)}>
+        {adLink ? (
+          <a 
+            href={adLink} 
+            target="_blank" 
+            rel="noopener noreferrer"
+            style={{ width: finalWidth, height: finalHeight }}
+            className="block"
+          >
+            <img 
+              src={adImage} 
+              alt="Advertisement" 
+              className="w-full h-full object-cover"
+              style={{ width: finalWidth, height: finalHeight }}
+            />
+          </a>
+        ) : (
+          <img 
+            src={adImage} 
+            alt="Advertisement" 
+            className="w-full h-full object-cover"
+            style={{ width: finalWidth, height: finalHeight }}
+          />
+        )}
       </div>
+    );
+  }
+
+  // Placeholder khi không có quảng cáo
+  return (
+    <div 
+      className={cn(
+        getPositionStyle(),
+        "bg-slate-100 dark:bg-slate-800 border border-dashed border-slate-300 dark:border-slate-600 rounded-md flex flex-col items-center justify-center p-4",
+        className
+      )}
+      style={{ width: finalWidth, height: finalHeight }}
+    >
+      <AlertTriangle className="h-6 w-6 text-yellow-500 mb-2" />
+      <p className="text-xs text-center text-slate-500 dark:text-slate-400">Đang tải quảng cáo...</p>
     </div>
   );
 }
+
+export default BannerAd;

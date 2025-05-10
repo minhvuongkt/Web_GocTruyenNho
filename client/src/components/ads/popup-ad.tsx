@@ -1,93 +1,164 @@
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { X } from 'lucide-react';
-import { apiRequest } from '@/lib/queryClient';
+import { 
+  AlertDialog, 
+  AlertDialogContent, 
+  AlertDialogTitle,
+  AlertDialogHeader,
+  AlertDialogFooter,
+  AlertDialogDescription
+} from '@/components/ui/alert-dialog';
+import { Button } from '@/components/ui/button';
+import { useAdTimer } from '@/hooks/use-ads';
 
-interface PopupAdProps {
-  onClose: () => void;
+export interface PopupAdProps {
+  title?: string;
+  isOpen?: boolean;
+  onClose?: () => void;
+  adCode?: string;
+  adImage?: string;
+  adLink?: string;
+  width?: number | string;
+  height?: number | string;
+  autoShow?: boolean; // Tự động hiển thị khi thỏa mãn thời gian
+  forceShow?: boolean; // Bỏ qua kiểm tra thời gian
+  timerKey?: string; // Khóa để lưu trữ thời gian hiển thị
+  timerMinutes?: number; // Số phút giữa các lần hiển thị
 }
 
-interface AdData {
-  id: number;
-  title: string;
-  imageUrl: string;
-  targetUrl: string;
-}
+export function PopupAd({
+  title = 'Quảng cáo',
+  isOpen: externalIsOpen,
+  onClose,
+  adCode,
+  adImage,
+  adLink,
+  width = 500,
+  height = 400,
+  autoShow = true,
+  forceShow = false,
+  timerKey = 'popup_ad',
+  timerMinutes = 15
+}: PopupAdProps) {
+  const [canShowAd, markAdAsShown] = useAdTimer(timerKey, timerMinutes);
+  const [internalIsOpen, setInternalIsOpen] = useState(false);
+  
+  // Xác định trạng thái đóng/mở dựa trên props và internal state
+  const isOpen = externalIsOpen !== undefined ? externalIsOpen : internalIsOpen;
 
-export function PopupAd({ onClose }: PopupAdProps) {
-  const [ad, setAd] = useState<AdData | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    async function fetchPopupAd() {
-      try {
-        setLoading(true);
-        const response = await fetch('/api/ads?position=popup');
-        if (!response.ok) {
-          throw new Error('Failed to fetch popup ad');
-        }
-        
-        const data = await response.json();
-        if (data && data.length > 0) {
-          // Get first active popup ad
-          setAd(data[0]);
-          // Record view
-          await apiRequest('POST', `/api/ads/${data[0].id}/view`);
-        }
-      } catch (error) {
-        console.error('Error fetching popup ad:', error);
-      } finally {
-        setLoading(false);
-      }
+  // Xử lý đóng popup
+  const handleClose = () => {
+    if (onClose) {
+      onClose();
+    } else {
+      setInternalIsOpen(false);
     }
-
-    fetchPopupAd();
-  }, []);
-
-  const handleAdClick = async () => {
-    if (ad) {
-      try {
-        // Record click
-        await apiRequest('POST', `/api/ads/${ad.id}/click`);
-        // Open ad target in new tab
-        window.open(ad.targetUrl, '_blank');
-      } catch (error) {
-        console.error('Error recording ad click:', error);
-      }
+    
+    if (canShowAd) {
+      markAdAsShown();
     }
   };
 
-  if (loading) {
-    return null; // Don't show anything while loading
-  }
+  // Tự động hiển thị khi thỏa mãn điều kiện thời gian
+  useEffect(() => {
+    if (autoShow && (canShowAd || forceShow) && externalIsOpen === undefined) {
+      // Delay hiển thị quảng cáo để tránh làm phiền người dùng ngay lập tức
+      const timer = setTimeout(() => {
+        setInternalIsOpen(true);
+      }, 500);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [autoShow, canShowAd, forceShow, externalIsOpen]);
 
-  if (!ad) {
-    // No ad to display, execute onClose to clean up
-    onClose();
+  // Nếu không thể hiện quảng cáo và không bắt buộc mở, thì không hiển thị gì
+  if (!canShowAd && !forceShow && externalIsOpen === undefined) {
     return null;
   }
 
-  return (
-    <div className="fixed bottom-4 right-4 z-40 max-w-sm rounded-lg overflow-hidden shadow-lg bg-white">
-      <div className="relative">
-        <button 
-          onClick={onClose}
-          className="absolute top-2 right-2 p-1 rounded-full bg-white/80 text-gray-700 hover:bg-gray-200 transition-colors z-10"
-          aria-label="Close advertisement"
-        >
-          <X className="h-5 w-5" />
-        </button>
-        
-        <div onClick={handleAdClick} className="cursor-pointer">
-          <img 
-            src={ad.imageUrl} 
-            alt={ad.title} 
-            className="w-full h-auto" 
-          />
-          <div className="absolute bottom-0 left-0 right-0 bg-black/30 text-white text-xs p-1 text-center">
-            Quảng cáo
-          </div>
+  // Render ad content
+  const renderAdContent = () => {
+    if (adCode) {
+      return (
+        <div 
+          style={{ width, height }}
+          dangerouslySetInnerHTML={{ __html: adCode }}
+        />
+      );
+    }
+
+    if (adImage) {
+      return (
+        <div className="flex justify-center items-center" style={{ width, height }}>
+          {adLink ? (
+            <a 
+              href={adLink} 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="block"
+              onClick={handleClose}
+            >
+              <img 
+                src={adImage} 
+                alt="Advertisement" 
+                className="max-w-full max-h-full object-contain"
+              />
+            </a>
+          ) : (
+            <img 
+              src={adImage} 
+              alt="Advertisement" 
+              className="max-w-full max-h-full object-contain"
+            />
+          )}
         </div>
+      );
+    }
+
+    return (
+      <div 
+        className="bg-slate-100 dark:bg-slate-800 flex flex-col items-center justify-center p-6 rounded-md"
+        style={{ width, height: height || 300 }}
+      >
+        <p className="text-center text-slate-500 dark:text-slate-400">
+          Không có nội dung quảng cáo
+        </p>
       </div>
-    </div>
+    );
+  };
+
+  return (
+    <AlertDialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
+      <AlertDialogContent className="p-0 overflow-hidden max-w-screen-md" style={{ width: 'auto', maxWidth: '90vw' }}>
+        <AlertDialogHeader className="bg-primary text-primary-foreground p-2 flex items-center justify-between">
+          <AlertDialogTitle className="text-sm">{title}</AlertDialogTitle>
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="h-6 w-6 rounded-full hover:bg-white/20 text-white"
+            onClick={handleClose}
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        </AlertDialogHeader>
+        
+        <div className="overflow-auto">
+          {renderAdContent()}
+        </div>
+        
+        <AlertDialogFooter className="px-4 py-2 border-t">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={handleClose} 
+            className="w-full"
+          >
+            Đóng quảng cáo
+          </Button>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }
+
+export default PopupAd;

@@ -3,6 +3,7 @@ import { Express, Request, Response, NextFunction } from 'express';
 import * as chapterService from './chapter-service';
 import { processInlineImages } from './document-processor';
 import { ensureAdmin } from './auth-middleware';
+import { checkChapterUnlocked, handleUnlockCheck } from './chapter-unlock-fix';
 
 // Không cần định nghĩa lại ensureAdmin vì đã import từ auth-middleware.ts
 
@@ -44,14 +45,13 @@ export function registerChapterRoutes(app: Express) {
         return res.status(404).json({ error: 'Chapter not found' });
       }
       
-      // Kiểm tra chapter bị khóa
+      // Kiểm tra chapter bị khóa bằng util function mới
       let isUnlocked = !chapterInfo.chapter.isLocked;
       
-      if (chapterInfo.chapter.isLocked && req.isAuthenticated && req.isAuthenticated()) {
-        // Kiểm tra user đã mở khóa chapter chưa
-        const userId = (req.user as any).id;
-        const { storage } = await import('./storage');
-        isUnlocked = await storage.isChapterUnlocked(userId, chapterInfo.chapter.id);
+      if (chapterInfo.chapter.isLocked) {
+        // Sử dụng hàm mới để kiểm tra trạng thái mở khóa
+        isUnlocked = await handleUnlockCheck(req, chapterInfo.chapter.id);
+        console.log(`API endpoint /api/chapters/:id - Chapter ${id} unlock status: ${isUnlocked ? 'UNLOCKED' : 'LOCKED'}`);
       }
       
       // Chỉ tăng lượt xem nếu chapter không bị khóa hoặc đã được mở khóa

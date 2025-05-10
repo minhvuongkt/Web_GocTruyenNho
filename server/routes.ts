@@ -1686,6 +1686,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // User's unlocked chapters endpoint
+  app.get("/api/user/unlocked-chapters/:contentId", ensureAuthenticated, async (req, res) => {
+    try {
+      const contentId = parseInt(req.params.contentId);
+      const userId = (req.user as any).id;
+      
+      if (isNaN(contentId)) {
+        return res.status(400).json({ error: "Invalid content ID" });
+      }
+      
+      // Get all chapters for the content
+      const chapters = await storage.getChaptersByContent(contentId);
+      
+      // Get unlocked status for each chapter
+      const unlockedChapterIds = [];
+      for (const chapter of chapters) {
+        if (!chapter.isLocked) continue; // Skip chapters that aren't locked
+        
+        const isUnlocked = await storage.isChapterUnlocked(userId, chapter.id);
+        if (isUnlocked) {
+          unlockedChapterIds.push(chapter.id);
+        }
+      }
+      
+      res.json(unlockedChapterIds);
+    } catch (error) {
+      console.error("Error getting user's unlocked chapters:", error);
+      res.status(500).json({ 
+        error: "Failed to get user's unlocked chapters",
+        message: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+  
   // Favorites Routes
   app.post("/api/favorites", ensureAuthenticated, async (req, res) => {
     try {

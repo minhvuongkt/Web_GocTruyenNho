@@ -1,96 +1,120 @@
-import React, { createContext, useState, useContext, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useLocalStorage } from '@/hooks/use-local-storage';
 
+// Thời gian mặc định giữa các lần hiển thị quảng cáo (15 phút)
+const DEFAULT_AD_INTERVAL = 15 * 60 * 1000;
+
+// Loại quảng cáo
+type AdType = 'banner' | 'popup' | 'overlay';
+
+// Trạng thái quảng cáo đã đóng
+interface AdCloseState {
+  [key: string]: number; // Thời gian đóng quảng cáo
+}
+
 interface AdsContextType {
-  showAds: boolean; // Có hiển thị quảng cáo không
-  showBanners: boolean; // Có hiển thị banner hai bên không
-  toggleAds: () => void; // Bật/tắt quảng cáo
-  lastAdCloseTime: number | null; // Thời gian cuối cùng khi đóng quảng cáo popup
-  updateLastAdCloseTime: () => void; // Cập nhật thời gian đóng quảng cáo popup
-  shouldShowAds: (adType: 'popup' | 'overlay' | 'banner', adKey?: string) => boolean; // Kiểm tra có nên hiển thị quảng cáo không
-}
-
-const AdsContext = createContext<AdsContextType>({
-  showAds: true,
-  showBanners: true,
-  toggleAds: () => {},
-  lastAdCloseTime: null,
-  updateLastAdCloseTime: () => {},
-  shouldShowAds: () => true,
-});
-
-export const useAds = () => useContext(AdsContext);
-
-// Thời gian tối thiểu giữa các lần hiển thị quảng cáo popup (15 phút = 900000ms)
-const AD_INTERVAL = 15 * 60 * 1000;
-
-export interface AdsProviderProps {
-  children: ReactNode;
-}
-
-export function AdsProvider({ children }: AdsProviderProps) {
-  // Lưu trạng thái hiển thị quảng cáo vào localStorage
-  const [showAds, setShowAds] = useLocalStorage<boolean>('showAds', true);
-  const [showBanners, setShowBanners] = useLocalStorage<boolean>('showBanners', true);
-  const [lastAdCloseTime, setLastAdCloseTime] = useLocalStorage<number | null>('lastAdCloseTime', null);
+  // Trạng thái hiển thị quảng cáo
+  showAds: boolean;
+  toggleAds: () => void;
   
-  // Theo dõi lần cuối đóng từng loại quảng cáo cụ thể
-  const [adTimers, setAdTimers] = useLocalStorage<Record<string, number>>('adTimers', {});
+  // Điều khiển hiển thị các loại quảng cáo
+  showBanners: boolean;
+  showPopups: boolean;
+  showOverlays: boolean;
+  toggleBanners: () => void;
+  togglePopups: () => void;
+  toggleOverlays: () => void;
+  
+  // Kiểm tra xem có nên hiển thị quảng cáo không
+  shouldShowAds: (type: AdType, key?: string) => boolean;
+  
+  // Cập nhật thời gian đóng quảng cáo
+  updateLastAdCloseTime: (key?: string) => void;
+  
+  // Ẩn quảng cáo khi đọc truyện
+  hideAdsOnReading: boolean;
+  setHideAdsOnReading: (hide: boolean) => void;
+}
 
-  // Bật/tắt quảng cáo
-  const toggleAds = () => {
-    setShowAds(!showAds);
-    setShowBanners(!showBanners);
-  };
+const AdsContext = createContext<AdsContextType | undefined>(undefined);
 
-  // Cập nhật thời gian đóng quảng cáo popup
-  const updateLastAdCloseTime = () => {
-    const now = Date.now();
-    setLastAdCloseTime(now);
-  };
-
-  // Cập nhật thời gian đóng quảng cáo cụ thể
-  const updateAdTimer = (adKey: string) => {
-    const now = Date.now();
-    setAdTimers((prev) => ({
+export function AdsProvider({ children }: { children: React.ReactNode }) {
+  // Trạng thái hiển thị quảng cáo tổng thể
+  const [showAds, setShowAds] = useLocalStorage('showAds', true);
+  
+  // Trạng thái hiển thị từng loại quảng cáo
+  const [showBanners, setShowBanners] = useLocalStorage('showBanners', true);
+  const [showPopups, setShowPopups] = useLocalStorage('showPopups', true);
+  const [showOverlays, setShowOverlays] = useLocalStorage('showOverlays', true);
+  
+  // Ẩn quảng cáo khi đọc truyện
+  const [hideAdsOnReading, setHideAdsOnReading] = useLocalStorage('hideAdsOnReading', true);
+  
+  // Lưu thời gian đóng quảng cáo
+  const [adCloseHistory, setAdCloseHistory] = useLocalStorage<AdCloseState>('adCloseHistory', {});
+  
+  // Toggle hiển thị quảng cáo
+  const toggleAds = () => setShowAds(prev => !prev);
+  
+  // Toggle hiển thị từng loại quảng cáo
+  const toggleBanners = () => setShowBanners(prev => !prev);
+  const togglePopups = () => setShowPopups(prev => !prev);
+  const toggleOverlays = () => setShowOverlays(prev => !prev);
+  
+  // Cập nhật thời gian đóng quảng cáo
+  const updateLastAdCloseTime = (key = 'global') => {
+    setAdCloseHistory(prev => ({
       ...prev,
-      [adKey]: now,
+      [key]: Date.now()
     }));
   };
-
-  // Kiểm tra xem có nên hiển thị quảng cáo hay không
-  const shouldShowAds = (adType: 'popup' | 'overlay' | 'banner', adKey?: string) => {
+  
+  // Kiểm tra xem có nên hiển thị quảng cáo không dựa trên thời gian đóng
+  const shouldShowAds = (type: AdType, key = 'global'): boolean => {
+    // Kiểm tra xem quảng cáo có được bật không
     if (!showAds) return false;
     
-    if (adType === 'banner') {
-      return showBanners;
-    }
+    // Kiểm tra từng loại quảng cáo
+    if (type === 'banner' && !showBanners) return false;
+    if (type === 'popup' && !showPopups) return false;
+    if (type === 'overlay' && !showOverlays) return false;
     
-    if (adType === 'popup' || adType === 'overlay') {
-      const now = Date.now();
-      
-      // Nếu có adKey cụ thể, kiểm tra timer của ad đó
-      if (adKey && adTimers[adKey]) {
-        return now - adTimers[adKey] > AD_INTERVAL;
-      }
-      
-      // Nếu không có adKey, sử dụng lastAdCloseTime chung
-      if (lastAdCloseTime) {
-        return now - lastAdCloseTime > AD_INTERVAL;
-      }
-    }
+    // Lấy thời gian đóng quảng cáo cuối cùng
+    const lastCloseTime = adCloseHistory[key] || 0;
+    const now = Date.now();
     
-    return true;
+    // Kiểm tra xem đã qua đủ thời gian hiển thị lại chưa
+    return now - lastCloseTime > DEFAULT_AD_INTERVAL;
   };
-
-  const value = {
+  
+  // Cung cấp context
+  const value: AdsContextType = {
     showAds,
-    showBanners,
     toggleAds,
-    lastAdCloseTime,
-    updateLastAdCloseTime,
+    showBanners,
+    showPopups,
+    showOverlays,
+    toggleBanners,
+    togglePopups,
+    toggleOverlays,
     shouldShowAds,
+    updateLastAdCloseTime,
+    hideAdsOnReading,
+    setHideAdsOnReading,
   };
+  
+  return (
+    <AdsContext.Provider value={value}>
+      {children}
+    </AdsContext.Provider>
+  );
+}
 
-  return <AdsContext.Provider value={value}>{children}</AdsContext.Provider>;
+// Hook để sử dụng context quảng cáo
+export function useAds(): AdsContextType {
+  const context = useContext(AdsContext);
+  if (context === undefined) {
+    throw new Error('useAds must be used within an AdsProvider');
+  }
+  return context;
 }

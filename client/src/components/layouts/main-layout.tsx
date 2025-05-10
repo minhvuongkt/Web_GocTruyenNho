@@ -51,8 +51,20 @@ export function MainLayout({ children }: MainLayoutProps) {
     setMobileMenuOpen(!mobileMenuOpen);
   };
 
+  // Kiểm tra xem đang ở trang đọc truyện hay không để ẩn quảng cáo
+  const isReadingPage = location.includes('/read/') || location.includes('/chapter/') || location.includes('/view/');
+  const { hideAdsOnReading } = useAds();
+  const shouldShowAdsOnPage = !(isReadingPage && hideAdsOnReading);
+
   return (
     <div className="min-h-screen flex flex-col">
+      {/* Top Banner Ad */}
+      {shouldShowAdsOnPage && (
+        <div className="w-full">
+          <BannerAd position="top" />
+        </div>
+      )}
+      
       {/* Header */}
       <header className="sticky top-0 z-50 bg-white dark:bg-slate-900 shadow-md">
         <div className="container mx-auto px-4">
@@ -237,6 +249,32 @@ export function MainLayout({ children }: MainLayoutProps) {
 
       {/* Search Modal */}
       <SearchModal isOpen={searchModalOpen} onClose={() => setSearchModalOpen(false)} />
+      
+      {/* Popup Ad - Only shown if not on reading pages */}
+      {shouldShowAdsOnPage && (
+        <PopupAd 
+          title="Quảng cáo" 
+          adImage="https://via.placeholder.com/400x300?text=Advertisement"
+          adLink="#"
+          width={400}
+          height={300}
+          timerMinutes={15}
+          delay={3000} // Show after 3 seconds
+        />
+      )}
+      
+      {/* Overlay Ad - Only shown if not on reading pages */}
+      {shouldShowAdsOnPage && (
+        <OverlayAd 
+          adImage="https://via.placeholder.com/500x500?text=Advertisement"
+          adLink="#"
+          position="center"
+          width="500px"
+          height="500px"
+          timerMinutes={30}
+          delay={1000} // Show after 1 second
+        />
+      )}
 
       {/* Main content */}
       <main className="flex-grow relative">

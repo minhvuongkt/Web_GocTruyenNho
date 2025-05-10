@@ -527,7 +527,7 @@ export default function ChapterListPage({ contentId }: { contentId: number }) {
 
                 <Separator />
 
-                {selectedChapter.isLocked && (
+                {!selectedChapter.isLocked && (
                   <div className="space-y-2">
                     <Label htmlFor="unlock-price">Giá để mở khóa (xu)</Label>
                     <Input

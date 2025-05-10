@@ -297,8 +297,18 @@ export function MangaReaderPage({
 
   // If locked and not unlocked, show unlock modal
   useEffect(() => {
-    if (data?.chapter?.isLocked && !data?.isUnlocked && user) {
-      setShowUnlockModal(true);
+    if (data?.chapter) {
+      // Kiểm tra nếu chapter bị khóa và chưa được mở khóa
+      const isLocked = data.chapter.isLocked;
+      const isUnlocked = data.chapter.isUnlocked;
+      
+      console.log(`Manga chapter status: isLocked=${isLocked}, isUnlocked=${isUnlocked}`);
+      
+      if (isLocked && !isUnlocked && user) {
+        setShowUnlockModal(true);
+      } else {
+        setShowUnlockModal(false);
+      }
     }
   }, [data, user]);
 
@@ -454,7 +464,7 @@ export function MangaReaderPage({
   }
 
   // If chapter is locked and not unlocked
-  if (data.chapter.isLocked && !data.isUnlocked) {
+  if (data.chapter.isLocked && !data.chapter.isUnlocked) {
     return (
       <ReaderLayout
         contentId={contentId}

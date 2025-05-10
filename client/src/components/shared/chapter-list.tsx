@@ -91,14 +91,27 @@ export function ChapterList({
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
                     <span className="font-medium">Chương {chapter.number}</span>
+                    {/* Hiển thị badge cho chương chưa mở khóa */}
                     {chapter.isLocked &&
                       !userUnlockedChapters.includes(chapter.id) && (
                         <Badge
                           variant="outline"
                           className="bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400"
                         >
-                          {/* <LockIcon className="h-3 w-3 mr-1" /> */}
+                          <LockIcon className="h-3 w-3 mr-1" />
                           {chapter.unlockPrice} xu
+                        </Badge>
+                      )}
+                    
+                    {/* Hiển thị badge cho chương đã mở khóa */}
+                    {chapter.isLocked &&
+                      userUnlockedChapters.includes(chapter.id) && (
+                        <Badge
+                          variant="outline"
+                          className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                        >
+                          <span className="h-3 w-3 mr-1 flex items-center">✓</span>
+                          Đã mở khóa
                         </Badge>
                       )}
                   </div>

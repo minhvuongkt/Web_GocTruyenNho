@@ -550,21 +550,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const userId = (req.user as any).id;
         console.log(`Checking unlocked chapters for user: ${userId}, contentId: ${contentId}`);
         
-        // Create a new array with updated isLocked status
+        // Create a new array with added isUnlocked status
         const updatedChapters = await Promise.all(
           chapters.map(async (chapter) => {
-            // If chapter is locked, check if the user has unlocked it
+            // Mặc định chương chưa mở khóa
+            let isUnlocked = false;
+            
+            // Nếu chương bị khóa, kiểm tra xem người dùng đã mở khóa chưa
             if (chapter.isLocked) {
-              const isUnlocked = await storage.isChapterUnlocked(userId, chapter.id);
+              isUnlocked = await storage.isChapterUnlocked(userId, chapter.id);
               console.log(`Chapter ${chapter.id} (${chapter.title}): isLocked=${chapter.isLocked}, isUnlocked=${isUnlocked}`);
               if (isUnlocked) {
-                // If unlocked, return a modified chapter object with isLocked=false
                 console.log(`Marking chapter ${chapter.id} as unlocked for user ${userId}`);
-                return { ...chapter, isLocked: false };
               }
+            } else {
+              // Nếu chapter không bị khóa, mặc định là đã "mở khóa"
+              isUnlocked = true;
             }
-            // Return original chapter if not locked or not unlocked
-            return chapter;
+            
+            // Trả về chapter với trạng thái isUnlocked
+            return { 
+              ...chapter, 
+              isUnlocked // Thêm thuộc tính isUnlocked nhưng KHÔNG thay đổi isLocked
+            };
           })
         );
         

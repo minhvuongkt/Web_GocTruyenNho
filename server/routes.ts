@@ -544,8 +544,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const contentId = parseInt(req.params.contentId);
       const chapters = await storage.getChaptersByContent(contentId);
+      
+      // If user is authenticated, check for unlocked chapters
+      if (req.isAuthenticated && req.isAuthenticated()) {
+        const userId = (req.user as any).id;
+        console.log(`Checking unlocked chapters for user: ${userId}, contentId: ${contentId}`);
+        
+        // Create a new array with updated isLocked status
+        const updatedChapters = await Promise.all(
+          chapters.map(async (chapter) => {
+            // If chapter is locked, check if the user has unlocked it
+            if (chapter.isLocked) {
+              const isUnlocked = await storage.isChapterUnlocked(userId, chapter.id);
+              console.log(`Chapter ${chapter.id} (${chapter.title}): isLocked=${chapter.isLocked}, isUnlocked=${isUnlocked}`);
+              if (isUnlocked) {
+                // If unlocked, return a modified chapter object with isLocked=false
+                console.log(`Marking chapter ${chapter.id} as unlocked for user ${userId}`);
+                return { ...chapter, isLocked: false };
+              }
+            }
+            // Return original chapter if not locked or not unlocked
+            return chapter;
+          })
+        );
+        
+        console.log(`Returning ${updatedChapters.length} chapters with updated lock status`);
+        return res.json(updatedChapters);
+      }
+      
+      // Return original chapters if user is not authenticated
       res.json(chapters);
     } catch (error) {
+      console.error("Failed to get chapters:", error);
       res.status(500).json({ error: "Failed to get chapters" });
     }
   });

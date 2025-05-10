@@ -57,6 +57,7 @@ import {
   Lock,
   Unlock,
   ArrowLeft,
+  Check,
 } from "lucide-react";
 
 export default function ChapterListPage({ contentId }: { contentId: number }) {
@@ -432,13 +433,13 @@ export default function ChapterListPage({ contentId }: { contentId: number }) {
                         <TableCell className="text-center">
                           {chapter.isLocked ? (
                             <div className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold bg-yellow-100 text-yellow-800 border-yellow-200">
-                              {/* <Lock className="mr-1 h-3 w-3" /> */}
+                              <Lock className="mr-1 h-3 w-3" />
                               {chapter.unlockPrice || 0} xu
                             </div>
                           ) : (
                             <div className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold bg-green-100 text-green-800 border-green-200">
-                              {/* <Unlock className="mr-1 h-3 w-3" /> */}
-                              Free
+                              <Check className="mr-1 h-3 w-3" />
+                              Miễn phí
                             </div>
                           )}
                         </TableCell>
@@ -526,7 +527,7 @@ export default function ChapterListPage({ contentId }: { contentId: number }) {
 
                 <Separator />
 
-                {!selectedChapter.isLocked && (
+                {selectedChapter.isLocked && (
                   <div className="space-y-2">
                     <Label htmlFor="unlock-price">Giá để mở khóa (xu)</Label>
                     <Input

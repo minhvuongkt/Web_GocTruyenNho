@@ -186,7 +186,10 @@ export function PopupAd() {
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center animate-in fade-in duration-300">
       <div className="bg-background rounded-lg shadow-lg max-w-md w-full p-4 relative animate-in slide-in-from-bottom-4 duration-300">
-        <div className="text-sm font-medium mb-2">Quảng cáo</div>
+        <div className="text-sm font-medium mb-2 flex items-center">
+          <span className="bg-primary/80 text-primary-foreground px-2 py-1 text-xs rounded mr-1">Quảng cáo</span>
+          <span className="text-xs text-muted-foreground">Sẽ xuất hiện lại sau 15 phút khi bạn click</span>
+        </div>
         <a 
           href={ad.targetUrl} 
           target="_blank" 
@@ -199,7 +202,7 @@ export function PopupAd() {
             alt={ad.title} 
             className="w-full object-contain mb-2"
           />
-          <div className="text-center text-primary hover:text-primary/80">{ad.title}</div>
+          <div className="text-center text-primary hover:text-primary/80 font-medium">{ad.title}</div>
         </a>
         <button 
           onClick={() => closeAd('popup')} 
@@ -228,12 +231,15 @@ export function OverlayAd() {
   return (
     <div className="fixed inset-0 z-40 flex items-center justify-center pointer-events-none animate-in fade-in duration-300">
       <div className="pointer-events-auto max-w-[320px] relative animate-in slide-in-from-top-4 duration-300">
+        <div className="absolute -top-6 left-0 right-0 text-center">
+          <span className="text-xs bg-black/70 text-white px-2 py-1 rounded">Xuất hiện lại sau 5 phút khi đóng</span>
+        </div>
         <a 
           href={ad.targetUrl} 
           target="_blank" 
           rel="noopener noreferrer"
           onClick={() => clickAd(ad.id, 'overlay')}
-          className="block relative rounded-lg overflow-hidden shadow-lg bg-background/60 backdrop-blur-sm"
+          className="block relative rounded-lg overflow-hidden shadow-lg ad-overlay-bg"
         >
           <img 
             src={ad.imageUrl} 
@@ -242,6 +248,9 @@ export function OverlayAd() {
           />
           <div className="absolute top-0 left-0 bg-primary/80 text-primary-foreground px-2 py-1 text-xs">
             Quảng cáo
+          </div>
+          <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-white p-2 text-center text-sm font-medium">
+            {ad.title}
           </div>
         </a>
         <button 
@@ -258,6 +267,30 @@ export function OverlayAd() {
 
 // Container component that includes all ad components
 export function AdsContainer() {
+  const { positions } = useAds();
+
+  // Apply content padding classes based on ad visibility
+  React.useEffect(() => {
+    const mainContent = document.querySelector('main') || document.getElementById('content');
+    if (mainContent) {
+      // Add or remove content padding classes based on side ad visibility
+      if (positions.left?.show) {
+        mainContent.classList.add('has-left-ad');
+      } else {
+        mainContent.classList.remove('has-left-ad');
+      }
+
+      if (positions.right?.show) {
+        mainContent.classList.add('has-right-ad');
+      } else {
+        mainContent.classList.remove('has-right-ad');
+      }
+
+      // Always add transition class for smooth animations
+      mainContent.classList.add('ad-content-padding');
+    }
+  }, [positions.left?.show, positions.right?.show]);
+
   return (
     <>
       <TopAd />

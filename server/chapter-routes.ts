@@ -3,7 +3,6 @@ import { Express, Request, Response, NextFunction } from 'express';
 import * as chapterService from './chapter-service';
 import { processInlineImages } from './document-processor';
 import { ensureAdmin } from './auth-middleware';
-import { checkChapterUnlocked, handleUnlockCheck } from './chapter-unlock-fix';
 
 // Không cần định nghĩa lại ensureAdmin vì đã import từ auth-middleware.ts
 
@@ -45,13 +44,14 @@ export function registerChapterRoutes(app: Express) {
         return res.status(404).json({ error: 'Chapter not found' });
       }
       
-      // Kiểm tra chapter bị khóa bằng util function mới
+      // Kiểm tra chapter bị khóa
       let isUnlocked = !chapterInfo.chapter.isLocked;
       
-      if (chapterInfo.chapter.isLocked) {
-        // Sử dụng hàm mới để kiểm tra trạng thái mở khóa
-        isUnlocked = await handleUnlockCheck(req, chapterInfo.chapter.id);
-        console.log(`API endpoint /api/chapters/:id - Chapter ${id} unlock status: ${isUnlocked ? 'UNLOCKED' : 'LOCKED'}`);
+      if (chapterInfo.chapter.isLocked && req.isAuthenticated && req.isAuthenticated()) {
+        // Kiểm tra user đã mở khóa chapter chưa
+        const userId = (req.user as any).id;
+        const { storage } = await import('./storage');
+        isUnlocked = await storage.isChapterUnlocked(userId, chapterInfo.chapter.id);
       }
       
       // Chỉ tăng lượt xem nếu chapter không bị khóa hoặc đã được mở khóa
@@ -119,13 +119,14 @@ export function registerChapterRoutes(app: Express) {
         });
       }
       
-      // Kiểm tra chapter bị khóa bằng util function mới
+      // Kiểm tra chapter bị khóa
       let isUnlocked = !chapterInfo.chapter.isLocked;
       
-      if (chapterInfo.chapter.isLocked) {
-        // Sử dụng hàm mới để kiểm tra trạng thái mở khóa
-        isUnlocked = await handleUnlockCheck(req, chapterInfo.chapter.id);
-        console.log(`API endpoint /api/content/:contentId/chapter/:chapterNumber - Chapter ${chapterInfo.chapter.id} unlock status: ${isUnlocked ? 'UNLOCKED' : 'LOCKED'}`);
+      if (chapterInfo.chapter.isLocked && req.isAuthenticated && req.isAuthenticated()) {
+        // Kiểm tra user đã mở khóa chapter chưa
+        const userId = (req.user as any).id;
+        const { storage } = await import('./storage');
+        isUnlocked = await storage.isChapterUnlocked(userId, chapterInfo.chapter.id);
       }
       
       // Chỉ tăng lượt xem nếu chapter không bị khóa hoặc đã được mở khóa
@@ -324,82 +325,6 @@ export function registerChapterRoutes(app: Express) {
       console.error('Error updating chapter lock status:', error);
       res.status(500).json({
         error: 'Failed to update chapter lock status',
-        message: error instanceof Error ? error.message : 'Unknown error'
-      });
-    }
-  });
-  
-  // Endpoint cho người dùng mở khóa một chapter
-  app.post('/api/chapters/:id/unlock', async (req: Request, res: Response) => {
-    try {
-      const chapterId = parseInt(req.params.id);
-      
-      if (isNaN(chapterId)) {
-        return res.status(400).json({ error: 'Invalid chapter ID' });
-      }
-      
-      // Kiểm tra người dùng đã đăng nhập
-      if (!req.isAuthenticated || !req.isAuthenticated()) {
-        return res.status(401).json({ error: 'User must be logged in to unlock chapters' });
-      }
-      
-      const userId = (req.user as any).id;
-      
-      // Lấy thông tin chapter
-      const chapterInfo = await chapterService.getChapterById(chapterId);
-      
-      if (!chapterInfo) {
-        return res.status(404).json({ error: 'Chapter not found' });
-      }
-      
-      // Kiểm tra chapter có bị khóa không
-      if (!chapterInfo.chapter.isLocked) {
-        console.log(`Chapter ${chapterId} is not locked, no need to unlock`);
-        return res.status(200).json({ 
-          success: true, 
-          message: 'Chapter is not locked',
-          isUnlocked: true
-        });
-      }
-      
-      // Kiểm tra người dùng đã mở khóa chapter chưa
-      const isAlreadyUnlocked = await handleUnlockCheck(req, chapterId);
-      
-      if (isAlreadyUnlocked) {
-        console.log(`Chapter ${chapterId} is already unlocked for user ${userId}`);
-        return res.status(200).json({ 
-          success: true, 
-          message: 'Chapter already unlocked',
-          isUnlocked: true
-        });
-      }
-      
-      // Thực hiện mở khóa chapter
-      const { storage } = await import('./storage');
-      const unlockResult = await storage.unlockChapter(userId, chapterId);
-      
-      if (!unlockResult) {
-        console.error(`Failed to unlock chapter ${chapterId} for user ${userId}`);
-        return res.status(400).json({ 
-          error: 'Failed to unlock chapter',
-          message: 'Insufficient balance or internal error'
-        });
-      }
-      
-      // Update user data after unlocking
-      const userData = await storage.getUser(userId);
-      
-      console.log(`Successfully unlocked chapter ${chapterId} for user ${userId}`);
-      res.json({ 
-        success: true, 
-        message: 'Chapter unlocked successfully',
-        isUnlocked: true,
-        userBalance: userData?.balance || 0
-      });
-    } catch (error) {
-      console.error('Error unlocking chapter:', error);
-      res.status(500).json({ 
-        error: 'Failed to unlock chapter',
         message: error instanceof Error ? error.message : 'Unknown error'
       });
     }

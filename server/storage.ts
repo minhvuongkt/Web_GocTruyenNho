@@ -1279,103 +1279,27 @@ export class DatabaseStorage implements IStorage {
   }
 
   async unlockChapter(userId: number, chapterId: number): Promise<boolean> {
-    try {
-      console.log(`Unlocking chapter ${chapterId} for user ${userId}`);
-      
-      // Check if already unlocked to avoid duplicates
-      const isAlreadyUnlocked = await this.isChapterUnlocked(userId, chapterId);
-      
-      if (isAlreadyUnlocked) {
-        console.log(`Chapter ${chapterId} already unlocked for user ${userId}`);
-        return true;
-      }
-      
-      // Get chapter price
-      const [chapter] = await db.select().from(chapters).where(eq(chapters.id, chapterId));
-      
-      if (!chapter) {
-        console.error(`Chapter ${chapterId} not found`);
-        return false;
-      }
-      
-      const price = chapter.unlockPrice || 0;
-      
-      // Get user balance
-      const [user] = await db.select().from(users).where(eq(users.id, userId));
-      
-      if (!user) {
-        console.error(`User ${userId} not found`);
-        return false;
-      }
-      
-      // Check if user has enough balance
-      if (user.balance < price) {
-        console.error(`User ${userId} does not have enough balance to unlock chapter ${chapterId}. Required: ${price}, Balance: ${user.balance}`);
-        return false;
-      }
-      
-      // Deduct balance and add unlock record in a transaction
-      await db.transaction(async (tx) => {
-        // Deduct user balance
-        await tx
-          .update(users)
-          .set({ balance: user.balance - price })
-          .where(eq(users.id, userId));
-        
-        // Insert unlock record
-        await tx.insert(unlockedChapters).values({
-          userId,
-          chapterId,
-          unlockedAt: new Date(),
-        });
-      });
-      
-      console.log(`Successfully unlocked chapter ${chapterId} for user ${userId}`);
-      return true;
-    } catch (error) {
-      console.error(`Error unlocking chapter ${chapterId} for user ${userId}:`, error);
-      return false;
-    }
+    await db.insert(unlockedChapters).values({
+      userId,
+      chapterId,
+      unlockedAt: new Date(),
+    });
+
+    return true;
   }
 
   async isChapterUnlocked(userId: number, chapterId: number): Promise<boolean> {
-    try {
-      // Log the request
-      console.log(`Checking if chapter ${chapterId} is unlocked for user ${userId}`);
-      
-      // Check if the chapter is locked at all
-      const [chapter] = await db.select().from(chapters).where(eq(chapters.id, chapterId));
-      
-      if (!chapter) {
-        console.error(`Chapter ${chapterId} not found when checking unlock status`);
-        return false;
-      }
-      
-      // If chapter isn't locked, it's always "unlocked"
-      if (!chapter.isLocked) {
-        console.log(`Chapter ${chapterId} is not locked, so it's automatically unlocked for user ${userId}`);
-        return true;
-      }
-      
-      // Check if there's an unlock record
-      const [unlocked] = await db
-        .select()
-        .from(unlockedChapters)
-        .where(
-          and(
-            eq(unlockedChapters.userId, userId),
-            eq(unlockedChapters.chapterId, chapterId),
-          ),
-        );
-      
-      const isUnlocked = !!unlocked;
-      console.log(`Chapter ${chapterId} unlock check for user ${userId}: ${isUnlocked ? 'UNLOCKED' : 'LOCKED'}`);
-      
-      return isUnlocked;
-    } catch (error) {
-      console.error(`Error checking unlock status for chapter ${chapterId}:`, error);
-      return false;
-    }
+    const [unlocked] = await db
+      .select()
+      .from(unlockedChapters)
+      .where(
+        and(
+          eq(unlockedChapters.userId, userId),
+          eq(unlockedChapters.chapterId, chapterId),
+        ),
+      );
+
+    return !!unlocked;
   }
 
   // Payment management methods

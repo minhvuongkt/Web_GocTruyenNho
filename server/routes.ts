@@ -7,7 +7,6 @@ import passport from "passport";
 import { storage } from "./storage";
 import { Server } from "http";
 import * as schema from "@shared/schema";
-import { users, chapters, unlockedChapters } from "@shared/schema";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { generateVietQRURL } from "./payment-utils";
@@ -23,7 +22,7 @@ import { ensureAuthenticated, ensureAdmin } from "./auth-middleware";
 import { registerChapterRoutes } from "./chapter-routes"; // Import routes mới cho chapter
 import { registerUploadRoutes } from "./document-upload-routes"; // Import routes mới cho upload
 import { db } from "./db";
-import { eq, and, inArray } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 
 // No need to redefine - use the middleware imported from auth-middleware.ts
 
@@ -1687,55 +1686,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // User's unlocked chapters endpoint
-  app.get("/api/user/unlocked-chapters/:contentId", ensureAuthenticated, async (req, res) => {
-    try {
-      const contentId = parseInt(req.params.contentId);
-      const userId = (req.user as any).id;
-      
-      if (isNaN(contentId)) {
-        return res.status(400).json({ error: "Invalid content ID" });
-      }
-      
-      console.log(`Fetching unlocked chapters for user ${userId} and content ${contentId}`);
-      
-      // Get all chapters for the content
-      const chapters = await storage.getChaptersByContent(contentId);
-      
-      // Get IDs of all chapters that are locked
-      const lockedChapterIds = chapters
-        .filter(chapter => chapter.isLocked)
-        .map(chapter => chapter.id);
-        
-      if (lockedChapterIds.length === 0) {
-        console.log(`No locked chapters found for content ${contentId}`);
-        return res.json([]);
-      }
-      
-      // Get all unlocked chapters directly from the database in one query
-      const unlocked = await db
-        .select()
-        .from(unlockedChapters)
-        .where(
-          and(
-            eq(unlockedChapters.userId, userId),
-            inArray(unlockedChapters.chapterId, lockedChapterIds)
-          )
-        );
-        
-      const unlockedChapterIds = unlocked.map(record => record.chapterId);
-      console.log(`Found ${unlockedChapterIds.length} unlocked chapters for user ${userId} in content ${contentId}`);
-      
-      res.json(unlockedChapterIds);
-    } catch (error) {
-      console.error("Error getting user's unlocked chapters:", error);
-      res.status(500).json({ 
-        error: "Failed to get user's unlocked chapters",
-        message: error instanceof Error ? error.message : "Unknown error"
-      });
-    }
-  });
-  
   // Favorites Routes
   app.post("/api/favorites", ensureAuthenticated, async (req, res) => {
     try {

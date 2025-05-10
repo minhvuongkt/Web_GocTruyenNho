@@ -8,7 +8,7 @@
  * 4. Verifying the unlock status and balance change
  */
 
-const fetch = require('node-fetch');
+import fetch from 'node-fetch';
 
 // Configuration
 const BASE_URL = 'http://localhost:5000';
@@ -16,8 +16,8 @@ const USER = { username: 'admin', password: 'admin123' };
 const CHAPTER_ID = 2; // Adjust to a valid chapter ID that is locked
 
 async function getCookieJar(response) {
-  const setCookieHeader = response.headers.get('set-cookie');
-  return setCookieHeader;
+  const setCookieHeader = response.headers.raw()['set-cookie'];
+  return setCookieHeader ? setCookieHeader.join('; ') : '';
 }
 
 // Main test function

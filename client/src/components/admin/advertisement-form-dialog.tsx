@@ -42,13 +42,13 @@ const adSchema = z.object({
   title: z.string().min(1, { message: "Tiêu đề không được để trống" }),
   imageUrl: z.string().min(1, { message: "URL hình ảnh không được để trống" }),
   targetUrl: z.string().min(1, { message: "URL đích không được để trống" }),
-  position: z.enum(["banner", "sidebar_left", "sidebar_right", "popup", "overlay"], { 
+  position: z.enum(["top", "bottom", "left", "right", "popup", "overlay"], { 
     required_error: "Vui lòng chọn vị trí" 
   }),
   startDate: z.string().min(1, { message: "Ngày bắt đầu không được để trống" }),
   endDate: z.string().min(1, { message: "Ngày kết thúc không được để trống" }),
   isActive: z.boolean().default(true),
-  displayFrequency: z.number().min(15).max(60).optional(),
+  displayFrequency: z.number().min(5).max(60).optional(),
 });
 
 type AdFormValues = z.infer<typeof adSchema>;
@@ -267,11 +267,12 @@ export function AdvertisementFormDialog({
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="banner">Banner</SelectItem>
-                      <SelectItem value="sidebar_left">Thanh bên trái</SelectItem>
-                      <SelectItem value="sidebar_right">Thanh bên phải</SelectItem>
+                      <SelectItem value="top">Trên cùng</SelectItem>
+                      <SelectItem value="bottom">Dưới cùng</SelectItem>
+                      <SelectItem value="left">Bên trái</SelectItem>
+                      <SelectItem value="right">Bên phải</SelectItem>
                       <SelectItem value="popup">Popup</SelectItem>
-                      <SelectItem value="overlay">Overlay (Toàn màn hình)</SelectItem>
+                      <SelectItem value="overlay">Overlay (Lớp phủ)</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />
@@ -309,7 +310,7 @@ export function AdvertisementFormDialog({
               />
             </div>
 
-            {form.watch("position") === "overlay" && (
+            {(form.watch("position") === "overlay" || form.watch("position") === "popup") && (
               <FormField
                 control={form.control}
                 name="displayFrequency"
@@ -319,21 +320,23 @@ export function AdvertisementFormDialog({
                     <FormControl>
                       <Input 
                         type="number" 
-                        min="15" 
+                        min="5" 
                         max="60" 
-                        placeholder="30"
+                        placeholder="15"
                         {...field} 
-                        value={field.value || 30}
+                        value={field.value || (form.watch("position") === "popup" ? 5 : 15)}
                         onChange={(e) => {
                           const value = parseInt(e.target.value);
-                          if (value >= 15 && value <= 60) {
+                          if (value >= 5 && value <= 60) {
                             field.onChange(value);
                           }
                         }}
                       />
                     </FormControl>
                     <FormDescription>
-                      Thời gian giữa các lần hiển thị quảng cáo (15-60 phút)
+                      {form.watch("position") === "popup" 
+                        ? "Thời gian tái hiện popup sau khi đóng (5-60 phút, mặc định 5 phút)" 
+                        : "Thời gian tái hiện overlay sau khi click (5-60 phút, mặc định 15 phút)"}
                     </FormDescription>
                     <FormMessage />
                   </FormItem>

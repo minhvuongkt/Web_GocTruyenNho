@@ -314,13 +314,27 @@ export function registerChapterRoutes(app: Express) {
       
       const { isLocked, unlockPrice } = req.body;
       
+      console.log(`Updating chapter ${id} with data:`, { isLocked, unlockPrice });
+      
+      // Kiểm tra dữ liệu đầu vào
+      if (isLocked && (unlockPrice === undefined || unlockPrice <= 0)) {
+        return res.status(400).json({ 
+          error: 'Invalid unlock price', 
+          message: 'Unlock price must be greater than 0 for locked chapters' 
+        });
+      }
+      
+      // Nếu mở khóa chương, reset giá về 0
+      const finalUnlockPrice = isLocked ? unlockPrice : 0;
+      
       // Cập nhật thông tin khóa của chapter
       const updatedChapter = await chapterService.updateChapter({
         id,
         isLocked,
-        unlockPrice
+        unlockPrice: finalUnlockPrice
       });
       
+      console.log('Updated chapter:', updatedChapter);
       res.json(updatedChapter);
     } catch (error) {
       console.error('Error updating chapter lock status:', error);

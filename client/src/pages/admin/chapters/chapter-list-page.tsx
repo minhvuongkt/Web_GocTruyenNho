@@ -116,6 +116,7 @@ export default function ChapterListPage({ contentId }: { contentId: number }) {
       isLocked: boolean;
       unlockPrice?: number;
     }) => {
+      console.log(`Updating chapter ${chapterId}: isLocked=${isLocked}, unlockPrice=${unlockPrice}`);
       const response = await apiRequest(
         "PATCH",
         `/api/chapters/${chapterId}/lock`,
@@ -123,10 +124,11 @@ export default function ChapterListPage({ contentId }: { contentId: number }) {
       );
       return await response.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      const action = data.isLocked ? "khóa" : "mở khóa";
       toast({
         title: "Cập nhật thành công",
-        description: `Chương đã được ${selectedChapter?.isLocked ? "mở khóa" : "khóa"}`,
+        description: `Chương đã được ${action}${data.isLocked ? ` với giá ${data.unlockPrice} xu` : ''}`,
       });
 
       setShowLockDialog(false);
@@ -561,11 +563,33 @@ export default function ChapterListPage({ contentId }: { contentId: number }) {
               <Button
                 onClick={() => {
                   if (selectedChapter) {
-                    updateLockStatusMutation.mutate({
-                      chapterId: selectedChapter.id,
-                      isLocked: !selectedChapter.isLocked,
-                      unlockPrice: selectedChapter.unlockPrice,
-                    });
+                    // Nếu đang khóa chương (chuyển từ không khóa sang khóa)
+                    if (!selectedChapter.isLocked) {
+                      // Đảm bảo unlockPrice có giá trị hợp lệ
+                      const unlockPrice = selectedChapter.unlockPrice || 0;
+                      if (unlockPrice <= 0) {
+                        toast({
+                          title: "Giá không hợp lệ",
+                          description: "Vui lòng nhập giá mở khóa lớn hơn 0",
+                          variant: "destructive",
+                        });
+                        return;
+                      }
+                      
+                      // Khóa chương và đặt giá
+                      updateLockStatusMutation.mutate({
+                        chapterId: selectedChapter.id,
+                        isLocked: true,
+                        unlockPrice: unlockPrice,
+                      });
+                    } else {
+                      // Mở khóa chương (isLocked = false)
+                      updateLockStatusMutation.mutate({
+                        chapterId: selectedChapter.id,
+                        isLocked: false,
+                        unlockPrice: 0, // Reset giá về 0 khi mở khóa
+                      });
+                    }
                   }
                 }}
                 disabled={updateLockStatusMutation.isPending}

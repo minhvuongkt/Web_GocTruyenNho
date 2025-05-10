@@ -1696,19 +1696,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Invalid content ID" });
       }
       
+      console.log(`Fetching unlocked chapters for user ${userId} and content ${contentId}`);
+      
       // Get all chapters for the content
       const chapters = await storage.getChaptersByContent(contentId);
       
-      // Get unlocked status for each chapter
-      const unlockedChapterIds = [];
-      for (const chapter of chapters) {
-        if (!chapter.isLocked) continue; // Skip chapters that aren't locked
+      // Get IDs of all chapters that are locked
+      const lockedChapterIds = chapters
+        .filter(chapter => chapter.isLocked)
+        .map(chapter => chapter.id);
         
-        const isUnlocked = await storage.isChapterUnlocked(userId, chapter.id);
-        if (isUnlocked) {
-          unlockedChapterIds.push(chapter.id);
-        }
+      if (lockedChapterIds.length === 0) {
+        console.log(`No locked chapters found for content ${contentId}`);
+        return res.json([]);
       }
+      
+      // Get all unlocked chapters directly from the database in one query
+      const unlocked = await db
+        .select()
+        .from(unlockedChapters)
+        .where(
+          and(
+            eq(unlockedChapters.userId, userId),
+            inArray(unlockedChapters.chapterId, lockedChapterIds)
+          )
+        );
+        
+      const unlockedChapterIds = unlocked.map(record => record.chapterId);
+      console.log(`Found ${unlockedChapterIds.length} unlocked chapters for user ${userId} in content ${contentId}`);
       
       res.json(unlockedChapterIds);
     } catch (error) {

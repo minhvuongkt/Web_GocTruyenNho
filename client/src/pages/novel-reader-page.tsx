@@ -250,11 +250,23 @@ export function NovelReaderPage({
     isUnlocked,
   } = data;
   const novelTitle = novelDetails?.content?.title || "Đang tải...";
-  const novelContent = chapterContent || "";
+  
+  // Lấy nội dung từ đúng trường dữ liệu - API trả về content hoặc trong chapter.content
+  const novelContent = chapterContent || chapter.content || "";
+  
+  console.log("Novel content data:", { 
+    contentLength: novelContent?.length,
+    chapterContentLength: chapterContent?.length,
+    chapterDirectContentLength: chapter.content?.length,
+    preview: novelContent?.substring(0, 50)
+  });
 
   // Parse HTML content safely
   const renderFormattedContent = () => {
-    if (!novelContent) return null;
+    if (!novelContent) {
+      console.error("Không tìm thấy nội dung chapter");
+      return <div className="text-red-500">Không tìm thấy nội dung chương. Vui lòng thử lại sau.</div>;
+    }
 
     return (
       <div

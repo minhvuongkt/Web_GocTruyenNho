@@ -76,10 +76,11 @@ export function AdvertisementFormDialog({
       title: "",
       imageUrl: "",
       targetUrl: "",
-      position: "banner",
+      position: "top",
       startDate: format(new Date(), "yyyy-MM-dd"),
       endDate: format(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), "yyyy-MM-dd"),
       isActive: true,
+      displayFrequency: 5,
     },
   });
 
@@ -102,11 +103,11 @@ export function AdvertisementFormDialog({
         title: "",
         imageUrl: "",
         targetUrl: "",
-        position: "banner",
+        position: "top", // Changed from "banner" to "top" (valid value from adPositionEnum)
         startDate: format(new Date(), "yyyy-MM-dd"),
         endDate: format(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), "yyyy-MM-dd"),
         isActive: true,
-        displayFrequency: 30,
+        displayFrequency: 5, // Default for popup/overlay reappear time when closed
       });
     }
   }, [advertisement, mode, form]);
@@ -311,37 +312,46 @@ export function AdvertisementFormDialog({
             </div>
 
             {(form.watch("position") === "overlay" || form.watch("position") === "popup") && (
-              <FormField
-                control={form.control}
-                name="displayFrequency"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Tần suất hiển thị (phút)</FormLabel>
-                    <FormControl>
-                      <Input 
-                        type="number" 
-                        min="5" 
-                        max="60" 
-                        placeholder="15"
-                        {...field} 
-                        value={field.value || (form.watch("position") === "popup" ? 5 : 15)}
-                        onChange={(e) => {
-                          const value = parseInt(e.target.value);
-                          if (value >= 5 && value <= 60) {
-                            field.onChange(value);
-                          }
-                        }}
-                      />
-                    </FormControl>
-                    <FormDescription>
-                      {form.watch("position") === "popup" 
-                        ? "Thời gian tái hiện popup sau khi đóng (5-60 phút, mặc định 5 phút)" 
-                        : "Thời gian tái hiện overlay sau khi click (5-60 phút, mặc định 15 phút)"}
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              <>
+                <FormField
+                  control={form.control}
+                  name="displayFrequency"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Thời gian tái hiện sau khi đóng (phút)</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="number" 
+                          min="5" 
+                          max="60" 
+                          placeholder="5"
+                          {...field} 
+                          value={field.value || 5}
+                          onChange={(e) => {
+                            const value = parseInt(e.target.value);
+                            if (value >= 5 && value <= 60) {
+                              field.onChange(value);
+                            }
+                          }}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Thời gian tái hiện sau khi người dùng đóng quảng cáo (5-60 phút, mặc định 5 phút)
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <div className="flex items-center p-4 bg-muted/50 rounded-md">
+                  <div className="space-y-1">
+                    <h4 className="font-medium">Thông tin thêm</h4>
+                    <p className="text-sm text-muted-foreground">
+                      Quảng cáo dạng {form.watch("position") === "popup" ? "popup" : "overlay"} sẽ tái hiện sau 5 phút khi người dùng đóng, và sau 15 phút khi người dùng nhấp vào.
+                    </p>
+                  </div>
+                </div>
+              </>
             )}
 
             <FormField

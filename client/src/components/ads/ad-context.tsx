@@ -59,6 +59,31 @@ export function AdProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     fetchAds();
   }, []);
+  
+  // Effect to hide banner ads when reading content
+  useEffect(() => {
+    if (isReading) {
+      // Hide all banner ads but keep popup/overlay state based on their timers
+      setPositions(prev => {
+        const updated = { ...prev };
+        updated.top = { ...prev.top, show: false };
+        updated.bottom = { ...prev.bottom, show: false };
+        updated.left = { ...prev.left, show: false };
+        updated.right = { ...prev.right, show: false };
+        return updated;
+      });
+    } else {
+      // Show banner ads again when not reading
+      setPositions(prev => {
+        const updated = { ...prev };
+        updated.top = { ...prev.top, show: true };
+        updated.bottom = { ...prev.bottom, show: true };
+        updated.left = { ...prev.left, show: true };
+        updated.right = { ...prev.right, show: true };
+        return updated;
+      });
+    }
+  }, [isReading]);
 
   // Check for popup/overlay timing
   useEffect(() => {
@@ -72,7 +97,7 @@ export function AdProvider({ children }: { children: ReactNode }) {
   const fetchAds = async () => {
     try {
       setIsLoading(true);
-      const response = await apiRequest('/api/ads/active');
+      const response = await apiRequest('/api/ads/active', { method: 'GET' });
       
       // Check if response is valid
       if (response && Array.isArray(response)) {
@@ -133,44 +158,48 @@ export function AdProvider({ children }: { children: ReactNode }) {
   };
 
   const showAd = (position: string) => {
-    setPositions(prev => ({
-      ...prev,
-      [position]: { ...prev[position], show: true }
-    }));
+    setPositions(prev => {
+      const updated = { ...prev };
+      updated[position] = { ...prev[position], show: true };
+      return updated;
+    });
   };
 
   const hideAd = (position: string) => {
-    setPositions(prev => ({
-      ...prev,
-      [position]: { ...prev[position], show: false }
-    }));
+    setPositions(prev => {
+      const updated = { ...prev };
+      updated[position] = { ...prev[position], show: false };
+      return updated;
+    });
   };
 
   const closeAd = (position: string) => {
-    setPositions(prev => ({
-      ...prev,
-      [position]: { 
+    setPositions(prev => {
+      const updated = { ...prev };
+      updated[position] = { 
         ...prev[position], 
         show: false,
         lastClosed: new Date(),
-      }
-    }));
+      };
+      return updated;
+    });
   };
 
   const clickAd = async (adId: number, position: string) => {
     try {
       // Record the click
-      await apiRequest(`/api/ads/${adId}/click`, { method: 'POST' } as any);
+      await apiRequest(`/api/ads/${adId}/click`, { method: 'POST' });
       
       // Update local state
-      setPositions(prev => ({
-        ...prev,
-        [position]: { 
+      setPositions(prev => {
+        const updated = { ...prev };
+        updated[position] = { 
           ...prev[position], 
           show: false,
           lastClicked: new Date(),
-        }
-      }));
+        };
+        return updated;
+      });
       
       // Update the click count in our local state
       setAds(prev => {

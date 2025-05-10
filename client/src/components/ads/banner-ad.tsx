@@ -1,92 +1,79 @@
-import React from 'react';
-import { cn } from '@/lib/utils';
-import { useAds } from './ads-provider';
+import { useEffect, useState } from 'react';
+import { apiRequest } from '@/lib/queryClient';
 
-export interface BannerAdProps {
+interface BannerAdProps {
   className?: string;
-  adCode?: string;
-  adImage?: string;
-  adLink?: string;
-  width?: number | string;
-  height?: number | string;
-  position?: 'top' | 'bottom' | 'left' | 'right' | 'sidebar';
 }
 
-export function BannerAd({
-  className,
-  adCode,
-  adImage,
-  adLink = '#',
-  width = '100%',
-  height = 'auto',
-  position = 'top',
-}: BannerAdProps) {
-  const { showAds, shouldShowAds } = useAds();
-  
-  // Nếu không hiển thị quảng cáo, return null
-  if (!showAds || !shouldShowAds('banner')) {
-    return null;
-  }
+interface AdData {
+  id: number;
+  title: string;
+  imageUrl: string;
+  targetUrl: string;
+}
 
-  // Xác định kích thước dựa trên vị trí
-  const getDefaultDimensions = () => {
-    switch (position) {
-      case 'top':
-      case 'bottom':
-        return { width: '100%', height: '90px' };
-      case 'left':
-      case 'right':
-      case 'sidebar':
-        return { width: '160px', height: '600px' };
-      default:
-        return { width: '100%', height: '90px' };
+export function BannerAd({ className = '' }: BannerAdProps) {
+  const [ad, setAd] = useState<AdData | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchBannerAd() {
+      try {
+        setLoading(true);
+        const response = await fetch('/api/ads?position=banner');
+        if (!response.ok) {
+          throw new Error('Failed to fetch banner ad');
+        }
+        
+        const data = await response.json();
+        if (data && data.length > 0) {
+          // Get first active banner ad
+          setAd(data[0]);
+          // Record view
+          await apiRequest('POST', `/api/ads/${data[0].id}/view`);
+        }
+      } catch (error) {
+        console.error('Error fetching banner ad:', error);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchBannerAd();
+  }, []);
+
+  const handleAdClick = async () => {
+    if (ad) {
+      try {
+        // Record click
+        await apiRequest('POST', `/api/ads/${ad.id}/click`);
+        // Open ad target in new tab
+        window.open(ad.targetUrl, '_blank');
+      } catch (error) {
+        console.error('Error recording ad click:', error);
+      }
     }
   };
 
-  const defaultDimensions = getDefaultDimensions();
-  const bannerWidth = width || defaultDimensions.width;
-  const bannerHeight = height || defaultDimensions.height;
-
-  // Nếu có adCode, ưu tiên hiển thị
-  if (adCode) {
-    return (
-      <div
-        className={cn('ad-container', className)}
-        style={{ width: bannerWidth, height: bannerHeight }}
-        dangerouslySetInnerHTML={{ __html: adCode }}
-      />
-    );
+  if (loading || !ad) {
+    return null; // Don't show anything while loading or if no ad
   }
 
-  // Nếu có adImage, hiển thị ảnh
-  if (adImage) {
-    return (
-      <a
-        href={adLink}
-        target="_blank"
-        rel="noopener noreferrer"
-        className={cn('ad-container block overflow-hidden', className)}
-        style={{ width: bannerWidth, height: bannerHeight }}
-      >
-        <img
-          src={adImage}
-          alt="Advertisement"
-          className="w-full h-full object-contain"
-        />
-      </a>
-    );
-  }
-
-  // Nếu không có dữ liệu quảng cáo, hiển thị vùng trống với border
   return (
-    <div
-      className={cn(
-        'ad-container flex items-center justify-center border border-dashed border-gray-300 bg-gray-50 dark:bg-gray-800 dark:border-gray-700',
-        className
-      )}
-      style={{ width: bannerWidth, height: bannerHeight }}
-    >
-      <p className="text-sm text-gray-500 dark:text-gray-400">Quảng cáo</p>
+    <div className={`banner-ad w-full my-4 ${className}`}>
+      <div 
+        onClick={handleAdClick} 
+        className="cursor-pointer relative rounded-lg overflow-hidden shadow-md border border-gray-200"
+      >
+        <img 
+          src={ad.imageUrl} 
+          alt={ad.title} 
+          className="w-full h-auto object-cover" 
+        />
+        <div className="absolute bottom-0 left-0 right-0 bg-black/30 text-white text-xs p-1 text-center">
+          Quảng cáo
+        </div>
+      </div>
     </div>
   );
 }

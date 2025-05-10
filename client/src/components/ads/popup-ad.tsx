@@ -1,139 +1,93 @@
-import React, { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { X } from 'lucide-react';
-import { useAds } from './ads-provider';
-import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { apiRequest } from '@/lib/queryClient';
 
-export interface PopupAdProps {
-  className?: string;
-  adCode?: string;
-  adImage?: string;
-  adLink?: string;
-  title?: string;
-  width?: number | string;
-  height?: number | string;
-  isOpen?: boolean;
-  onClose?: () => void;
-  autoShow?: boolean;
-  forceShow?: boolean;
-  timerKey?: string; // Khóa duy nhất để theo dõi timer cho popup này
-  timerMinutes?: number;
-  delay?: number; // Milliseconds để delay hiển thị sau khi mount
+interface PopupAdProps {
+  onClose: () => void;
 }
 
-export function PopupAd({
-  className,
-  adCode,
-  adImage,
-  adLink = '#',
-  title = 'Quảng cáo',
-  width = 400,
-  height = 300,
-  isOpen: externalIsOpen,
-  onClose,
-  autoShow = true, // Tự động hiển thị khi component được mount
-  forceShow = false, // Bắt buộc hiển thị bỏ qua timer
-  timerKey = 'default-popup-ad', // Khóa mặc định
-  timerMinutes = 15, // 15 phút giữa các lần hiển thị
-  delay = 0, // Không delay mặc định
-}: PopupAdProps) {
-  const { showAds, shouldShowAds, updateLastAdCloseTime } = useAds();
-  const [internalIsOpen, setInternalIsOpen] = useState(false);
+interface AdData {
+  id: number;
+  title: string;
+  imageUrl: string;
+  targetUrl: string;
+}
 
-  // Xác định trạng thái hiển thị thực tế
-  const isOpen = externalIsOpen !== undefined ? externalIsOpen : internalIsOpen;
+export function PopupAd({ onClose }: PopupAdProps) {
+  const [ad, setAd] = useState<AdData | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  // Xử lý đóng popup
-  const handleClose = () => {
-    if (onClose) {
-      onClose();
-    } else {
-      setInternalIsOpen(false);
+  useEffect(() => {
+    async function fetchPopupAd() {
+      try {
+        setLoading(true);
+        const response = await fetch('/api/ads?position=popup');
+        if (!response.ok) {
+          throw new Error('Failed to fetch popup ad');
+        }
+        
+        const data = await response.json();
+        if (data && data.length > 0) {
+          // Get first active popup ad
+          setAd(data[0]);
+          // Record view
+          await apiRequest('POST', `/api/ads/${data[0].id}/view`);
+        }
+      } catch (error) {
+        console.error('Error fetching popup ad:', error);
+      } finally {
+        setLoading(false);
+      }
     }
-    updateLastAdCloseTime();
+
+    fetchPopupAd();
+  }, []);
+
+  const handleAdClick = async () => {
+    if (ad) {
+      try {
+        // Record click
+        await apiRequest('POST', `/api/ads/${ad.id}/click`);
+        // Open ad target in new tab
+        window.open(ad.targetUrl, '_blank');
+      } catch (error) {
+        console.error('Error recording ad click:', error);
+      }
+    }
   };
 
-  // Hiệu ứng tự động hiển thị popup sau khi delay
-  useEffect(() => {
-    // Nếu không hiển thị quảng cáo hoặc không auto show, không làm gì cả
-    if (!showAds || !autoShow) return;
+  if (loading) {
+    return null; // Don't show anything while loading
+  }
 
-    // Kiểm tra xem có nên hiển thị dựa trên timer không
-    const canShow = forceShow || shouldShowAds('popup', timerKey);
-    
-    if (canShow) {
-      // Nếu có delay, đợi rồi mới hiển thị
-      const timer = setTimeout(() => {
-        setInternalIsOpen(true);
-      }, delay);
-      
-      return () => clearTimeout(timer);
-    }
-  }, [
-    showAds,
-    autoShow,
-    forceShow,
-    shouldShowAds,
-    timerKey,
-    delay,
-  ]);
-
-  // Nếu không hiển thị quảng cáo hoặc không đủ điều kiện hiển thị, return null
-  if (!showAds || (!isOpen && !autoShow)) {
+  if (!ad) {
+    // No ad to display, execute onClose to clean up
+    onClose();
     return null;
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
-      <DialogContent
-        className={cn('', className)}
-        style={{ maxWidth: width, maxHeight: height }}
-      >
-        <DialogHeader className="flex justify-between items-center">
-          <DialogTitle>{title}</DialogTitle>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={handleClose}
-            className="absolute right-4 top-4"
-          >
-            <X className="h-4 w-4" />
-          </Button>
-        </DialogHeader>
-
-        {/* Nội dung quảng cáo */}
-        {adCode ? (
-          <div
-            dangerouslySetInnerHTML={{ __html: adCode }}
-            className="w-full h-full"
+    <div className="fixed bottom-4 right-4 z-40 max-w-sm rounded-lg overflow-hidden shadow-lg bg-white">
+      <div className="relative">
+        <button 
+          onClick={onClose}
+          className="absolute top-2 right-2 p-1 rounded-full bg-white/80 text-gray-700 hover:bg-gray-200 transition-colors z-10"
+          aria-label="Close advertisement"
+        >
+          <X className="h-5 w-5" />
+        </button>
+        
+        <div onClick={handleAdClick} className="cursor-pointer">
+          <img 
+            src={ad.imageUrl} 
+            alt={ad.title} 
+            className="w-full h-auto" 
           />
-        ) : adImage ? (
-          <a
-            href={adLink}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="block w-full h-full overflow-hidden"
-          >
-            <img
-              src={adImage}
-              alt="Advertisement"
-              className="w-full h-full object-contain"
-            />
-          </a>
-        ) : (
-          <div className="flex items-center justify-center p-6 border border-dashed border-gray-300 bg-gray-50 dark:bg-gray-800 dark:border-gray-700 w-full h-full rounded">
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              Nội dung quảng cáo sẽ xuất hiện ở đây
-            </p>
+          <div className="absolute bottom-0 left-0 right-0 bg-black/30 text-white text-xs p-1 text-center">
+            Quảng cáo
           </div>
-        )}
-      </DialogContent>
-    </Dialog>
+        </div>
+      </div>
+    </div>
   );
 }

@@ -20,17 +20,12 @@ import {
   Settings,
   Heart,
   History,
-  CreditCard,
-  BanIcon
+  CreditCard
 } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useState } from "react";
 import { SearchModal } from "@/components/shared/search-modal";
 import { formatCurrency } from "@/lib/utils";
-import { useAds } from "@/components/ads/ads-provider";
-import { BannerAd } from "@/components/ads/banner-ad";
-import { PopupAd } from "@/components/ads/popup-ad";
-import { OverlayAd } from "@/components/ads/overlay-ad";
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -41,7 +36,6 @@ export function MainLayout({ children }: MainLayoutProps) {
   const { user, logoutMutation } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchModalOpen, setSearchModalOpen] = useState(false);
-  const { showAds, showBanners, toggleAds } = useAds();
 
   const handleLogout = () => {
     logoutMutation.mutate();
@@ -51,20 +45,8 @@ export function MainLayout({ children }: MainLayoutProps) {
     setMobileMenuOpen(!mobileMenuOpen);
   };
 
-  // Kiểm tra xem đang ở trang đọc truyện hay không để ẩn quảng cáo
-  const isReadingPage = location.includes('/read/') || location.includes('/chapter/') || location.includes('/view/');
-  const { hideAdsOnReading } = useAds();
-  const shouldShowAdsOnPage = !(isReadingPage && hideAdsOnReading);
-
   return (
     <div className="min-h-screen flex flex-col">
-      {/* Top Banner Ad */}
-      {shouldShowAdsOnPage && (
-        <div className="w-full">
-          <BannerAd position="top" />
-        </div>
-      )}
-      
       {/* Header */}
       <header className="sticky top-0 z-50 bg-white dark:bg-slate-900 shadow-md">
         <div className="container mx-auto px-4">
@@ -99,17 +81,6 @@ export function MainLayout({ children }: MainLayoutProps) {
             {/* User actions */}
             <div className="flex items-center space-x-4">
               <ToggleTheme />
-              
-              {/* Nút bật/tắt quảng cáo */}
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={toggleAds}
-                title={showAds ? "Tắt quảng cáo" : "Bật quảng cáo"}
-                className="text-foreground/70 hover:text-primary"
-              >
-                <BanIcon className={`h-5 w-5 ${!showAds ? 'text-red-500' : ''}`} />
-              </Button>
               
               {user ? (
                 <DropdownMenu>
@@ -249,56 +220,10 @@ export function MainLayout({ children }: MainLayoutProps) {
 
       {/* Search Modal */}
       <SearchModal isOpen={searchModalOpen} onClose={() => setSearchModalOpen(false)} />
-      
-      {/* Popup Ad - Only shown if not on reading pages */}
-      {shouldShowAdsOnPage && (
-        <PopupAd 
-          title="Quảng cáo" 
-          adImage="https://via.placeholder.com/400x300?text=Advertisement"
-          adLink="#"
-          width={400}
-          height={300}
-          timerMinutes={15}
-          delay={3000} // Show after 3 seconds
-        />
-      )}
-      
-      {/* Overlay Ad - Only shown if not on reading pages */}
-      {shouldShowAdsOnPage && (
-        <OverlayAd 
-          adImage="https://via.placeholder.com/500x500?text=Advertisement"
-          adLink="#"
-          position="center"
-          width="500px"
-          height="500px"
-          timerMinutes={30}
-          delay={1000} // Show after 1 second
-        />
-      )}
 
       {/* Main content */}
-      <main className="flex-grow relative">
-        {/* Banner quảng cáo trên */}
-        {showAds && showBanners && (
-          <div className="container mx-auto px-4 mt-4">
-            <BannerAd 
-              position="top" 
-              className="mx-auto"
-            />
-          </div>
-        )}
-        
+      <main className="flex-grow">
         {children}
-        
-        {/* Banner quảng cáo dưới */}
-        {showAds && showBanners && (
-          <div className="container mx-auto px-4 mb-4">
-            <BannerAd 
-              position="bottom" 
-              className="mx-auto"
-            />
-          </div>
-        )}
       </main>
 
       {/* Footer */}

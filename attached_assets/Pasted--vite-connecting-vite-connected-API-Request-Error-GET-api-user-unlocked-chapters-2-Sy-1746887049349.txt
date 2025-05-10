@@ -1,0 +1,22 @@
+[vite] connecting...
+[vite] connected.
+API Request Error (GET /api/user/unlocked-chapters/2): 
+SyntaxError {}
+
+Warning: Each child in a list should have a unique &quot;key&quot; prop.
+
+Check the render method of `NovelDetailPage`. See https://reactjs.org/link/warning-keys for more information.
+    at https://003e016b-5ad9-4d7d-be71-443658f3d24d-00-2x34acek0veo2.sisko.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=1940df65:337:18
+    at NovelDetailPage (https://003e016b-5ad9-4d7d-be71-443658f3d24d-00-2x34acek0veo2.sisko.replit.dev/src/pages/novel-detail-page.tsx:48:35)
+    at ContentDetailPage (https://003e016b-5ad9-4d7d-be71-443658f3d24d-00-2x34acek0veo2.sisko.replit.dev/src/pages/content-detail-page.tsx:24:37)
+    at Route (https://003e016b-5ad9-4d7d-be71-443658f3d24d-00-2x34acek0veo2.sisko.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=1940df65:323:16)
+    at Switch (https://003e016b-5ad9-4d7d-be71-443658f3d24d-00-2x34acek0veo2.sisko.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=1940df65:379:17)
+    at Router
+    at Provider (https://003e016b-5ad9-4d7d-be71-443658f3d24d-00-2x34acek0veo2.sisko.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-OXZDJRWN.js?v=1940df65:38:15)
+    at TooltipProvider (https://003e016b-5ad9-4d7d-be71-443658f3d24d-00-2x34acek0veo2.sisko.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-tooltip.js?v=1940df65:62:5)
+    at AuthProvider (https://003e016b-5ad9-4d7d-be71-443658f3d24d-00-2x34acek0veo2.sisko.replit.dev/src/hooks/use-auth.tsx:26:32)
+    at ThemeProvider (https://003e016b-5ad9-4d7d-be71-443658f3d24d-00-2x34acek0veo2.sisko.replit.dev/src/components/ui/theme-provider.tsx:25:3)
+    at QueryClientProvider (https://003e016b-5ad9-4d7d-be71-443658f3d24d-00-2x34acek0veo2.sisko.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=1940df65:2805:3)
+    at App
+API Request Error (POST /api/chapters/6/unlock): 
+Error {}

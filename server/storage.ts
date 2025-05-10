@@ -1289,17 +1289,23 @@ export class DatabaseStorage implements IStorage {
   }
 
   async isChapterUnlocked(userId: number, chapterId: number): Promise<boolean> {
-    const [unlocked] = await db
-      .select()
-      .from(unlockedChapters)
-      .where(
-        and(
-          eq(unlockedChapters.userId, userId),
-          eq(unlockedChapters.chapterId, chapterId),
-        ),
-      );
-
-    return !!unlocked;
+    try {
+      const [unlocked] = await db
+        .select()
+        .from(unlockedChapters)
+        .where(
+          and(
+            eq(unlockedChapters.userId, userId),
+            eq(unlockedChapters.chapterId, chapterId),
+          ),
+        );
+      
+      console.log(`isChapterUnlocked check - userId: ${userId}, chapterId: ${chapterId}, result: ${!!unlocked}`);
+      return !!unlocked;
+    } catch (error) {
+      console.error(`Error checking if chapter is unlocked - userId: ${userId}, chapterId: ${chapterId}`, error);
+      return false;
+    }
   }
 
   // Payment management methods

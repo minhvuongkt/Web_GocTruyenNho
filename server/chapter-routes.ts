@@ -127,6 +127,7 @@ export function registerChapterRoutes(app: Express) {
         const userId = (req.user as any).id;
         const { storage } = await import('./storage');
         isUnlocked = await storage.isChapterUnlocked(userId, chapterInfo.chapter.id);
+        console.log(`Content/${contentId}/Chapter/${chapterNumber} (ID: ${chapterInfo.chapter.id}) - isLocked=${chapterInfo.chapter.isLocked}, isUnlocked=${isUnlocked} for user ${userId}`);
       }
       
       // Chỉ tăng lượt xem nếu chapter không bị khóa hoặc đã được mở khóa

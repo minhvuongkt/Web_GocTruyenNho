@@ -119,14 +119,13 @@ export function registerChapterRoutes(app: Express) {
         });
       }
       
-      // Kiểm tra chapter bị khóa
+      // Kiểm tra chapter bị khóa bằng util function mới
       let isUnlocked = !chapterInfo.chapter.isLocked;
       
-      if (chapterInfo.chapter.isLocked && req.isAuthenticated && req.isAuthenticated()) {
-        // Kiểm tra user đã mở khóa chapter chưa
-        const userId = (req.user as any).id;
-        const { storage } = await import('./storage');
-        isUnlocked = await storage.isChapterUnlocked(userId, chapterInfo.chapter.id);
+      if (chapterInfo.chapter.isLocked) {
+        // Sử dụng hàm mới để kiểm tra trạng thái mở khóa
+        isUnlocked = await handleUnlockCheck(req, chapterInfo.chapter.id);
+        console.log(`API endpoint /api/content/:contentId/chapter/:chapterNumber - Chapter ${chapterInfo.chapter.id} unlock status: ${isUnlocked ? 'UNLOCKED' : 'LOCKED'}`);
       }
       
       // Chỉ tăng lượt xem nếu chapter không bị khóa hoặc đã được mở khóa

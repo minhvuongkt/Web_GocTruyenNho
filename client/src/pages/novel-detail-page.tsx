@@ -378,12 +378,18 @@ export function NovelDetailPage({ id }: NovelDetailPageProps) {
 
               {/* Chapters tab */}
               <TabsContent value="chapters">
-                <ChapterList
-                  chapters={chaptersData}
-                  contentId={id}
-                  contentType="novel"
-                  userUnlockedChapters={unlockedChapters}
-                />
+                {chaptersData ? (
+                  <ChapterList
+                    chapters={chaptersData}
+                    contentId={id}
+                    contentType="novel"
+                    userUnlockedChapters={unlockedChapters}
+                  />
+                ) : (
+                  <div className="py-4 text-center text-muted-foreground">
+                    Đang tải danh sách chương...
+                  </div>
+                )}
                 {/* {chaptersData && chaptersData.length > 0 ? (
                   <ChapterList
                     chapters={chaptersData}

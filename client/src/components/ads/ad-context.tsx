@@ -98,7 +98,7 @@ export function AdProvider({ children }: { children: ReactNode }) {
     setPositions(prev => {
       const updated = { ...prev };
       
-      // Check popup timing (appear after 5 minutes if closed, 15 minutes if clicked)
+      // Check popup timing (reappear after 5 minutes if closed, 15 minutes if clicked)
       if (updated.popup.lastClosed) {
         const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
         if (updated.popup.lastClosed < fiveMinutesAgo) {
@@ -113,7 +113,7 @@ export function AdProvider({ children }: { children: ReactNode }) {
         }
       }
       
-      // Similar logic for overlay
+      // For overlay, implement the same timing as requested (5 minutes if closed, 15 minutes if clicked)
       if (updated.overlay.lastClosed) {
         const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
         if (updated.overlay.lastClosed < fiveMinutesAgo) {

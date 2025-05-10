@@ -222,30 +222,30 @@ export function OverlayAd() {
   const ad = overlayAds[0];
   
   return (
-    <div className="fixed inset-0 bg-black/25 z-40 flex items-center justify-center pointer-events-none">
-      <div className="pointer-events-auto">
+    <div className="fixed inset-0 z-40 flex items-center justify-center pointer-events-none">
+      <div className="pointer-events-auto max-w-[320px] relative">
         <a 
           href={ad.targetUrl} 
           target="_blank" 
           rel="noopener noreferrer"
           onClick={() => clickAd(ad.id, 'overlay')}
-          className="block relative"
+          className="block relative rounded-lg overflow-hidden shadow-lg"
         >
           <img 
             src={ad.imageUrl} 
             alt={ad.title} 
-            className="max-w-full max-h-[80vh] object-contain"
+            className="w-full object-contain"
           />
           <div className="absolute top-0 left-0 bg-primary/80 text-primary-foreground px-2 py-1 text-xs">
-            Advertisement
+            Quảng cáo
           </div>
         </a>
         <button 
           onClick={() => closeAd('overlay')} 
-          className="absolute top-0 right-0 bg-background/80 p-1 rounded-bl-md text-foreground"
+          className="absolute -top-2 -right-2 bg-white shadow-md p-1 rounded-full text-gray-700 hover:bg-gray-200 z-10"
           aria-label="Close advertisement"
         >
-          <X size={20} />
+          <X size={16} />
         </button>
       </div>
     </div>

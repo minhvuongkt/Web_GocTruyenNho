@@ -7,6 +7,7 @@ import passport from "passport";
 import { storage } from "./storage";
 import { Server } from "http";
 import * as schema from "@shared/schema";
+import { users, chapters, unlockedChapters } from "@shared/schema";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { generateVietQRURL } from "./payment-utils";
@@ -22,7 +23,7 @@ import { ensureAuthenticated, ensureAdmin } from "./auth-middleware";
 import { registerChapterRoutes } from "./chapter-routes"; // Import routes mới cho chapter
 import { registerUploadRoutes } from "./document-upload-routes"; // Import routes mới cho upload
 import { db } from "./db";
-import { eq, and } from "drizzle-orm";
+import { eq, and, inArray } from "drizzle-orm";
 
 // No need to redefine - use the middleware imported from auth-middleware.ts
 

@@ -221,14 +221,13 @@ export interface IStorage {
   // Advertisement management
   createAdvertisement(adData: InsertAdvertisement): Promise<Advertisement>;
   getAdvertisement(id: number): Promise<Advertisement | undefined>;
-  getActiveAdvertisements(
-    position: "banner" | "sidebar_left" | "sidebar_right" | "popup" | "overlay",
-  ): Promise<Advertisement[]>;
-  getActiveOverlayAd(): Promise<Advertisement | undefined>;
-  getAllAdvertisements(
-    page?: number,
-    limit?: number,
-  ): Promise<{ ads: Advertisement[]; total: number }>;
+  getActiveAds(date: Date): Promise<Advertisement[]>;
+  getAdvertisements(options?: {
+    page?: number;
+    limit?: number;
+    position?: string;
+    isActive?: boolean;
+  }): Promise<{ ads: Advertisement[]; total: number }>;
   updateAdvertisement(
     id: number,
     adData: Partial<InsertAdvertisement>,
@@ -1410,53 +1409,86 @@ export class DatabaseStorage implements IStorage {
     return ad;
   }
 
-  async getActiveAdvertisements(
-    position: "banner" | "sidebar_left" | "sidebar_right" | "popup" | "overlay",
-  ): Promise<Advertisement[]> {
-    const now = new Date();
-
-    return db
+  async getActiveAds(date: Date): Promise<Advertisement[]> {
+    const ads = await db
       .select()
       .from(advertisements)
       .where(
         and(
-          eq(advertisements.position, position),
           eq(advertisements.isActive, true),
-          lt(advertisements.startDate, now),
-          gt(advertisements.endDate, now),
-        ),
-      );
-  }
-
-  async getActiveOverlayAd(): Promise<Advertisement | undefined> {
-    const now = new Date();
-    
-    // Get an overlay ad that hasn't been displayed recently (at least 15 minutes ago)
-    // or has never been displayed
-    const fifteenMinutesAgo = new Date(now.getTime() - 15 * 60 * 1000);
-    
-    const [ad] = await db
-      .select()
-      .from(advertisements)
-      .where(
-        and(
-          eq(advertisements.position, "overlay"),
-          eq(advertisements.isActive, true),
-          lt(advertisements.startDate, now),
-          gt(advertisements.endDate, now),
-          or(
-            isNull(advertisements.lastDisplayed),
-            lt(advertisements.lastDisplayed, fifteenMinutesAgo)
-          )
-        ),
+          lt(advertisements.startDate, date),
+          gt(advertisements.endDate, date)
+        )
       )
-      .orderBy(asc(advertisements.lastDisplayed), asc(advertisements.views))
-      .limit(1);
+      .orderBy(asc(advertisements.position), asc(advertisements.displayOrder));
     
-    return ad;
+    return ads;
   }
 
-  async getAllAdvertisements(
+  async getAdvertisements({
+    page = 1,
+    limit = 10,
+    position,
+    isActive,
+  }: {
+    page?: number;
+    limit?: number;
+    position?: string;
+    isActive?: boolean;
+  } = {}): Promise<{ ads: Advertisement[]; total: number }> {
+    const offset = (page - 1) * limit;
+    
+    // Build the where conditions
+    let whereConditions = [];
+    
+    if (position) {
+      whereConditions.push(eq(advertisements.position, position));
+    }
+    
+    if (isActive !== undefined) {
+      whereConditions.push(eq(advertisements.isActive, isActive));
+    }
+    
+    // Combine conditions if any
+    const conditions = whereConditions.length > 0 
+      ? and(...whereConditions) 
+      : undefined;
+    
+    // Get the ads
+    const adsList = conditions 
+      ? await db
+          .select()
+          .from(advertisements)
+          .where(conditions)
+          .orderBy(desc(advertisements.updatedAt || advertisements.createdAt))
+          .limit(limit)
+          .offset(offset)
+      : await db
+          .select()
+          .from(advertisements)
+          .orderBy(desc(advertisements.updatedAt || advertisements.createdAt))
+          .limit(limit)
+          .offset(offset);
+    
+    // Count total
+    const [countResult] = conditions
+      ? await db
+          .select({ count: count() })
+          .from(advertisements)
+          .where(conditions)
+      : await db
+          .select({ count: count() })
+          .from(advertisements);
+    
+    const total = Number(countResult?.count || 0);
+    
+    return {
+      ads: adsList,
+      total,
+    };
+  }
+
+  async updateAdvertisement(
     page: number = 1,
     limit: number = 10,
   ): Promise<{ ads: Advertisement[]; total: number }> {
@@ -1620,3 +1652,5 @@ export class DatabaseStorage implements IStorage {
 }
 
 export const storage = new DatabaseStorage();
+
+export type Storage = typeof storage;

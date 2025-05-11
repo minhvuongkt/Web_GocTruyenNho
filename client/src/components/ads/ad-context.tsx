@@ -97,13 +97,22 @@ export function AdProvider({ children }: { children: ReactNode }) {
   const fetchAds = async () => {
     try {
       setIsLoading(true);
-      const response = await apiRequest('/api/ads/active', { method: 'GET' });
+      const response = await fetch('/api/ads/active', {
+        method: 'GET',
+        credentials: 'include'
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Error fetching ads: ${response.status}`);
+      }
+      
+      const data = await response.json();
       
       // Check if response is valid
-      if (response && Array.isArray(response)) {
+      if (data && Array.isArray(data)) {
         // Group ads by position
         const groupedAds: Record<string, Advertisement[]> = {};
-        response.forEach((ad: Advertisement) => {
+        data.forEach((ad: Advertisement) => {
           if (!groupedAds[ad.position]) {
             groupedAds[ad.position] = [];
           }
@@ -205,7 +214,10 @@ export function AdProvider({ children }: { children: ReactNode }) {
   const clickAd = async (adId: number, position: string) => {
     try {
       // Record the click
-      await apiRequest(`/api/ads/${adId}/click`, { method: 'POST' });
+      await fetch(`/api/ads/${adId}/click`, {
+        method: 'POST',
+        credentials: 'include'
+      });
       
       // Update local state
       setPositions(prev => {

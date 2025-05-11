@@ -39,6 +39,9 @@ import {
   paymentSettings,
   type PaymentSettings,
   type InsertPaymentSettings,
+  externalAdConfigs,
+  type ExternalAdConfig,
+  type InsertExternalAdConfig,
 } from "@shared/schema";
 import { db } from "./db";
 import {
@@ -237,6 +240,17 @@ export interface IStorage {
   incrementAdViews(id: number): Promise<boolean>;
   incrementAdClicks(id: number): Promise<boolean>;
   updateLastDisplayed(id: number): Promise<boolean>;
+  
+  // External Ad management
+  createExternalAdConfig(configData: InsertExternalAdConfig): Promise<ExternalAdConfig>;
+  getExternalAdConfig(id: number): Promise<ExternalAdConfig | undefined>;
+  getActiveExternalAdConfigs(): Promise<ExternalAdConfig[]>;
+  getAllExternalAdConfigs(page?: number, limit?: number): Promise<{ configs: ExternalAdConfig[]; total: number }>;
+  updateExternalAdConfig(
+    id: number,
+    configData: Partial<InsertExternalAdConfig>,
+  ): Promise<ExternalAdConfig | undefined>;
+  deleteExternalAdConfig(id: number): Promise<boolean>;
 
   // Payment settings
   getPaymentSettings(): Promise<PaymentSettings | undefined>;

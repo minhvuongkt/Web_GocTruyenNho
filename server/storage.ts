@@ -222,6 +222,7 @@ export interface IStorage {
   createAdvertisement(adData: InsertAdvertisement): Promise<Advertisement>;
   getAdvertisement(id: number): Promise<Advertisement | undefined>;
   getActiveAds(date: Date): Promise<Advertisement[]>;
+  getAllAdvertisements(page?: number, limit?: number): Promise<{ ads: Advertisement[]; total: number }>;
   getAdvertisements(options?: {
     page?: number;
     limit?: number;
@@ -1488,7 +1489,7 @@ export class DatabaseStorage implements IStorage {
     };
   }
 
-  async updateAdvertisement(
+  async getAllAdvertisements(
     page: number = 1,
     limit: number = 10,
   ): Promise<{ ads: Advertisement[]; total: number }> {

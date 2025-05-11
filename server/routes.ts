@@ -52,7 +52,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerUploadRoutes(app);
   
   // Đăng ký các routes cho quảng cáo
-  registerAdRoutes(app, storage);
+  registerAdRoutes(app);
   
   // API để lấy các chapters đã unlock của user
   app.get(

@@ -111,16 +111,27 @@ export function registerAdRoutes(app: express.Express) {
   app.get('/api/ads/active', async (req: Request, res: Response) => {
     try {
       const now = new Date();
+      const provider = req.query.provider as string;
+      
+      // Build query conditions
+      let conditions = [
+        eq(advertisements.isActive, true),
+        lte(advertisements.startDate, now),
+        gte(advertisements.endDate, now)
+      ];
+      
+      // Add provider filter if specified
+      if (provider === 'external') {
+        conditions.push(ne(advertisements.provider, 'internal'));
+      } else if (provider) {
+        conditions.push(eq(advertisements.provider, provider));
+      } else {
+        // Default to internal ads for backward compatibility
+        conditions.push(eq(advertisements.provider, 'internal'));
+      }
       
       const activeAds = await db.select().from(advertisements)
-        .where(
-          and(
-            eq(advertisements.isActive, true),
-            eq(advertisements.provider, 'internal'),
-            lte(advertisements.startDate, now),
-            gte(advertisements.endDate, now)
-          )
-        )
+        .where(and(...conditions))
         .orderBy(asc(advertisements.displayOrder), desc(advertisements.id));
       
       // Chuyển đổi kết quả thành JSON thuần để tránh lỗi cấu trúc vòng

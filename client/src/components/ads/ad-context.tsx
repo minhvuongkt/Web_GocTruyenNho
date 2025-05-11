@@ -150,7 +150,8 @@ export function AdProvider({ children }: { children: ReactNode }) {
   
   const fetchExternalAds = async () => {
     try {
-      const response = await fetch('/api/external-ads/active', {
+      // Use the unified ads API with a provider filter for external ads
+      const response = await fetch('/api/ads/active?provider=external', {
         method: 'GET',
         credentials: 'include'
       });

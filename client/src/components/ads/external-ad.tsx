@@ -1,27 +1,9 @@
 import React, { useEffect, useRef } from 'react';
-
-// Interface for external ad configuration
-export interface ExternalAdConfig {
-  id: number;
-  name: string;
-  provider: string;
-  position: string;
-  scriptContent: string;
-  containerId?: string;
-  isActive: boolean;
-  createdAt: string;
-  updatedAt: string;
-  height?: number;
-  width?: number;
-  displayOrder?: number;
-  startDate?: string;
-  endDate?: string;
-  isMobileEnabled: boolean;
-}
+import { Advertisement } from '@shared/schema';
 
 // Props for the ExternalAd component
 interface ExternalAdProps {
-  config: ExternalAdConfig;
+  config: Advertisement;
   className?: string;
 }
 
@@ -37,8 +19,11 @@ export function ExternalAd({ config, className = '' }: ExternalAdProps) {
     // Skip if no container ref or script was already inserted
     if (!adContainerRef.current || scriptInserted.current) return;
     
+    // Get metadata
+    const metadata = config.metadata as Record<string, any> || {};
+    
     // Create a sanitized container ID if none provided
-    const containerId = config.containerId || `ad-container-${config.id}`;
+    const containerId = metadata.containerId || `ad-container-${config.id}`;
     
     // Setup the ad container with proper ID and dimensions
     const container = adContainerRef.current;
@@ -54,9 +39,13 @@ export function ExternalAd({ config, className = '' }: ExternalAdProps) {
     }
     
     try {
+      // Get script content from metadata
+      const metadata = config.metadata as Record<string, any> || {};
+      const scriptContent = metadata.scriptContent || '';
+      
       // First approach: Use innerHTML for well-formed HTML content
       // This is safer for actual ad code that contains HTML + JS
-      container.innerHTML = config.scriptContent;
+      container.innerHTML = scriptContent;
       
       // Find any script tags in the content and re-execute them
       // Scripts added via innerHTML don't execute automatically

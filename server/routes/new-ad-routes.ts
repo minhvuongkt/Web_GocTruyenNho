@@ -59,14 +59,14 @@ export function registerAdRoutes(app: express.Express) {
       const search = req.query.search as string;
       const status = req.query.status as string;
       const position = req.query.position as string;
+      const provider = req.query.provider as string;
       
       const offset = (page - 1) * limit;
-      const pageSize = limit;
       
-      // Chỉ lấy quảng cáo nội bộ
-      let query = db.select().from(advertisements)
-                   .where(eq(advertisements.provider, 'internal'));
+      // Build query for all ads with filters
+      let query = db.select().from(advertisements);
       
+      // Add filters
       if (search) {
         query = query.where(ilike(advertisements.title, `%${search}%`));
       }
@@ -81,21 +81,52 @@ export function registerAdRoutes(app: express.Express) {
         query = query.where(eq(advertisements.position, position as any));
       }
       
-      // Tính tổng số quảng cáo
-      const totalCountResult = await db.select({ count: sql`count(*)` })
-                                      .from(advertisements)
-                                      .where(eq(advertisements.provider, 'internal'));
+      // Add provider filter if specified
+      if (provider === 'external') {
+        query = query.where(ne(advertisements.provider, 'internal'));
+      } else if (provider) {
+        query = query.where(eq(advertisements.provider, provider as any));
+      }
       
+      // Tính tổng số quảng cáo với các bộ lọc
+      let countQuery = db.select({ count: sql`count(*)` }).from(advertisements);
+      
+      // Apply the same filters to the count query
+      if (search) {
+        countQuery = countQuery.where(ilike(advertisements.title, `%${search}%`));
+      }
+      
+      if (status === 'active') {
+        countQuery = countQuery.where(eq(advertisements.isActive, true));
+      } else if (status === 'inactive') {
+        countQuery = countQuery.where(eq(advertisements.isActive, false));
+      }
+      
+      if (position) {
+        countQuery = countQuery.where(eq(advertisements.position, position as any));
+      }
+      
+      // Add provider filter if specified
+      if (provider === 'external') {
+        countQuery = countQuery.where(ne(advertisements.provider, 'internal'));
+      } else if (provider) {
+        countQuery = countQuery.where(eq(advertisements.provider, provider as any));
+      }
+      
+      const totalCountResult = await countQuery;
       const total = parseInt(totalCountResult[0].count.toString());
       
       // Thực hiện truy vấn chính với phân trang
-      const ads = await query.limit(pageSize).offset(offset).orderBy(desc(advertisements.id));
+      const ads = await query.limit(limit).offset(offset).orderBy(desc(advertisements.id));
       
       // Chuyển đổi kết quả thành JSON thuần để tránh lỗi cấu trúc vòng
       const plainResults = JSON.parse(JSON.stringify(ads));
       
+      // Add transformations for external ads
+      const transformedResults = plainResults.map(transformAdData);
+      
       res.status(200).json({
-        ads: plainResults,
+        ads: transformedResults,
         total: total.toString(),
         page,
         limit,
@@ -137,7 +168,10 @@ export function registerAdRoutes(app: express.Express) {
       // Chuyển đổi kết quả thành JSON thuần để tránh lỗi cấu trúc vòng
       const plainResults = JSON.parse(JSON.stringify(activeAds));
       
-      res.status(200).json(plainResults);
+      // Transform external ads to include metadata fields
+      const transformedResults = plainResults.map(transformAdData);
+      
+      res.status(200).json(transformedResults);
     } catch (error) {
       console.error('Error fetching active ads:', error);
       res.status(500).json({ error: 'Không thể lấy danh sách quảng cáo đang hoạt động' });
@@ -359,97 +393,27 @@ export function registerAdRoutes(app: express.Express) {
   });
 
   // === EXTERNAL ADS ROUTES (Quảng cáo bên ngoài) ===
+  // Legacy endpoints that redirect to the new consolidated API
   
-  // Lấy danh sách quảng cáo bên ngoài
+  // Lấy danh sách quảng cáo bên ngoài - redirect to consolidated API
   app.get('/api/external-ads', async (req: Request, res: Response) => {
-    try {
-      const page = parseInt(req.query.page as string) || 1;
-      const limit = parseInt(req.query.limit as string) || 10;
-      const search = req.query.search as string;
-      const status = req.query.status as string;
-      const position = req.query.position as string;
-      const provider = req.query.provider as string;
-      
-      const offset = (page - 1) * limit;
-      const pageSize = limit;
-      
-      // Lấy quảng cáo từ bên ngoài (không phải internal)
-      let query = db.select().from(advertisements)
-                   .where(ne(advertisements.provider, 'internal'));
-      
-      if (search) {
-        query = query.where(ilike(advertisements.title, `%${search}%`));
-      }
-      
-      if (status === 'active') {
-        query = query.where(eq(advertisements.isActive, true));
-      } else if (status === 'inactive') {
-        query = query.where(eq(advertisements.isActive, false));
-      }
-      
-      if (position) {
-        query = query.where(eq(advertisements.position, position as any));
-      }
-      
-      if (provider) {
-        query = query.where(eq(advertisements.provider, provider as any));
-      }
-      
-      // Tính tổng số quảng cáo
-      const totalCountResult = await db.select({ count: sql`count(*)` })
-                                      .from(advertisements)
-                                      .where(ne(advertisements.provider, 'internal'));
-      
-      const total = parseInt(totalCountResult[0].count.toString());
-      
-      // Thực hiện truy vấn chính với phân trang
-      const ads = await query.limit(pageSize).offset(offset).orderBy(desc(advertisements.id));
-      
-      // Chuyển đổi kết quả thành JSON thuần để tránh lỗi cấu trúc vòng
-      const plainAds = JSON.parse(JSON.stringify(ads));
-      
-      // Biến đổi dữ liệu để phù hợp với cấu trúc hiện tại của frontend
-      const transformedAds = plainAds.map(transformAdData);
-      
-      res.status(200).json({
-        ads: transformedAds,
-        total: total.toString(),
-        page,
-        limit,
-        totalPages: Math.ceil(total / limit)
-      });
-    } catch (error) {
-      console.error('Error fetching external ads:', error);
-      res.status(500).json({ error: 'Không thể lấy danh sách quảng cáo bên ngoài' });
-    }
-  });
-
-  // Lấy quảng cáo bên ngoài đang hoạt động
-  app.get('/api/external-ads/active', async (req: Request, res: Response) => {
-    try {
-      const activeExternalAds = await db.select().from(advertisements)
-        .where(
-          and(
-            eq(advertisements.isActive, true),
-            ne(advertisements.provider, 'internal')
-          )
-        )
-        .orderBy(desc(advertisements.id));
-      
-      // Chuyển đổi kết quả thành JSON thuần để tránh lỗi cấu trúc vòng
-      const plainAds = JSON.parse(JSON.stringify(activeExternalAds));
-      
-      // Biến đổi dữ liệu để phù hợp với cấu trúc hiện tại của frontend
-      const transformedAds = plainAds.map(transformAdData);
-      
-      res.status(200).json(transformedAds);
-    } catch (error) {
-      console.error('Error fetching active external ads:', error);
-      res.status(500).json({ error: 'Không thể lấy danh sách quảng cáo bên ngoài đang hoạt động' });
-    }
+    // Add provider=external to the query and redirect to the consolidated API
+    const query = new URLSearchParams(req.query as any);
+    
+    // Always set provider to external for this legacy endpoint
+    query.set('provider', 'external');
+    
+    // Redirect to the consolidated API
+    return res.redirect(`/api/ads?${query.toString()}`);
   });
   
-  // Tạo quảng cáo bên ngoài mới
+  // Lấy quảng cáo bên ngoài đang hoạt động - redirect to consolidated API
+  app.get('/api/external-ads/active', async (req: Request, res: Response) => {
+    // Redirect to the consolidated API with provider=external
+    return res.redirect('/api/ads/active?provider=external');
+  });
+  
+  // Tạo quảng cáo bên ngoài mới - transform and pass to consolidated API
   app.post('/api/external-ads', ensureAdmin, async (req: Request, res: Response) => {
     try {
       const {
@@ -471,7 +435,8 @@ export function registerAdRoutes(app: express.Express) {
         isMobileEnabled: isMobileEnabled !== undefined ? isMobileEnabled : true
       };
       
-      const newExternalAd = {
+      // Chuyển đổi thành định dạng quảng cáo thống nhất
+      const newAdRequest = {
         title: name,
         imageUrl: '',
         targetUrl: '#',
@@ -481,118 +446,43 @@ export function registerAdRoutes(app: express.Express) {
         startDate: new Date(),
         endDate: new Date(new Date().setFullYear(new Date().getFullYear() + 1)), // Mặc định là 1 năm
         isActive: isActive !== undefined ? isActive : true,
-        views: 0,
-        clicks: 0,
         width: width || null,
         height: height || null,
-        metadata: JSON.stringify(metadata),
+        metadata
       };
       
-      const [ad] = await db.insert(advertisements).values(newExternalAd).returning();
+      // Chuyển request tới API tạo quảng cáo thống nhất
+      req.body = newAdRequest;
       
-      // Chuyển đổi kết quả thành JSON thuần để tránh lỗi cấu trúc vòng
-      const plainResult = JSON.parse(JSON.stringify(ad));
-      
-      // Biến đổi kết quả để tương thích với cấu trúc hiện tại của frontend
-      const transformedAd = transformAdData(plainResult);
-      
-      res.status(201).json(transformedAd);
+      // Forward to the main ad creation endpoint
+      return app.handle(req, res);
     } catch (error) {
-      console.error('Error creating external ad config:', error);
-      res.status(500).json({ error: 'Không thể tạo cấu hình quảng cáo bên ngoài' });
+      console.error('Error creating external ad:', error);
+      res.status(500).json({ error: 'Không thể tạo quảng cáo bên ngoài' });
     }
   });
-
-  // Cập nhật cấu hình quảng cáo bên ngoài
+  
+  // Cập nhật quảng cáo bên ngoài - transform and pass to consolidated API
   app.put('/api/external-ads/:id', ensureAdmin, async (req: Request, res: Response) => {
     try {
-      const id = parseInt(req.params.id);
-      const {
-        name, provider, scriptContent, position,
-        adUnitId, slotId, publisherId, isActive,
-        cssSelector, cssStyles, width, height,
-        format, isMobileEnabled
-      } = req.body;
-      
-      // Lấy quảng cáo hiện tại
-      const [currentAd] = await db.select().from(advertisements).where(eq(advertisements.id, id));
-      
-      if (!currentAd) {
-        return res.status(404).json({ error: 'Không tìm thấy quảng cáo bên ngoài' });
-      }
-      
-      // Phân tích metadata hiện tại
-      let currentMetadata = {};
-      try {
-        if (currentAd.metadata) {
-          if (typeof currentAd.metadata === 'string') {
-            currentMetadata = JSON.parse(currentAd.metadata);
-          } else {
-            currentMetadata = currentAd.metadata;
-          }
-        }
-      } catch (e) {
-        console.error('Error parsing current metadata:', e);
-      }
-      
-      // Cập nhật metadata
-      const metadata = {
-        ...currentMetadata,
-        scriptContent: scriptContent !== undefined ? scriptContent : currentMetadata.scriptContent,
-        adUnitId: adUnitId !== undefined ? adUnitId : currentMetadata.adUnitId,
-        slotId: slotId !== undefined ? slotId : currentMetadata.slotId,
-        publisherId: publisherId !== undefined ? publisherId : currentMetadata.publisherId,
-        cssSelector: cssSelector !== undefined ? cssSelector : currentMetadata.cssSelector,
-        cssStyles: cssStyles !== undefined ? cssStyles : currentMetadata.cssStyles,
-        format: format !== undefined ? format : currentMetadata.format,
-        isMobileEnabled: isMobileEnabled !== undefined ? isMobileEnabled : currentMetadata.isMobileEnabled
-      };
-      
-      const updateData = {
-        title: name || currentAd.title,
-        position: position || currentAd.position,
-        provider: provider || currentAd.provider,
-        isActive: isActive !== undefined ? isActive : currentAd.isActive,
-        width: width !== undefined ? width : currentAd.width,
-        height: height !== undefined ? height : currentAd.height,
-        metadata: JSON.stringify(metadata),
-      };
-      
-      const [updatedAd] = await db.update(advertisements)
-                                  .set(updateData)
-                                  .where(eq(advertisements.id, id))
-                                  .returning();
-      
-      // Chuyển đổi kết quả thành JSON thuần để tránh lỗi cấu trúc vòng
-      const plainResult = JSON.parse(JSON.stringify(updatedAd));
-      
-      // Biến đổi kết quả để tương thích với cấu trúc hiện tại của frontend
-      const transformedAd = transformAdData(plainResult);
-      
-      res.status(200).json(transformedAd);
+      // Forward the request to the main ad update endpoint
+      req.url = `/api/ads/${req.params.id}`;
+      return app.handle(req, res);
     } catch (error) {
-      console.error('Error updating external ad config:', error);
-      res.status(500).json({ error: 'Không thể cập nhật cấu hình quảng cáo bên ngoài' });
+      console.error('Error updating external ad:', error);
+      res.status(500).json({ error: 'Không thể cập nhật quảng cáo bên ngoài' });
     }
   });
-
-  // Xóa cấu hình quảng cáo bên ngoài
+  
+  // Xóa quảng cáo bên ngoài - forward to consolidated API
   app.delete('/api/external-ads/:id', ensureAdmin, async (req: Request, res: Response) => {
     try {
-      const id = parseInt(req.params.id);
-      
-      const [deletedAd] = await db.delete(advertisements)
-                                  .where(eq(advertisements.id, id))
-                                  .returning();
-      
-      if (!deletedAd) {
-        return res.status(404).json({ error: 'Không tìm thấy quảng cáo bên ngoài' });
-      }
-      
-      res.status(200).json({ message: 'Quảng cáo bên ngoài đã được xóa', id });
+      // Forward the request to the main ad deletion endpoint
+      req.url = `/api/ads/${req.params.id}`;
+      return app.handle(req, res);
     } catch (error) {
-      console.error('Error deleting external ad config:', error);
-      res.status(500).json({ error: 'Không thể xóa cấu hình quảng cáo bên ngoài' });
+      console.error('Error deleting external ad:', error);
+      res.status(500).json({ error: 'Không thể xóa quảng cáo bên ngoài' });
     }
   });
 }

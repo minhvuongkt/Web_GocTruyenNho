@@ -2,6 +2,7 @@ import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { ToggleTheme } from "@/components/ui/toggle-theme";
 import { Button } from "@/components/ui/button";
+import { AdsContainer } from "@/components/ads/ad-components";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -220,6 +221,9 @@ export function MainLayout({ children }: MainLayoutProps) {
 
       {/* Search Modal */}
       <SearchModal isOpen={searchModalOpen} onClose={() => setSearchModalOpen(false)} />
+
+      {/* Ads Container */}
+      <AdsContainer />
 
       {/* Main content */}
       <main className="flex-grow">

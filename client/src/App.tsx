@@ -7,6 +7,7 @@ import { ThemeProvider } from "./components/ui/theme-provider";
 import { AuthProvider } from "./hooks/use-auth";
 import { ProtectedRoute } from "./lib/protected-route";
 import { normalizeId } from "@/lib/hashUtils";
+import { AdProvider } from "./components/ads/ad-context";
 
 // Pages
 import HomePage from "@/pages/home-page";
@@ -163,10 +164,12 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <ThemeProvider defaultTheme="light" storageKey="goctruyennho-theme">
         <AuthProvider>
-          <TooltipProvider>
-            <Toaster />
-            <Router />
-          </TooltipProvider>
+          <AdProvider>
+            <TooltipProvider>
+              <Toaster />
+              <Router />
+            </TooltipProvider>
+          </AdProvider>
         </AuthProvider>
       </ThemeProvider>
     </QueryClientProvider>

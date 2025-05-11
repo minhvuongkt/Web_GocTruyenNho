@@ -1,84 +1,115 @@
 import React, { useEffect, useRef } from 'react';
-import { ExternalAdConfig } from './ad-context';
-import { cn } from '@/lib/utils';
 
+// Interface for external ad configuration
+export interface ExternalAdConfig {
+  id: number;
+  name: string;
+  provider: string;
+  position: string;
+  scriptContent: string;
+  containerId?: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  height?: number;
+  width?: number;
+  displayOrder?: number;
+  startDate?: string;
+  endDate?: string;
+  isMobileEnabled: boolean;
+}
+
+// Props for the ExternalAd component
 interface ExternalAdProps {
   config: ExternalAdConfig;
   className?: string;
 }
 
 /**
- * Component that renders third-party ad scripts from providers like Google AdSense
+ * ExternalAd component renders third-party ad scripts
+ * It safely injects the script content into the DOM
  */
-export function ExternalAd({ config, className }: ExternalAdProps) {
+export function ExternalAd({ config, className = '' }: ExternalAdProps) {
   const adContainerRef = useRef<HTMLDivElement>(null);
+  const scriptInserted = useRef(false);
 
   useEffect(() => {
-    if (!adContainerRef.current || !config.scriptContent) return;
-
-    // If there's a specific container ID required, set it on the div
-    if (config.containerId) {
-      adContainerRef.current.id = config.containerId;
+    // Skip if no container ref or script was already inserted
+    if (!adContainerRef.current || scriptInserted.current) return;
+    
+    // Create a sanitized container ID if none provided
+    const containerId = config.containerId || `ad-container-${config.id}`;
+    
+    // Setup the ad container with proper ID and dimensions
+    const container = adContainerRef.current;
+    container.id = containerId;
+    
+    // Apply width and height if provided
+    if (config.width) {
+      container.style.width = `${config.width}px`;
     }
-
-    // Create a script element
+    
+    if (config.height) {
+      container.style.height = `${config.height}px`;
+    }
+    
+    // Sanitize script content - Remove <script> tags to prevent issues with script injection
+    // (The script content will be wrapped in script tags when inserted)
+    let sanitizedScript = config.scriptContent
+      .replace(/<script[^>]*>/g, '')
+      .replace(/<\/script>/g, '');
+    
+    // Create and inject the script
     const script = document.createElement('script');
+    script.type = 'text/javascript';
+    script.text = sanitizedScript;
     
-    // Use script content from the configuration
-    script.innerHTML = config.scriptContent;
+    // Insert the script into the container
+    container.appendChild(script);
     
-    // For some third-party scripts, you may need these attributes
-    // for security and proper functioning
-    script.async = true;
+    // Mark as inserted to prevent duplicate inserts
+    scriptInserted.current = true;
     
-    // Depending on provider, set different attributes
-    if (config.provider === 'google') {
-      script.setAttribute('data-ad-client', 'google-adsense');
-    } else if (config.provider === 'facebook') {
-      script.setAttribute('data-ad-client', 'facebook-ads');
-    }
-    
-    // Add the script to the container
-    adContainerRef.current.appendChild(script);
-
-    // Cleanup function to remove scripts when unmounting
+    // Clean up function
     return () => {
-      if (adContainerRef.current) {
-        // Remove all child nodes (scripts)
-        while (adContainerRef.current.firstChild) {
-          adContainerRef.current.removeChild(adContainerRef.current.firstChild);
-        }
+      if (container && script && container.contains(script)) {
+        container.removeChild(script);
+        scriptInserted.current = false;
       }
     };
   }, [config]);
-
-  // Apply different classes based on ad position
-  const positionClasses = {
-    top: 'w-full h-[90px] mb-4',
-    bottom: 'w-full h-[90px] mt-4',
-    left: 'w-[160px] h-[600px] mr-4',
-    right: 'w-[160px] h-[600px] ml-4',
-    popup: 'w-[300px] h-[250px]',
-    overlay: 'w-full h-full bg-black/30 backdrop-blur-sm',
-    custom: '', // Custom size will be defined by the script itself
-  };
-
+  
+  // Determine style classes based on provider and configuration
+  let providerClass = '';
+  switch (config.provider.toLowerCase()) {
+    case 'google':
+    case 'google adsense':
+    case 'adsense':
+      providerClass = 'google-ad';
+      break;
+    case 'facebook':
+      providerClass = 'facebook-ad';
+      break;
+    default:
+      providerClass = 'external-ad';
+  }
+  
   return (
-    <div
-      ref={adContainerRef}
-      className={cn(
-        'external-ad',
-        'border border-border rounded overflow-hidden relative',
-        positionClasses[config.position],
-        className
-      )}
+    <div 
+      ref={adContainerRef} 
+      className={`ad-container ${providerClass} ${className}`}
+      style={{
+        width: config.width ? `${config.width}px` : '100%',
+        height: config.height ? `${config.height}px` : 'auto',
+        overflow: 'hidden',
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center'
+      }}
       data-ad-provider={config.provider}
       data-ad-position={config.position}
     >
-      {/* Container for the external ad script */}
-      <div className="text-xs text-muted-foreground absolute top-0 right-0 bg-background px-1 opacity-50">
-        Ad by {config.provider}
-      </div>
+      {/* Ad will be injected here via script */}
     </div>
   );
 }

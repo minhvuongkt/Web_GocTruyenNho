@@ -182,33 +182,53 @@ export function AdProvider({ children }: { children: ReactNode }) {
     setPositions(prev => {
       const updated = { ...prev };
       
+      // Check if there are any popup ads available
+      const hasPopupAds = (ads.popup && ads.popup.length > 0) || (externalAds.popup && externalAds.popup.length > 0);
+      
       // Check popup timing (reappear after 5 minutes if closed, 15 minutes if clicked)
-      if (updated.popup.lastClosed) {
-        const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
-        if (updated.popup.lastClosed < fiveMinutesAgo) {
+      if (hasPopupAds) {
+        // Show popup initially if we have never shown it before (no lastClosed or lastClicked)
+        if (!updated.popup.lastClosed && !updated.popup.lastClicked) {
           updated.popup.show = true;
-          updated.popup.lastClosed = undefined;
-        }
-      } else if (updated.popup.lastClicked) {
-        const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000);
-        if (updated.popup.lastClicked < fifteenMinutesAgo) {
-          updated.popup.show = true;
-          updated.popup.lastClicked = undefined;
+        } 
+        // Otherwise check timing rules
+        else if (updated.popup.lastClosed) {
+          const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+          if (updated.popup.lastClosed < fiveMinutesAgo) {
+            updated.popup.show = true;
+            updated.popup.lastClosed = undefined;
+          }
+        } else if (updated.popup.lastClicked) {
+          const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000);
+          if (updated.popup.lastClicked < fifteenMinutesAgo) {
+            updated.popup.show = true;
+            updated.popup.lastClicked = undefined;
+          }
         }
       }
       
+      // Check if there are any overlay ads available
+      const hasOverlayAds = (ads.overlay && ads.overlay.length > 0) || (externalAds.overlay && externalAds.overlay.length > 0);
+      
       // For overlay, implement the same timing as requested (5 minutes if closed, 15 minutes if clicked)
-      if (updated.overlay.lastClosed) {
-        const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
-        if (updated.overlay.lastClosed < fiveMinutesAgo) {
+      if (hasOverlayAds) {
+        // Show overlay initially if we have never shown it before (no lastClosed or lastClicked)
+        if (!updated.overlay.lastClosed && !updated.overlay.lastClicked) {
           updated.overlay.show = true;
-          updated.overlay.lastClosed = undefined;
-        }
-      } else if (updated.overlay.lastClicked) {
-        const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000);
-        if (updated.overlay.lastClicked < fifteenMinutesAgo) {
-          updated.overlay.show = true;
-          updated.overlay.lastClicked = undefined;
+        } 
+        // Otherwise check timing rules
+        else if (updated.overlay.lastClosed) {
+          const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+          if (updated.overlay.lastClosed < fiveMinutesAgo) {
+            updated.overlay.show = true;
+            updated.overlay.lastClosed = undefined;
+          }
+        } else if (updated.overlay.lastClicked) {
+          const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000);
+          if (updated.overlay.lastClicked < fifteenMinutesAgo) {
+            updated.overlay.show = true;
+            updated.overlay.lastClicked = undefined;
+          }
         }
       }
       

@@ -85,16 +85,21 @@ export function BottomAd() {
     const externalAd = bottomExternalAds[0];
     
     return (
-      <div className="w-full bg-background border-t mt-4 px-2 pt-1 sticky bottom-0 transition-height duration-300 ease-in-out z-10" data-ad-position="bottom">
+      <div className="w-full bg-background border-t border-border mt-4 px-2 pt-1 sticky bottom-0 transition-height duration-300 ease-in-out z-10 shadow-lg" data-ad-position="bottom">
         <div className="relative max-w-7xl mx-auto">
-          <ExternalAd config={externalAd} className="mx-auto" />
-          <button 
-            onClick={() => closeAd('bottom')} 
-            className="absolute top-0 right-0 p-1 text-muted-foreground hover:text-foreground"
-            aria-label="Close advertisement"
-          >
-            <X size={16} />
-          </button>
+          <div className="flex justify-between items-center mb-1">
+            <div className="text-xs text-muted-foreground">Quảng cáo từ {externalAd.provider}</div>
+            <button 
+              onClick={() => closeAd('bottom')} 
+              className="p-1 text-muted-foreground hover:text-foreground"
+              aria-label="Close advertisement"
+            >
+              <X size={16} />
+            </button>
+          </div>
+          <div className="py-2">
+            <ExternalAd config={externalAd} className="mx-auto" />
+          </div>
         </div>
       </div>
     );
@@ -104,29 +109,32 @@ export function BottomAd() {
   const ad = bottomAds[0];
   
   return (
-    <div className="w-full bg-background border-t mt-4 px-2 pt-1 sticky bottom-0 transition-height duration-300 ease-in-out z-10" data-ad-position="bottom">
+    <div className="w-full bg-background border-t border-border mt-4 px-2 pt-1 sticky bottom-0 transition-height duration-300 ease-in-out z-10 shadow-lg" data-ad-position="bottom">
       <div className="relative max-w-7xl mx-auto">
+        <div className="flex justify-between items-center mb-1">
+          <div className="text-xs text-muted-foreground">Quảng cáo</div>
+          <button 
+            onClick={() => closeAd('bottom')} 
+            className="p-1 text-muted-foreground hover:text-foreground"
+            aria-label="Close advertisement"
+          >
+            <X size={16} />
+          </button>
+        </div>
         <a 
           href={ad.targetUrl} 
           target="_blank" 
           rel="noopener noreferrer"
           onClick={() => clickAd(ad.id, 'bottom')}
-          className="block"
+          className="block py-2"
         >
-          <div className="text-xs text-muted-foreground mb-1">Quảng cáo</div>
           <img 
             src={ad.imageUrl} 
             alt={ad.title} 
             className="mx-auto max-h-24 object-contain"
           />
+          <div className="text-center text-sm mt-1">{ad.title}</div>
         </a>
-        <button 
-          onClick={() => closeAd('bottom')} 
-          className="absolute top-0 right-0 p-1 text-muted-foreground hover:text-foreground"
-          aria-label="Close advertisement"
-        >
-          <X size={16} />
-        </button>
       </div>
     </div>
   );

@@ -51,6 +51,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Đăng ký các routes cho upload document và media
   registerUploadRoutes(app);
   
+  // Đăng ký các routes cho quảng cáo
+  registerAdRoutes(app, storage);
+  
   // API để lấy các chapters đã unlock của user
   app.get(
     '/api/user/unlocked-chapters/:contentId',

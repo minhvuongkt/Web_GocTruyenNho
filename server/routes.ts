@@ -21,6 +21,7 @@ import { setupAuth } from "./auth";
 import { ensureAuthenticated, ensureAdmin } from "./auth-middleware";
 import { registerChapterRoutes } from "./chapter-routes"; // Import routes mới cho chapter
 import { registerUploadRoutes } from "./document-upload-routes"; // Import routes mới cho upload
+import { registerAdRoutes } from "./routes/ad-routes"; // Import routes cho quảng cáo
 import { db } from "./db";
 import { eq, and } from "drizzle-orm";
 

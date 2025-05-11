@@ -1,6 +1,6 @@
 import express, { Request, Response } from 'express';
 import { Storage } from '../storage';
-import { adPositionEnum } from '@shared/schema';
+import { adPositionEnum, adProviderEnum, insertExternalAdConfigSchema } from '@shared/schema';
 
 /**
  * Đăng ký các routes liên quan đến quảng cáo
@@ -178,6 +178,177 @@ export function registerAdRoutes(app: express.Express, storage: Storage) {
     } catch (error) {
       console.error('Error recording ad click:', error);
       res.status(500).json({ error: 'Failed to record click' });
+    }
+  });
+
+  // ===== EXTERNAL ADS ENDPOINTS =====
+
+  // Get all external ad configs (admin)
+  app.get('/api/external-ads', async (req: Request, res: Response) => {
+    try {
+      // Check admin permission
+      if (!req.isAuthenticated || !req.isAuthenticated() || (req.user as any).role !== 'admin') {
+        return res.status(403).json({ error: 'Unauthorized: Admin access required' });
+      }
+      
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 20;
+      
+      const result = await storage.getAllExternalAdConfigs(page, limit);
+      res.json(result);
+    } catch (error) {
+      console.error('Error fetching external ad configs:', error);
+      res.status(500).json({ error: 'Failed to fetch external ad configurations' });
+    }
+  });
+
+  // Get active external ad configs (for client-side rendering)
+  app.get('/api/external-ads/active', async (req: Request, res: Response) => {
+    try {
+      const configs = await storage.getActiveExternalAdConfigs();
+      res.json(configs);
+    } catch (error) {
+      console.error('Error fetching active external ad configs:', error);
+      res.status(500).json({ error: 'Failed to fetch active external ad configurations' });
+    }
+  });
+
+  // Get specific external ad config
+  app.get('/api/external-ads/:id', async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const config = await storage.getExternalAdConfig(id);
+      
+      if (!config) {
+        return res.status(404).json({ error: 'External ad configuration not found' });
+      }
+      
+      res.json(config);
+    } catch (error) {
+      console.error('Error fetching external ad config:', error);
+      res.status(500).json({ error: 'Failed to fetch external ad configuration' });
+    }
+  });
+
+  // Create new external ad config
+  app.post('/api/external-ads', async (req: Request, res: Response) => {
+    try {
+      // Check admin permission
+      if (!req.isAuthenticated || !req.isAuthenticated() || (req.user as any).role !== 'admin') {
+        return res.status(403).json({ error: 'Unauthorized: Admin access required' });
+      }
+      
+      const { provider, position, name, scriptContent, containerId, isActive } = req.body;
+      
+      // Validate provider
+      if (!Object.values(adProviderEnum.enumValues).includes(provider)) {
+        return res.status(400).json({ error: 'Invalid ad provider' });
+      }
+      
+      // Validate position
+      if (!Object.values(adPositionEnum.enumValues).includes(position)) {
+        return res.status(400).json({ error: 'Invalid position' });
+      }
+      
+      // Validate required fields
+      if (!name || !scriptContent) {
+        return res.status(400).json({ error: 'Name and script content are required' });
+      }
+      
+      // Validate with schema
+      try {
+        insertExternalAdConfigSchema.parse({
+          provider,
+          position,
+          name,
+          scriptContent,
+          containerId,
+          isActive: isActive !== undefined ? isActive : true
+        });
+      } catch (validationError) {
+        return res.status(400).json({ error: 'Invalid data', details: validationError });
+      }
+      
+      // Create external ad config
+      const config = await storage.createExternalAdConfig({
+        provider,
+        position,
+        name,
+        scriptContent,
+        containerId,
+        isActive: isActive !== undefined ? isActive : true,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      });
+      
+      res.status(201).json(config);
+    } catch (error) {
+      console.error('Error creating external ad config:', error);
+      res.status(500).json({ error: 'Failed to create external ad configuration' });
+    }
+  });
+
+  // Update external ad config
+  app.put('/api/external-ads/:id', async (req: Request, res: Response) => {
+    try {
+      // Check admin permission
+      if (!req.isAuthenticated || !req.isAuthenticated() || (req.user as any).role !== 'admin') {
+        return res.status(403).json({ error: 'Unauthorized: Admin access required' });
+      }
+      
+      const id = parseInt(req.params.id);
+      const { provider, position, name, scriptContent, containerId, isActive } = req.body;
+      
+      // Validate provider if provided
+      if (provider && !Object.values(adProviderEnum.enumValues).includes(provider)) {
+        return res.status(400).json({ error: 'Invalid ad provider' });
+      }
+      
+      // Validate position if provided
+      if (position && !Object.values(adPositionEnum.enumValues).includes(position)) {
+        return res.status(400).json({ error: 'Invalid position' });
+      }
+      
+      // Update external ad config
+      const config = await storage.updateExternalAdConfig(id, {
+        provider,
+        position,
+        name,
+        scriptContent,
+        containerId,
+        isActive,
+      });
+      
+      if (!config) {
+        return res.status(404).json({ error: 'External ad configuration not found' });
+      }
+      
+      res.json(config);
+    } catch (error) {
+      console.error('Error updating external ad config:', error);
+      res.status(500).json({ error: 'Failed to update external ad configuration' });
+    }
+  });
+
+  // Delete external ad config
+  app.delete('/api/external-ads/:id', async (req: Request, res: Response) => {
+    try {
+      // Check admin permission
+      if (!req.isAuthenticated || !req.isAuthenticated() || (req.user as any).role !== 'admin') {
+        return res.status(403).json({ error: 'Unauthorized: Admin access required' });
+      }
+      
+      const id = parseInt(req.params.id);
+      const success = await storage.deleteExternalAdConfig(id);
+      
+      if (!success) {
+        return res.status(404).json({ error: 'External ad configuration not found or could not be deleted' });
+      }
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error deleting external ad config:', error);
+      res.status(500).json({ error: 'Failed to delete external ad configuration' });
     }
   });
 }

@@ -6,12 +6,24 @@ export interface Advertisement {
   title: string;
   imageUrl: string;
   targetUrl: string;
-  position: 'top' | 'bottom' | 'left' | 'right' | 'popup' | 'overlay';
+  position: 'top' | 'bottom' | 'left' | 'right' | 'popup' | 'overlay' | 'custom';
   displayFrequency?: number;
   lastDisplayedAt?: string;
   isActive: boolean;
   views: number;
   clicks: number;
+}
+
+export interface ExternalAdConfig {
+  id: number;
+  provider: 'google' | 'facebook' | 'other';
+  position: 'top' | 'bottom' | 'left' | 'right' | 'popup' | 'overlay' | 'custom';
+  name: string;
+  scriptContent: string;
+  containerId?: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface AdPositionState {
@@ -22,6 +34,7 @@ export interface AdPositionState {
 
 interface AdContextValue {
   ads: Record<string, Advertisement[]>;
+  externalAds: Record<string, ExternalAdConfig[]>;
   positions: Record<string, AdPositionState>;
   isLoading: boolean;
   isReading: boolean;
@@ -44,6 +57,7 @@ export function useAds() {
 
 export function AdProvider({ children }: { children: ReactNode }) {
   const [ads, setAds] = useState<Record<string, Advertisement[]>>({});
+  const [externalAds, setExternalAds] = useState<Record<string, ExternalAdConfig[]>>({});
   const [positions, setPositions] = useState<Record<string, AdPositionState>>({
     top: { show: true },
     bottom: { show: true },
@@ -51,13 +65,16 @@ export function AdProvider({ children }: { children: ReactNode }) {
     right: { show: true },
     popup: { show: false },
     overlay: { show: false },
+    custom: { show: true },
   });
   const [isLoading, setIsLoading] = useState(true);
   const [isReading, setIsReading] = useState(false);
 
   // Fetch ads on component mount
   useEffect(() => {
-    fetchAds();
+    Promise.all([fetchAds(), fetchExternalAds()]).then(() => {
+      setIsLoading(false);
+    });
   }, []);
   
   // Effect to hide banner ads when reading content
@@ -96,7 +113,6 @@ export function AdProvider({ children }: { children: ReactNode }) {
 
   const fetchAds = async () => {
     try {
-      setIsLoading(true);
       const response = await fetch('/api/ads/active', {
         method: 'GET',
         credentials: 'include'
@@ -121,10 +137,43 @@ export function AdProvider({ children }: { children: ReactNode }) {
         
         setAds(groupedAds);
       }
+      return true;
     } catch (error) {
       console.error('Error fetching ads:', error);
-    } finally {
-      setIsLoading(false);
+      return false;
+    }
+  };
+  
+  const fetchExternalAds = async () => {
+    try {
+      const response = await fetch('/api/external-ads/active', {
+        method: 'GET',
+        credentials: 'include'
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Error fetching external ads: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      
+      // Check if response is valid
+      if (data && Array.isArray(data)) {
+        // Group external ads by position
+        const groupedExternalAds: Record<string, ExternalAdConfig[]> = {};
+        data.forEach((ad: ExternalAdConfig) => {
+          if (!groupedExternalAds[ad.position]) {
+            groupedExternalAds[ad.position] = [];
+          }
+          groupedExternalAds[ad.position].push(ad);
+        });
+        
+        setExternalAds(groupedExternalAds);
+      }
+      return true;
+    } catch (error) {
+      console.error('Error fetching external ads:', error);
+      return false;
     }
   };
 
@@ -268,6 +317,7 @@ export function AdProvider({ children }: { children: ReactNode }) {
   return (
     <AdContext.Provider value={{
       ads,
+      externalAds,
       positions,
       isLoading,
       isReading,

@@ -70,7 +70,8 @@ export function AdManagementPage() {
       if (adPosition && adPosition !== 'all') params.append('position', adPosition);
       if (adSearchTerm) params.append('search', adSearchTerm);
       
-      return apiRequest('GET', `/api/ads?${params.toString()}`);
+      const response = await apiRequest('GET', `/api/ads?${params.toString()}`);
+      return response.json();
     },
     enabled: activeTab === 'regular'
   });
@@ -91,7 +92,8 @@ export function AdManagementPage() {
       if (externalProvider && externalProvider !== 'all') params.append('provider', externalProvider);
       if (externalSearchTerm) params.append('search', externalSearchTerm);
       
-      return apiRequest('GET', `/api/external-ads?${params.toString()}`);
+      const response = await apiRequest('GET', `/api/external-ads?${params.toString()}`);
+      return response.json();
     },
     enabled: activeTab === 'external'
   });
@@ -292,7 +294,7 @@ export function AdManagementPage() {
                           Đang tải...
                         </TableCell>
                       </TableRow>
-                    ) : adData?.ads && adData.ads.length > 0 ? (
+                    ) : adData && adData.ads && adData.ads.length > 0 ? (
                       adData.ads.map((ad: Advertisement) => (
                         <TableRow key={ad.id}>
                           <TableCell className="font-medium">{ad.id}</TableCell>

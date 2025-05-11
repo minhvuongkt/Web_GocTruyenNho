@@ -336,7 +336,7 @@ export function AdManagementPage() {
                 </Table>
               </div>
 
-              {adData?.total && adData.total > 0 && (
+              {adData && adData.total && adData.total > 0 && (
                 <div className="mt-4 flex justify-between items-center">
                   <div>
                     Hiển thị {adPage * adLimit - adLimit + 1} đến {Math.min(adPage * adLimit, adData.total)} trong tổng số {adData.total} quảng cáo
@@ -457,7 +457,7 @@ export function AdManagementPage() {
                           Đang tải...
                         </TableCell>
                       </TableRow>
-                    ) : externalData?.ads && externalData.ads.length > 0 ? (
+                    ) : externalData && externalData.ads && externalData.ads.length > 0 ? (
                       externalData.ads.map((ad: ExternalAdConfig) => (
                         <TableRow key={ad.id}>
                           <TableCell className="font-medium">{ad.id}</TableCell>
@@ -500,7 +500,7 @@ export function AdManagementPage() {
                 </Table>
               </div>
 
-              {externalData?.total && externalData.total > 0 && (
+              {externalData && externalData.total && externalData.total > 0 && (
                 <div className="mt-4 flex justify-between items-center">
                   <div>
                     Hiển thị {externalPage * externalLimit - externalLimit + 1} đến {Math.min(externalPage * externalLimit, externalData.total)} trong tổng số {externalData.total} quảng cáo

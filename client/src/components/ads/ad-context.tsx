@@ -104,16 +104,13 @@ export function AdProvider({ children }: { children: ReactNode }) {
 
   // Check for popup/overlay timing
   useEffect(() => {
-    // Initial check for ad timings
-    checkAdTimings();
-    
     // Setup interval for periodic checks
     const interval = setInterval(() => {
       checkAdTimings();
     }, 60000); // Check every minute
 
     return () => clearInterval(interval);
-  }, [positions]);
+  }, []);
 
   const fetchAds = async () => {
     try {

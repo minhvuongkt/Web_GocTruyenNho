@@ -34,6 +34,7 @@ import UsersManagementPage from "@/pages/admin/users-management-page";
 import PaymentManagementPage from "@/pages/admin/payment-management-page";
 import PaymentSettingsPage from "@/pages/admin/payment-settings-page";
 import AdManagementPage from "@/pages/admin/ad-management-page";
+import { ExternalAdManagementPage } from "@/pages/admin/external-ad-management-page";
 import GenreManagementPage from "@/pages/admin/genre-management-page";
 import AuthorManagementPage from "@/pages/admin/author-management-page";
 import TranslationGroupManagementPage from "@/pages/admin/translation-group-management-page";
@@ -149,6 +150,7 @@ function Router() {
       <ProtectedRoute path="/admin/payments" component={PaymentManagementPage} requireAdmin={true} />
       <ProtectedRoute path="/admin/payment-settings" component={PaymentSettingsPage} requireAdmin={true} />
       <ProtectedRoute path="/admin/ads" component={AdManagementPage} requireAdmin={true} />
+      <ProtectedRoute path="/admin/external-ads" component={ExternalAdManagementPage} requireAdmin={true} />
       <ProtectedRoute path="/admin/genres" component={GenreManagementPage} requireAdmin={true} />
       <ProtectedRoute path="/admin/authors" component={AuthorManagementPage} requireAdmin={true} />
       <ProtectedRoute path="/admin/translation-groups" component={TranslationGroupManagementPage} requireAdmin={true} />

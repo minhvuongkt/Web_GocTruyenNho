@@ -1,19 +1,42 @@
 import React from 'react';
 import { useAds, type Advertisement } from './ad-context';
+import { ExternalAd } from './external-ad';
 import { X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 // Component for top banner ads
 export function TopAd() {
-  const { ads, positions, isReading, clickAd, closeAd } = useAds();
+  const { ads, externalAds, positions, isReading, clickAd, closeAd } = useAds();
   const topAds = ads.top || [];
+  const topExternalAds = externalAds?.top || [];
   
-  if (!positions.top?.show || topAds.length === 0 || isReading) {
+  // Early return if position is hidden or all ads are empty, or if reading
+  if (!positions.top?.show || (topAds.length === 0 && topExternalAds.length === 0) || isReading) {
     // Return an empty div with height transition for smooth collapsing/expanding
     return <div className="h-0 transition-height duration-300 ease-in-out overflow-hidden" data-ad-position="top"></div>;
   }
   
-  // Display the first ad in the array
+  // Prioritize external ads if available
+  if (topExternalAds.length > 0) {
+    const externalAd = topExternalAds[0];
+    
+    return (
+      <div className="w-full bg-background border-b mb-4 px-2 pt-1 transition-height duration-300 ease-in-out" data-ad-position="top">
+        <div className="relative max-w-7xl mx-auto">
+          <ExternalAd config={externalAd} className="mx-auto" />
+          <button 
+            onClick={() => closeAd('top')} 
+            className="absolute top-0 right-0 p-1 text-muted-foreground hover:text-foreground"
+            aria-label="Close advertisement"
+          >
+            <X size={16} />
+          </button>
+        </div>
+      </div>
+    );
+  }
+  
+  // Display the first ad in the internal ads array if no external ads
   const ad = topAds[0];
   
   return (
@@ -47,15 +70,37 @@ export function TopAd() {
 
 // Component for bottom banner ads
 export function BottomAd() {
-  const { ads, positions, isReading, clickAd, closeAd } = useAds();
+  const { ads, externalAds, positions, isReading, clickAd, closeAd } = useAds();
   const bottomAds = ads.bottom || [];
+  const bottomExternalAds = externalAds?.bottom || [];
   
-  if (!positions.bottom?.show || bottomAds.length === 0 || isReading) {
+  // Early return if position is hidden or all ads are empty, or if reading
+  if (!positions.bottom?.show || (bottomAds.length === 0 && bottomExternalAds.length === 0) || isReading) {
     // Return an empty div with height transition for smooth collapsing/expanding
     return <div className="h-0 transition-height duration-300 ease-in-out overflow-hidden" data-ad-position="bottom"></div>;
   }
   
-  // Display the first ad in the array
+  // Prioritize external ads if available
+  if (bottomExternalAds.length > 0) {
+    const externalAd = bottomExternalAds[0];
+    
+    return (
+      <div className="w-full bg-background border-t mt-4 px-2 pt-1 sticky bottom-0 transition-height duration-300 ease-in-out z-10" data-ad-position="bottom">
+        <div className="relative max-w-7xl mx-auto">
+          <ExternalAd config={externalAd} className="mx-auto" />
+          <button 
+            onClick={() => closeAd('bottom')} 
+            className="absolute top-0 right-0 p-1 text-muted-foreground hover:text-foreground"
+            aria-label="Close advertisement"
+          >
+            <X size={16} />
+          </button>
+        </div>
+      </div>
+    );
+  }
+  
+  // Display the first ad in the internal ads array if no external ads
   const ad = bottomAds[0];
   
   return (
@@ -89,15 +134,37 @@ export function BottomAd() {
 
 // Component for left sidebar ads
 export function LeftAd() {
-  const { ads, positions, isReading, clickAd, closeAd } = useAds();
+  const { ads, externalAds, positions, isReading, clickAd, closeAd } = useAds();
   const leftAds = ads.left || [];
+  const leftExternalAds = externalAds?.left || [];
   
-  if (!positions.left?.show || leftAds.length === 0 || isReading) {
+  // Early return if position is hidden or all ads are empty, or if reading
+  if (!positions.left?.show || (leftAds.length === 0 && leftExternalAds.length === 0) || isReading) {
     // Return an empty div with width transition for smooth collapsing/expanding
     return <div className="hidden lg:block fixed left-0 top-1/4 w-0 transition-all duration-300 ease-in-out overflow-hidden" data-ad-position="left"></div>;
   }
   
-  // Display the first ad in the array
+  // Prioritize external ads if available
+  if (leftExternalAds.length > 0) {
+    const externalAd = leftExternalAds[0];
+    
+    return (
+      <div className="hidden lg:block fixed left-0 top-1/4 w-[160px] bg-background border-r p-2 transition-all duration-300 ease-in-out" data-ad-position="left">
+        <div className="relative">
+          <ExternalAd config={externalAd} />
+          <button 
+            onClick={() => closeAd('left')} 
+            className="absolute top-0 right-0 p-1 text-muted-foreground hover:text-foreground"
+            aria-label="Close advertisement"
+          >
+            <X size={12} />
+          </button>
+        </div>
+      </div>
+    );
+  }
+  
+  // Display the first ad in the internal ads array if no external ads
   const ad = leftAds[0];
   
   return (
@@ -131,15 +198,37 @@ export function LeftAd() {
 
 // Component for right sidebar ads
 export function RightAd() {
-  const { ads, positions, isReading, clickAd, closeAd } = useAds();
+  const { ads, externalAds, positions, isReading, clickAd, closeAd } = useAds();
   const rightAds = ads.right || [];
+  const rightExternalAds = externalAds?.right || [];
   
-  if (!positions.right?.show || rightAds.length === 0 || isReading) {
+  // Early return if position is hidden or all ads are empty, or if reading
+  if (!positions.right?.show || (rightAds.length === 0 && rightExternalAds.length === 0) || isReading) {
     // Return an empty div with width transition for smooth collapsing/expanding
     return <div className="hidden lg:block fixed right-0 top-1/4 w-0 transition-all duration-300 ease-in-out overflow-hidden" data-ad-position="right"></div>;
   }
   
-  // Display the first ad in the array
+  // Prioritize external ads if available
+  if (rightExternalAds.length > 0) {
+    const externalAd = rightExternalAds[0];
+    
+    return (
+      <div className="hidden lg:block fixed right-0 top-1/4 w-[160px] bg-background border-l p-2 transition-all duration-300 ease-in-out" data-ad-position="right">
+        <div className="relative">
+          <ExternalAd config={externalAd} />
+          <button 
+            onClick={() => closeAd('right')} 
+            className="absolute top-0 right-0 p-1 text-muted-foreground hover:text-foreground"
+            aria-label="Close advertisement"
+          >
+            <X size={12} />
+          </button>
+        </div>
+      </div>
+    );
+  }
+  
+  // Display the first ad in the internal ads array if no external ads
   const ad = rightAds[0];
   
   return (
@@ -173,14 +262,42 @@ export function RightAd() {
 
 // Component for popup ads
 export function PopupAd() {
-  const { ads, positions, isReading, clickAd, closeAd } = useAds();
+  const { ads, externalAds, positions, isReading, clickAd, closeAd } = useAds();
   const popupAds = ads.popup || [];
+  const popupExternalAds = externalAds?.popup || [];
   
-  if (!positions.popup?.show || popupAds.length === 0 || isReading) {
+  // Early return if position is hidden or all ads are empty, or if reading
+  if (!positions.popup?.show || (popupAds.length === 0 && popupExternalAds.length === 0) || isReading) {
     return null;
   }
   
-  // Display the first ad in the array
+  // Prioritize external ads if available
+  if (popupExternalAds.length > 0) {
+    const externalAd = popupExternalAds[0];
+    
+    return (
+      <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center animate-in fade-in duration-300">
+        <div className="bg-background rounded-lg shadow-lg max-w-md w-full p-4 relative animate-in slide-in-from-bottom-4 duration-300">
+          <div className="text-sm font-medium mb-2 flex items-center">
+            <span className="bg-primary/80 text-primary-foreground px-2 py-1 text-xs rounded mr-1">Quảng cáo</span>
+            <span className="text-xs text-muted-foreground">Sẽ xuất hiện lại sau 15 phút khi bạn click</span>
+          </div>
+          <div className="max-w-[300px] mx-auto">
+            <ExternalAd config={externalAd} />
+          </div>
+          <button 
+            onClick={() => closeAd('popup')} 
+            className="absolute top-2 right-2 p-1 text-muted-foreground hover:text-foreground"
+            aria-label="Close advertisement"
+          >
+            <X size={18} />
+          </button>
+        </div>
+      </div>
+    );
+  }
+  
+  // Display the first ad in the internal ads array if no external ads
   const ad = popupAds[0];
   
   return (
@@ -218,14 +335,44 @@ export function PopupAd() {
 
 // Component for overlay ads
 export function OverlayAd() {
-  const { ads, positions, isReading, clickAd, closeAd } = useAds();
+  const { ads, externalAds, positions, isReading, clickAd, closeAd } = useAds();
   const overlayAds = ads.overlay || [];
+  const overlayExternalAds = externalAds?.overlay || [];
   
-  if (!positions.overlay?.show || overlayAds.length === 0 || isReading) {
+  // Early return if position is hidden or all ads are empty, or if reading
+  if (!positions.overlay?.show || (overlayAds.length === 0 && overlayExternalAds.length === 0) || isReading) {
     return null;
   }
   
-  // Display the first ad in the array
+  // Prioritize external ads if available
+  if (overlayExternalAds.length > 0) {
+    const externalAd = overlayExternalAds[0];
+    
+    return (
+      <div className="fixed inset-0 z-40 flex items-center justify-center pointer-events-none animate-in fade-in duration-300 backdrop-blur-sm">
+        <div className="pointer-events-auto max-w-[320px] relative animate-in slide-in-from-top-4 duration-300">
+          <div className="absolute -top-6 left-0 right-0 text-center">
+            <span className="text-xs bg-black/70 text-white px-2 py-1 rounded">Xuất hiện lại sau 5 phút khi đóng</span>
+          </div>
+          <div className="relative rounded-lg overflow-hidden shadow-lg bg-background/90">
+            <ExternalAd config={externalAd} />
+            <div className="absolute top-0 left-0 bg-primary/80 text-primary-foreground px-2 py-1 text-xs">
+              Quảng cáo {externalAd.provider}
+            </div>
+          </div>
+          <button 
+            onClick={() => closeAd('overlay')} 
+            className="absolute -top-2 -right-2 bg-white shadow-md p-1 rounded-full text-gray-700 hover:bg-gray-200 z-10"
+            aria-label="Close advertisement"
+          >
+            <X size={16} />
+          </button>
+        </div>
+      </div>
+    );
+  }
+  
+  // Display the first ad in the internal ads array if no external ads
   const ad = overlayAds[0];
   
   return (

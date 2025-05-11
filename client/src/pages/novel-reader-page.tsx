@@ -63,9 +63,9 @@ export function NovelReaderPage({
 
   // Reader settings
   const defaultSettings = {
-    fontSize: 14,
+    fontSize: 18, // Thật sự là kích thước font (px)
     fontFamily: "Times New Roman",
-    lineHeight: 1.5,
+    lineHeight: 1.5, // Khoảng cách dòng
     textColor: "",
     backgroundColor: "",
   };
@@ -175,11 +175,19 @@ export function NovelReaderPage({
 
   const fontSizeOptions = [
     { value: 14, label: "Rất Nhỏ" },
-    { value: 18, label: "Nhỏ" },
-    { value: 20, label: "Vừa" },
-    { value: 22, label: "Lớn" },
-    { value: 26, label: "Rất lớn" },
-    { value: 30, label: "Cực lớn" },
+    { value: 16, label: "Nhỏ" },
+    { value: 18, label: "Vừa" },
+    { value: 20, label: "Lớn" },
+    { value: 24, label: "Rất lớn" },
+    { value: 28, label: "Cực lớn" },
+  ];
+  
+  const lineHeightOptions = [
+    { value: 1.2, label: "Sát" },
+    { value: 1.5, label: "Thường" },
+    { value: 1.8, label: "Rộng" },
+    { value: 2.0, label: "Rất rộng" },
+    { value: 2.5, label: "Cực rộng" },
   ];
 
   // Calculated values
@@ -382,10 +390,11 @@ export function NovelReaderPage({
           style={{
             fontFamily: readerSettings.fontFamily,
             fontSize: `${readerSettings.fontSize}px`,
+            lineHeight: readerSettings.lineHeight,
             color: readerSettings.textColor || defaultTextColor,
-            backgroundColor: readerSettings.backgroundColor || "",
-            padding: readerSettings.backgroundColor ? "1rem" : "0",
-            borderRadius: readerSettings.backgroundColor ? "0.5rem" : "0",
+            backgroundColor: readerSettings.backgroundColor || (theme === "dark" ? "#121212" : "#ffffff"),
+            padding: "1rem",
+            borderRadius: "0.5rem",
           }}
         >
           {renderFormattedContent()}
@@ -437,6 +446,27 @@ export function NovelReaderPage({
                   {fontSizeOptions.map((size) => (
                     <SelectItem key={size.value} value={size.value.toString()}>
                       {size.label} ({size.value}px)
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="lineHeight">Khoảng cách dòng</Label>
+              <Select
+                value={readerSettings.lineHeight.toString()}
+                onValueChange={(value) =>
+                  updateSettings({ lineHeight: parseFloat(value) })
+                }
+              >
+                <SelectTrigger id="lineHeight">
+                  <SelectValue placeholder="Chọn khoảng cách dòng" />
+                </SelectTrigger>
+                <SelectContent>
+                  {lineHeightOptions.map((option) => (
+                    <SelectItem key={option.value} value={option.value.toString()}>
+                      {option.label} ({option.value})
                     </SelectItem>
                   ))}
                 </SelectContent>

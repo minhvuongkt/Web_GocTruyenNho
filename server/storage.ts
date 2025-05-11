@@ -39,9 +39,6 @@ import {
   paymentSettings,
   type PaymentSettings,
   type InsertPaymentSettings,
-  externalAdConfigs,
-  type ExternalAdConfig,
-  type InsertExternalAdConfig,
 } from "@shared/schema";
 import { db } from "./db";
 import {
@@ -241,16 +238,7 @@ export interface IStorage {
   incrementAdClicks(id: number): Promise<boolean>;
   updateLastDisplayed(id: number): Promise<boolean>;
   
-  // External Ad management
-  createExternalAdConfig(configData: InsertExternalAdConfig): Promise<ExternalAdConfig>;
-  getExternalAdConfig(id: number): Promise<ExternalAdConfig | undefined>;
-  getActiveExternalAdConfigs(): Promise<ExternalAdConfig[]>;
-  getAllExternalAdConfigs(page?: number, limit?: number): Promise<{ configs: ExternalAdConfig[]; total: number }>;
-  updateExternalAdConfig(
-    id: number,
-    configData: Partial<InsertExternalAdConfig>,
-  ): Promise<ExternalAdConfig | undefined>;
-  deleteExternalAdConfig(id: number): Promise<boolean>;
+  // External Ad management đã được gộp vào Advertisement
 
   // Payment settings
   getPaymentSettings(): Promise<PaymentSettings | undefined>;
@@ -1581,79 +1569,8 @@ export class DatabaseStorage implements IStorage {
     return result.rowCount !== null && result.rowCount > 0;
   }
 
-  // External Ad management methods
-  async createExternalAdConfig(
-    configData: InsertExternalAdConfig
-  ): Promise<ExternalAdConfig> {
-    const [result] = await db
-      .insert(externalAdConfigs)
-      .values(configData)
-      .returning();
-    return result;
-  }
-
-  async getExternalAdConfig(id: number): Promise<ExternalAdConfig | undefined> {
-    const [config] = await db
-      .select()
-      .from(externalAdConfigs)
-      .where(eq(externalAdConfigs.id, id));
-    return config;
-  }
-
-  async getActiveExternalAdConfigs(): Promise<ExternalAdConfig[]> {
-    const configs = await db
-      .select()
-      .from(externalAdConfigs)
-      .where(eq(externalAdConfigs.isActive, true));
-    return configs;
-  }
-
-  async getAllExternalAdConfigs(
-    page: number = 1,
-    limit: number = 20
-  ): Promise<{ configs: ExternalAdConfig[]; total: number }> {
-    const offset = (page - 1) * limit;
-
-    // Get total count
-    const [{ count }] = await db
-      .select({ count: sql<number>`count(*)` })
-      .from(externalAdConfigs);
-
-    // Get paginated results
-    const configs = await db
-      .select()
-      .from(externalAdConfigs)
-      .limit(limit)
-      .offset(offset)
-      .orderBy(desc(externalAdConfigs.id));
-
-    return {
-      configs,
-      total: Number(count),
-    };
-  }
-
-  async updateExternalAdConfig(
-    id: number,
-    configData: Partial<InsertExternalAdConfig>
-  ): Promise<ExternalAdConfig | undefined> {
-    const [updated] = await db
-      .update(externalAdConfigs)
-      .set({
-        ...configData,
-        updatedAt: new Date(),
-      })
-      .where(eq(externalAdConfigs.id, id))
-      .returning();
-    return updated;
-  }
-
-  async deleteExternalAdConfig(id: number): Promise<boolean> {
-    const result = await db
-      .delete(externalAdConfigs)
-      .where(eq(externalAdConfigs.id, id));
-    return result.rowCount > 0;
-  }
+  // External Ad management methods đã được gộp vào Advertisement
+  // Các phương thức này đã được loại bỏ và chuyển sang sử dụng Advertisement API với provider != 'internal'
 
   // Payment settings methods
   async getPaymentSettings(): Promise<PaymentSettings | undefined> {

@@ -215,26 +215,7 @@ export const advertisements = pgTable("advertisements", {
   metadata: jsonb("metadata"), // Thêm trường metadata để lưu thông tin của external ads
 });
 
-// Bảng lưu trữ cấu hình quảng cáo bên thứ 3
-export const externalAdConfigs = pgTable("external_ad_configs", {
-  id: serial("id").primaryKey(),
-  name: text("name").notNull(),                           // Tên cấu hình
-  provider: adProviderEnum("provider").notNull(),         // Nhà cung cấp
-  scriptContent: text("script_content").notNull(),        // Nội dung script (vd: Google AdSense)
-  position: adPositionEnum("position").notNull(),         // Vị trí hiển thị
-  adUnitId: text("ad_unit_id"),                          // ID của đơn vị quảng cáo (vd: AdSense ID)
-  slotId: text("slot_id"),                               // ID của vị trí quảng cáo
-  publisherId: text("publisher_id"),                     // ID nhà phát hành (vd: ID ca-pub của Google)
-  isActive: boolean("is_active").notNull().default(true), // Trạng thái hoạt động
-  cssSelector: text("css_selector"),                     // CSS selector chèn vào (tùy chọn)
-  cssStyles: text("css_styles"),                         // CSS tùy chỉnh (tùy chọn)
-  width: integer("width"),                               // Chiều rộng
-  height: integer("height"),                             // Chiều cao
-  format: text("format").default("auto"),                // Định dạng (auto, horizontal, rectangle, etc)
-  isMobileEnabled: boolean("is_mobile_enabled").default(true), // Bật trên mobile
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});
+// Bảng cấu hình quảng cáo bên thứ 3 đã được gộp vào bảng advertisements với trường provider và metadata
 
 // Zod schemas for insertions
 export const insertUserSchema = createInsertSchema(users).pick({
@@ -412,35 +393,7 @@ export type Payment = typeof payments.$inferSelect;
 export type InsertAdvertisement = z.infer<typeof insertAdvertisementSchema>;
 export type Advertisement = typeof advertisements.$inferSelect;
 
-export const insertExternalAdConfigSchema = createInsertSchema(externalAdConfigs)
-  .pick({
-    name: true,
-    provider: true,
-    scriptContent: true,
-    position: true,
-    adUnitId: true,
-    slotId: true,
-    publisherId: true,
-    isActive: true,
-    cssSelector: true,
-    cssStyles: true,
-    width: true,
-    height: true,
-    format: true,
-    isMobileEnabled: true,
-  })
-  .extend({
-    width: z.number().positive().optional(),
-    height: z.number().positive().optional(),
-    adUnitId: z.string().optional(),
-    slotId: z.string().optional(),
-    publisherId: z.string().optional(),
-    cssSelector: z.string().optional(),
-    cssStyles: z.string().optional(),
-  });
-
-export type InsertExternalAdConfig = z.infer<typeof insertExternalAdConfigSchema>;
-export type ExternalAdConfig = typeof externalAdConfigs.$inferSelect;
+// External Ad Config schema đã được gộp vào Advertisement schema với provider và metadata
 
 export const insertPaymentSettingsSchema = createInsertSchema(
   paymentSettings,

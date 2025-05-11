@@ -57,7 +57,6 @@ export function AdminLayout({ children }: AdminLayoutProps) {
     { name: "Quản lý thanh toán", href: "/admin/payments", icon: CreditCard },
     { name: "Thiết lập thanh toán", href: "/admin/payment-settings", icon: Settings },
     { name: "Quản lý quảng cáo", href: "/admin/ads", icon: Layout },
-    { name: "Quảng cáo thứ 3", href: "/admin/external-ads", icon: Layout },
   ];
 
   const Sidebar = () => (

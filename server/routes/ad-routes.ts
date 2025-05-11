@@ -72,7 +72,7 @@ export function registerAdRoutes(app: express.Express) {
       // Get the ads with pagination
       const results = await query.limit(pageSize).offset(offset).orderBy(desc(advertisements.id));
       
-      res.status(200).json({ ads: results, total: totalCount[0].count });
+      res.status(200).json({ ads: results, total: totalCount });
     } catch (error) {
       console.error('Error fetching ads:', error);
       res.status(500).json({ error: 'Failed to fetch advertisements' });
@@ -233,8 +233,15 @@ export function registerAdRoutes(app: express.Express) {
       }
       
       // Increment views count
+      // First get current views
+      const [ad] = await db.select().from(advertisements).where(eq(advertisements.id, adId));
+      if (!ad) {
+        return res.status(404).json({ error: 'Ad not found' });
+      }
+      
+      // Then increment
       const [updatedAd] = await db.update(advertisements)
-        .set({ views: advertisements.views + 1 })
+        .set({ views: ad.views + 1 })
         .where(eq(advertisements.id, adId))
         .returning();
       
@@ -296,12 +303,13 @@ export function registerAdRoutes(app: express.Express) {
       }
       
       // Get total count for pagination
-      const totalCount = await db.select({ count: db.fn.count() }).from(externalAdConfigs);
+      const totalCountResult = await db.select({ count: sql`count(*)` }).from(externalAdConfigs);
+      const totalCount = Number(totalCountResult[0]?.count || 0);
       
       // Get the external ads with pagination
       const results = await query.limit(pageSize).offset(offset).orderBy(desc(externalAdConfigs.id));
       
-      res.status(200).json({ ads: results, total: totalCount[0].count });
+      res.status(200).json({ ads: results, total: totalCount });
     } catch (error) {
       console.error('Error fetching external ads:', error);
       res.status(500).json({ error: 'Failed to fetch external ad configurations' });
@@ -323,7 +331,7 @@ export function registerAdRoutes(app: express.Express) {
             gte(externalAdConfigs.endDate || new Date('2099-12-31'), now)
           )
         )
-        .orderBy(asc(externalAdConfigs.displayOrder), desc(externalAdConfigs.id));
+        .orderBy(asc(externalAdConfigs.displayOrder));  // Only order by display order
       
       res.status(200).json(activeExternalAds);
     } catch (error) {

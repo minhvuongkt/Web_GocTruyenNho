@@ -63,8 +63,8 @@ export function AdProvider({ children }: { children: ReactNode }) {
     bottom: { show: true },
     left: { show: true },
     right: { show: true },
-    popup: { show: false },
-    overlay: { show: false },
+    popup: { show: true },
+    overlay: { show: true },
     custom: { show: true },
   });
   const [isLoading, setIsLoading] = useState(true);
@@ -104,6 +104,10 @@ export function AdProvider({ children }: { children: ReactNode }) {
 
   // Check for popup/overlay timing
   useEffect(() => {
+    // Initial check for ad timings
+    checkAdTimings();
+    
+    // Setup interval for periodic checks
     const interval = setInterval(() => {
       checkAdTimings();
     }, 60000); // Check every minute

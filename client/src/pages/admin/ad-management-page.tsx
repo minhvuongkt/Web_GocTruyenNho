@@ -262,10 +262,10 @@ export function AdManagementPage() {
                 </Select>
                 <div className="flex gap-2">
                   <Button variant="outline" onClick={() => refetchAds()} title="Làm mới dữ liệu">
-                    <RefreshCw size={16} />
+                    <RefreshCw size={16} className="mr-1" /> Làm mới
                   </Button>
                   <Button variant="outline" onClick={resetAdFilters} title="Đặt lại bộ lọc">
-                    <RefreshCw size={16} />
+                    <Search size={16} className="mr-1" /> Đặt lại
                   </Button>
                 </div>
               </div>
@@ -426,10 +426,10 @@ export function AdManagementPage() {
                 </Select>
                 <div className="flex gap-2">
                   <Button variant="outline" onClick={() => refetchExternalAds()} title="Làm mới dữ liệu">
-                    <RefreshCw size={16} />
+                    <RefreshCw size={16} className="mr-1" /> Làm mới
                   </Button>
                   <Button variant="outline" onClick={resetExternalFilters} title="Đặt lại bộ lọc">
-                    <RefreshCw size={16} />
+                    <Search size={16} className="mr-1" /> Đặt lại
                   </Button>
                 </div>
               </div>

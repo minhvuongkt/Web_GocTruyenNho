@@ -1,4 +1,5 @@
-CREATE TYPE "public"."ad_position" AS ENUM('banner', 'sidebar_left', 'sidebar_right', 'popup', 'overlay');--> statement-breakpoint
+CREATE TYPE "public"."ad_position" AS ENUM('top', 'bottom', 'left', 'right', 'popup', 'overlay', 'custom');--> statement-breakpoint
+CREATE TYPE "public"."ad_provider" AS ENUM('internal', 'google', 'facebook', 'other');--> statement-breakpoint
 CREATE TYPE "public"."content_type" AS ENUM('manga', 'novel');--> statement-breakpoint
 CREATE TYPE "public"."payment_method" AS ENUM('bank_transfer', 'credit_card', 'e_wallet', 'payos');--> statement-breakpoint
 CREATE TYPE "public"."payment_status" AS ENUM('pending', 'completed', 'failed');--> statement-breakpoint
@@ -20,7 +21,8 @@ CREATE TABLE "advertisements" (
 	"height" integer,
 	"display_frequency" integer DEFAULT 30 NOT NULL,
 	"last_displayed_at" timestamp,
-	"created_at" timestamp DEFAULT now() NOT NULL
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	"provider" "ad_provider" DEFAULT 'internal' NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "authors" (
@@ -76,6 +78,26 @@ CREATE TABLE "content" (
 CREATE TABLE "content_genres" (
 	"content_id" integer NOT NULL,
 	"genre_id" integer NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE "external_ad_configs" (
+	"id" serial PRIMARY KEY NOT NULL,
+	"name" text NOT NULL,
+	"provider" "ad_provider" NOT NULL,
+	"script_content" text NOT NULL,
+	"position" "ad_position" NOT NULL,
+	"ad_unit_id" text,
+	"slot_id" text,
+	"publisher_id" text,
+	"is_active" boolean DEFAULT true NOT NULL,
+	"css_selector" text,
+	"css_styles" text,
+	"width" integer,
+	"height" integer,
+	"format" text DEFAULT 'auto',
+	"is_mobile_enabled" boolean DEFAULT true,
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	"updated_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "genres" (

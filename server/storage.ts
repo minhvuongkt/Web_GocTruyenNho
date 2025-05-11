@@ -1560,7 +1560,7 @@ export class DatabaseStorage implements IStorage {
     const result = await db
       .update(advertisements)
       .set({
-        lastDisplayed: new Date(),
+        lastDisplayedAt: new Date(),
       })
       .where(eq(advertisements.id, id));
 

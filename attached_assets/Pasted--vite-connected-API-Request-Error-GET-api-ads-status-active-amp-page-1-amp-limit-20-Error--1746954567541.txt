@@ -1,0 +1,26 @@
+[vite] connected.
+API Request Error (GET /api/ads?status=active&amp;page=1&amp;limit=20): 
+Error {}
+
+at t.value (https://2b3e6ed9-6c03-4250-925f-011a8fb93b34-00-2a5t6hsxfz5m0.sisko.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:17465)
+at new t (https://2b3e6ed9-6c03-4250-925f-011a8fb93b34-00-2a5t6hsxfz5m0.sisko.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:12630)
+at t.value (https://2b3e6ed9-6c03-4250-925f-011a8fb93b34-00-2a5t6hsxfz5m0.sisko.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:32766)
+at https://2b3e6ed9-6c03-4250-925f-011a8fb93b34-00-2a5t6hsxfz5m0.sisko.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:34400
+Failed to fetch advertisements: 
+Error {}
+
+Warning: Each child in a list should have a unique &quot;key&quot; prop.
+
+Check the render method of `MangaDetailPage`. See https://reactjs.org/link/warning-keys for more information.
+    at https://2b3e6ed9-6c03-4250-925f-011a8fb93b34-00-2a5t6hsxfz5m0.sisko.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=1940df65:337:18
+    at MangaDetailPage (https://2b3e6ed9-6c03-4250-925f-011a8fb93b34-00-2a5t6hsxfz5m0.sisko.replit.dev/src/pages/manga-detail-page.tsx:48:35)
+    at ContentDetailPage (https://2b3e6ed9-6c03-4250-925f-011a8fb93b34-00-2a5t6hsxfz5m0.sisko.replit.dev/src/pages/content-detail-page.tsx:24:37)
+    at Route (https://2b3e6ed9-6c03-4250-925f-011a8fb93b34-00-2a5t6hsxfz5m0.sisko.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=1940df65:323:16)
+    at Switch (https://2b3e6ed9-6c03-4250-925f-011a8fb93b34-00-2a5t6hsxfz5m0.sisko.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=1940df65:379:17)
+    at Router
+    at Provider (https://2b3e6ed9-6c03-4250-925f-011a8fb93b34-00-2a5t6hsxfz5m0.sisko.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-OXZDJRWN.js?v=1940df65:38:15)
+    at TooltipProvider (https://2b3e6ed9-6c03-4250-925f-011a8fb93b34-00-2a5t6hsxfz5m0.sisko.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-tooltip.js?v=1940df65:62:5)
+    at AuthProvider (https://2b3e6ed9-6c03-4250-925f-011a8fb93b34-00-2a5t6hsxfz5m0.sisko.replit.dev/src/hooks/use-auth.tsx:26:32)
+    at ThemeProvider (https://2b3e6ed9-6c03-4250-925f-011a8fb93b34-00-2a5t6hsxfz5m0.sisko.replit.dev/src/components/ui/theme-provider.tsx:25:3)
+    at QueryClientProvider (https://2b3e6ed9-6c03-4250-925f-011a8fb93b34-00-2a5t6hsxfz5m0.sisko.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=1940df65:2805:3)
+    at App

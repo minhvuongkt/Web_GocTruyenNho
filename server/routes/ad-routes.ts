@@ -314,7 +314,7 @@ export function registerAdRoutes(app: express.Express) {
       const totalCount = Number(totalCountResult[0]?.count || 0);
       
       // Get the external ads with pagination
-      const results = await query.limit(pageSize).offset(offset).orderBy((eb) => eb.desc(externalAdConfigs.id));
+      const results = await query.limit(pageSize).offset(offset).orderBy({ column: externalAdConfigs.id, order: 'desc' });
       
       res.status(200).json({ ads: results, total: totalCount });
     } catch (error) {

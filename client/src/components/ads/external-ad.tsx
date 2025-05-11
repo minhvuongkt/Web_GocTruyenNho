@@ -53,27 +53,43 @@ export function ExternalAd({ config, className = '' }: ExternalAdProps) {
       container.style.height = `${config.height}px`;
     }
     
-    // Sanitize script content - Remove <script> tags to prevent issues with script injection
-    // (The script content will be wrapped in script tags when inserted)
-    let sanitizedScript = config.scriptContent
-      .replace(/<script[^>]*>/g, '')
-      .replace(/<\/script>/g, '');
-    
-    // Create and inject the script
-    const script = document.createElement('script');
-    script.type = 'text/javascript';
-    script.text = sanitizedScript;
-    
-    // Insert the script into the container
-    container.appendChild(script);
-    
-    // Mark as inserted to prevent duplicate inserts
-    scriptInserted.current = true;
+    try {
+      // First approach: Use innerHTML for well-formed HTML content
+      // This is safer for actual ad code that contains HTML + JS
+      container.innerHTML = config.scriptContent;
+      
+      // Find any script tags in the content and re-execute them
+      // Scripts added via innerHTML don't execute automatically
+      const scriptTags = container.getElementsByTagName('script');
+      
+      // Clone and replace each script tag to force execution
+      Array.from(scriptTags).forEach(oldScript => {
+        const newScript = document.createElement('script');
+        
+        // Copy all attributes from the old script to the new one
+        Array.from(oldScript.attributes).forEach(attr => {
+          newScript.setAttribute(attr.name, attr.value);
+        });
+        
+        // Copy the content
+        newScript.textContent = oldScript.textContent;
+        
+        // Replace the old script with the new one
+        if (oldScript.parentNode) {
+          oldScript.parentNode.replaceChild(newScript, oldScript);
+        }
+      });
+      
+      // Mark as inserted to prevent duplicate inserts
+      scriptInserted.current = true;
+    } catch (error) {
+      console.error("Failed to insert external ad script:", error);
+    }
     
     // Clean up function
     return () => {
-      if (container && script && container.contains(script)) {
-        container.removeChild(script);
+      if (container) {
+        container.innerHTML = '';
         scriptInserted.current = false;
       }
     };

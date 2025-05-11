@@ -130,7 +130,7 @@ export function registerAdRoutes(app: express.Express) {
         clicks: 0,
       };
       
-      const [result] = await db.insert(advertisements).values(newAd).returning();
+      const [result] = await db.insert(advertisements).values([newAd]).returning();
       
       res.status(201).json(result);
     } catch (error) {
@@ -263,8 +263,15 @@ export function registerAdRoutes(app: express.Express) {
       }
       
       // Increment clicks count
+      // First get current clicks
+      const [ad] = await db.select().from(advertisements).where(eq(advertisements.id, adId));
+      if (!ad) {
+        return res.status(404).json({ error: 'Ad not found' });
+      }
+      
+      // Then increment
       const [updatedAd] = await db.update(advertisements)
-        .set({ clicks: advertisements.clicks + 1 })
+        .set({ clicks: ad.clicks + 1 })
         .where(eq(advertisements.id, adId))
         .returning();
       
@@ -331,7 +338,8 @@ export function registerAdRoutes(app: express.Express) {
             gte(externalAdConfigs.endDate || new Date('2099-12-31'), now)
           )
         )
-        .orderBy(asc(externalAdConfigs.displayOrder));  // Only order by display order
+        // Order by displayOrder field
+        .orderBy(externalAdConfigs.displayOrder)
       
       res.status(200).json(activeExternalAds);
     } catch (error) {

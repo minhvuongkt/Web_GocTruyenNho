@@ -150,8 +150,33 @@ export function registerAdRoutes(app: express.Express) {
       const { 
         title, imageUrl, targetUrl, position, 
         displayOrder, width, height, displayFrequency,
-        startDate, endDate, isActive 
+        startDate, endDate, isActive, provider = 'internal', metadata
       } = req.body;
+      
+      console.log('Received dates:', { startDate, endDate });
+      
+      // Validate and parse dates
+      let parsedStartDate, parsedEndDate;
+      try {
+        // If dates are empty or invalid, use default dates
+        parsedStartDate = startDate ? new Date(startDate) : new Date();
+        
+        // If end date is not provided or invalid, set it to 30 days from start date
+        if (!endDate) {
+          parsedEndDate = new Date(parsedStartDate);
+          parsedEndDate.setDate(parsedEndDate.getDate() + 30);
+        } else {
+          parsedEndDate = new Date(endDate);
+        }
+        
+        // Extra validation to ensure dates are valid
+        if (isNaN(parsedStartDate.getTime()) || isNaN(parsedEndDate.getTime())) {
+          throw new Error('Invalid date format');
+        }
+      } catch (error) {
+        console.error('Date parsing error:', error);
+        return res.status(400).json({ error: 'Invalid date format. Please provide valid dates.' });
+      }
       
       const newAd = {
         title,
@@ -159,15 +184,16 @@ export function registerAdRoutes(app: express.Express) {
         targetUrl,
         position,
         displayOrder: displayOrder || 0,
-        startDate: new Date(startDate),
-        endDate: new Date(endDate),
-        isActive: isActive || true,
+        startDate: parsedStartDate,
+        endDate: parsedEndDate,
+        isActive: isActive === false ? false : true,
         width: width || null,
         height: height || null,
         displayFrequency: displayFrequency || 30,
         views: 0,
         clicks: 0,
-        provider: 'internal',
+        provider: provider || 'internal',
+        metadata: metadata ? JSON.stringify(metadata) : null,
       };
       
       const [ad] = await db.insert(advertisements).values(newAd).returning();
@@ -189,8 +215,39 @@ export function registerAdRoutes(app: express.Express) {
       const { 
         title, imageUrl, targetUrl, position, 
         displayOrder, width, height, displayFrequency,
-        startDate, endDate, isActive 
+        startDate, endDate, isActive, metadata, provider
       } = req.body;
+      
+      console.log('Update - Received dates:', { startDate, endDate });
+      
+      // Validate and parse dates
+      let parsedStartDate, parsedEndDate;
+      try {
+        // Get the existing ad to use its dates as fallback
+        const [existingAd] = await db.select().from(advertisements)
+          .where(eq(advertisements.id, id));
+          
+        if (!existingAd) {
+          return res.status(404).json({ error: 'Không tìm thấy quảng cáo' });
+        }
+        
+        // Use existing dates as fallback if new ones are not provided
+        parsedStartDate = startDate ? new Date(startDate) : existingAd.startDate;
+        
+        if (!endDate) {
+          parsedEndDate = existingAd.endDate;
+        } else {
+          parsedEndDate = new Date(endDate);
+        }
+        
+        // Extra validation to ensure dates are valid
+        if (isNaN(parsedStartDate.getTime()) || isNaN(parsedEndDate.getTime())) {
+          throw new Error('Invalid date format');
+        }
+      } catch (error) {
+        console.error('Date parsing error:', error);
+        return res.status(400).json({ error: 'Invalid date format. Please provide valid dates.' });
+      }
       
       const updateData = {
         title,
@@ -198,13 +255,23 @@ export function registerAdRoutes(app: express.Express) {
         targetUrl,
         position,
         displayOrder: displayOrder || 0,
-        startDate: new Date(startDate),
-        endDate: new Date(endDate),
+        startDate: parsedStartDate,
+        endDate: parsedEndDate,
         isActive: isActive !== undefined ? isActive : true,
         width: width || null,
         height: height || null,
         displayFrequency: displayFrequency || 30,
       };
+      
+      // Only update provider if it was provided
+      if (provider) {
+        updateData['provider'] = provider;
+      }
+      
+      // Only update metadata if it was provided
+      if (metadata) {
+        updateData['metadata'] = typeof metadata === 'string' ? metadata : JSON.stringify(metadata);
+      }
       
       const [updatedAd] = await db.update(advertisements)
                                   .set(updateData)

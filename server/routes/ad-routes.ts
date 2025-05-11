@@ -72,7 +72,10 @@ export function registerAdRoutes(app: express.Express) {
       // Get the ads with pagination
       const results = await query.limit(pageSize).offset(offset).orderBy(desc(advertisements.id));
       
-      res.status(200).json({ ads: results, total: totalCount });
+      // Chuyển đổi kết quả thành JSON thuần để tránh lỗi cấu trúc vòng
+      const plainResults = JSON.parse(JSON.stringify(results));
+      
+      res.status(200).json({ ads: plainResults, total: totalCount });
     } catch (error) {
       console.error('Error fetching ads:', error);
       res.status(500).json({ error: 'Failed to fetch advertisements' });
@@ -94,7 +97,10 @@ export function registerAdRoutes(app: express.Express) {
         )
         .orderBy(asc(advertisements.displayOrder), desc(advertisements.id));
       
-      res.status(200).json(activeAds);
+      // Chuyển đổi kết quả thành JSON thuần để tránh lỗi cấu trúc vòng
+      const plainResults = JSON.parse(JSON.stringify(activeAds));
+      
+      res.status(200).json(plainResults);
     } catch (error) {
       console.error('Error fetching active ads:', error);
       res.status(500).json({ error: 'Failed to fetch active advertisements' });
@@ -314,28 +320,10 @@ export function registerAdRoutes(app: express.Express) {
       const totalCount = Number(totalCountResult[0]?.count || 0);
       
       // Get the external ads with pagination
-      const results = await query.limit(pageSize).offset(offset).orderBy({ column: externalAdConfigs.id, order: 'desc' });
+      const results = await query.limit(pageSize).offset(offset).orderBy(desc(externalAdConfigs.id));
       
       // Transform results to plain objects to avoid circular references
-      const plainResults = results.map(ad => ({
-        id: ad.id,
-        name: ad.name,
-        provider: ad.provider,
-        position: ad.position,
-        scriptContent: ad.scriptContent,
-        adUnitId: ad.adUnitId,
-        slotId: ad.slotId,
-        publisherId: ad.publisherId,
-        isActive: ad.isActive,
-        cssSelector: ad.cssSelector,
-        cssStyles: ad.cssStyles,
-        width: ad.width,
-        height: ad.height,
-        format: ad.format,
-        isMobileEnabled: ad.isMobileEnabled,
-        createdAt: ad.createdAt,
-        updatedAt: ad.updatedAt
-      }));
+      const plainResults = JSON.parse(JSON.stringify(results));
       
       res.status(200).json({ ads: plainResults, total: totalCount });
     } catch (error) {
@@ -360,9 +348,12 @@ export function registerAdRoutes(app: express.Express) {
           )
         )
         // Order by displayOrder field
-        .orderBy({ column: externalAdConfigs.displayOrder, order: 'asc' })
+        .orderBy(asc(externalAdConfigs.id))
       
-      res.status(200).json(activeExternalAds);
+      // Chuyển đổi kết quả thành JSON thuần để tránh lỗi cấu trúc vòng
+      const plainResults = JSON.parse(JSON.stringify(activeExternalAds));
+      
+      res.status(200).json(plainResults);
     } catch (error) {
       console.error('Error fetching active external ads:', error);
       res.status(500).json({ error: 'Failed to fetch active external ad configurations' });

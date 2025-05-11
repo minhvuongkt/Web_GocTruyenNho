@@ -316,7 +316,28 @@ export function registerAdRoutes(app: express.Express) {
       // Get the external ads with pagination
       const results = await query.limit(pageSize).offset(offset).orderBy({ column: externalAdConfigs.id, order: 'desc' });
       
-      res.status(200).json({ ads: results, total: totalCount });
+      // Transform results to plain objects to avoid circular references
+      const plainResults = results.map(ad => ({
+        id: ad.id,
+        name: ad.name,
+        provider: ad.provider,
+        position: ad.position,
+        scriptContent: ad.scriptContent,
+        adUnitId: ad.adUnitId,
+        slotId: ad.slotId,
+        publisherId: ad.publisherId,
+        isActive: ad.isActive,
+        cssSelector: ad.cssSelector,
+        cssStyles: ad.cssStyles,
+        width: ad.width,
+        height: ad.height,
+        format: ad.format,
+        isMobileEnabled: ad.isMobileEnabled,
+        createdAt: ad.createdAt,
+        updatedAt: ad.updatedAt
+      }));
+      
+      res.status(200).json({ ads: plainResults, total: totalCount });
     } catch (error) {
       console.error('Error fetching external ads:', error);
       res.status(500).json({ error: 'Failed to fetch external ad configurations' });

@@ -1,0 +1,26 @@
+Error fetching external ads: TypeError: Converting circular structure to JSON
+    --> starting at object with constructor 'PgSerial'
+    |     property 'table' -> object with constructor 'PgTable'
+    --- property 'id' closes the circle
+    at file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:1345:74
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async NeonPreparedQuery.execute (/home/runner/workspace/node_modules/src/neon-serverless/session.ts:102:18)
+    at async <anonymous> (/home/runner/workspace/server/routes/ad-routes.ts:317:23)
+2:27:05 PM [express] GET /api/external-ads 500 in 1685ms :: {"error":"Failed to fetch external ad co…
+Application error: Error: Connection terminated unexpectedly
+    at file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:1345:74
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async PGStore._asyncQuery (/home/runner/workspace/node_modules/connect-pg-simple/index.js:322:21)
+Error [ERR_HTTP_HEADERS_SENT]: Cannot set headers after they are sent to the client
+    at ServerResponse.setHeader (node:_http_outgoing:655:11)
+    at ServerResponse.header (/home/runner/workspace/node_modules/express/lib/response.js:794:10)
+    at ServerResponse.send (/home/runner/workspace/node_modules/express/lib/response.js:174:12)
+    at ServerResponse.json (/home/runner/workspace/node_modules/express/lib/response.js:278:15)
+    at ServerResponse.res.json (/home/runner/workspace/server/index.ts:17:28)
+    at <anonymous> (/home/runner/workspace/server/index.ts:65:24)
+    at Layer.handle_error (/home/runner/workspace/node_modules/express/lib/router/layer.js:71:5)
+    at trim_prefix (/home/runner/workspace/node_modules/express/lib/router/index.js:326:13)
+    at /home/runner/workspace/node_modules/express/lib/router/index.js:286:9
+    at Function.process_params (/home/runner/workspace/node_modules/express/lib/router/index.js:346:12)
+    at Immediate.next (/home/runner/workspace/node_modules/express/lib/router/index.js:280:10)
+    at process.processImmediate (node:internal/timers:485:21)

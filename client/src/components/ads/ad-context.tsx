@@ -12,8 +12,11 @@ export interface Advertisement {
   isActive: boolean;
   views: number;
   clicks: number;
+  provider?: 'internal' | 'google' | 'facebook' | 'other';
+  metadata?: any; // Lưu trữ thông tin cho external ads
 }
 
+// Giữ lại định nghĩa cũ cho tương thích ngược với code hiện tại
 export interface ExternalAdConfig {
   id: number;
   provider: 'google' | 'facebook' | 'other';
@@ -22,8 +25,8 @@ export interface ExternalAdConfig {
   scriptContent: string;
   containerId?: string;
   isActive: boolean;
-  createdAt: string;
-  updatedAt: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface AdPositionState {
@@ -169,13 +172,39 @@ export function AdProvider({ children }: { children: ReactNode }) {
         // Group external ads by position
         const groupedExternalAds: Record<string, ExternalAdConfig[]> = {};
         
-        data.forEach((ad: ExternalAdConfig) => {
-          // Ensure ad is valid before adding it
+        data.forEach((ad: any) => {
+          // Đảm bảo quảng cáo hợp lệ trước khi thêm vào
           if (ad && ad.id && ad.position) {
+            // Chuyển đổi dữ liệu từ định dạng mới (với metadata) sang ExternalAdConfig
+            let externalAd: ExternalAdConfig = {
+              id: ad.id,
+              position: ad.position as any,
+              provider: ad.provider || 'other',
+              name: ad.title || '',
+              scriptContent: '',
+              isActive: ad.isActive || false,
+            };
+            
+            // Parse metadata nếu có
+            if (ad.metadata) {
+              try {
+                const metadata = typeof ad.metadata === 'string' 
+                  ? JSON.parse(ad.metadata) 
+                  : ad.metadata;
+                
+                externalAd.scriptContent = metadata.scriptContent || '';
+                externalAd.containerId = metadata.containerId || '';
+                // Thêm các trường khác từ metadata nếu cần
+              } catch (e) {
+                console.error('Error parsing ad metadata:', e);
+              }
+            }
+            
             if (!groupedExternalAds[ad.position]) {
               groupedExternalAds[ad.position] = [];
             }
-            groupedExternalAds[ad.position].push(ad);
+            
+            groupedExternalAds[ad.position].push(externalAd);
           }
         });
         

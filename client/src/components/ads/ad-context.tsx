@@ -156,17 +156,27 @@ export function AdProvider({ children }: { children: ReactNode }) {
         throw new Error(`Error fetching external ads: ${response.status}`);
       }
       
-      const data = await response.json();
+      let data;
+      try {
+        data = await response.json();
+      } catch (jsonError) {
+        console.error('Error parsing external ads JSON:', jsonError);
+        data = []; // Use empty array on parse error
+      }
       
       // Check if response is valid
       if (data && Array.isArray(data)) {
         // Group external ads by position
         const groupedExternalAds: Record<string, ExternalAdConfig[]> = {};
+        
         data.forEach((ad: ExternalAdConfig) => {
-          if (!groupedExternalAds[ad.position]) {
-            groupedExternalAds[ad.position] = [];
+          // Ensure ad is valid before adding it
+          if (ad && ad.id && ad.position) {
+            if (!groupedExternalAds[ad.position]) {
+              groupedExternalAds[ad.position] = [];
+            }
+            groupedExternalAds[ad.position].push(ad);
           }
-          groupedExternalAds[ad.position].push(ad);
         });
         
         setExternalAds(groupedExternalAds);
@@ -174,6 +184,8 @@ export function AdProvider({ children }: { children: ReactNode }) {
       return true;
     } catch (error) {
       console.error('Error fetching external ads:', error);
+      // Set empty external ads on error to avoid breaking the UI
+      setExternalAds({});
       return false;
     }
   };

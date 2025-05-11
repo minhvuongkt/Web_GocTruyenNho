@@ -20,7 +20,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
-import { Pagination } from '@/components/ui/pagination';
+import { CustomPagination } from '@/components/shared/custom-pagination';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { apiRequest } from '@/lib/queryClient';
@@ -339,7 +339,7 @@ export function AdManagementPage() {
                   <div>
                     Hiển thị {adPage * adLimit - adLimit + 1} đến {Math.min(adPage * adLimit, adData.total)} trong tổng số {adData.total} quảng cáo
                   </div>
-                  <Pagination
+                  <CustomPagination
                     currentPage={adPage}
                     totalPages={Math.ceil(adData.total / adLimit)}
                     onPageChange={setAdPage}
@@ -503,7 +503,7 @@ export function AdManagementPage() {
                   <div>
                     Hiển thị {externalPage * externalLimit - externalLimit + 1} đến {Math.min(externalPage * externalLimit, externalData.total)} trong tổng số {externalData.total} quảng cáo
                   </div>
-                  <Pagination
+                  <CustomPagination
                     currentPage={externalPage}
                     totalPages={Math.ceil(externalData.total / externalLimit)}
                     onPageChange={setExternalPage}

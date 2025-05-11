@@ -166,7 +166,7 @@ export function AdManagementPage() {
   };
 
   // Handler for editing an external ad
-  const handleEditExternalAd = (ad: ExternalAdConfig) => {
+  const handleEditExternalAd = (ad: Advertisement) => {
     setSelectedExternalAd(ad);
     setExternalDialogOpen(true);
   };
@@ -440,11 +440,11 @@ export function AdManagementPage() {
                   <TableHeader>
                     <TableRow>
                       <TableHead className="w-[50px]">ID</TableHead>
-                      <TableHead>Tên</TableHead>
+                      <TableHead>Tiêu đề</TableHead>
                       <TableHead>Nhà cung cấp</TableHead>
                       <TableHead>Vị trí</TableHead>
                       <TableHead>Ngày tạo</TableHead>
-                      <TableHead>Ngày cập nhật</TableHead>
+                      <TableHead>Ngày bắt đầu</TableHead>
                       <TableHead>Trạng thái</TableHead>
                       <TableHead className="text-right">Thao tác</TableHead>
                     </TableRow>
@@ -457,10 +457,10 @@ export function AdManagementPage() {
                         </TableCell>
                       </TableRow>
                     ) : externalData && externalData.ads && externalData.ads.length > 0 ? (
-                      externalData.ads.map((ad: ExternalAdConfig) => (
+                      externalData.ads.map((ad: Advertisement) => (
                         <TableRow key={ad.id}>
                           <TableCell className="font-medium">{ad.id}</TableCell>
-                          <TableCell>{ad.name}</TableCell>
+                          <TableCell>{ad.title}</TableCell>
                           <TableCell>{ad.provider}</TableCell>
                           <TableCell>
                             <Badge variant="outline">{ad.position}</Badge>
@@ -469,7 +469,7 @@ export function AdManagementPage() {
                             {ad.createdAt ? format(new Date(ad.createdAt), 'dd/MM/yyyy') : '-'}
                           </TableCell>
                           <TableCell>
-                            {ad.updatedAt ? format(new Date(ad.updatedAt), 'dd/MM/yyyy') : '-'}
+                            {ad.startDate ? format(new Date(ad.startDate), 'dd/MM/yyyy') : '-'}
                           </TableCell>
                           <TableCell>
                             <Badge variant={ad.isActive ? "success" : "secondary"}>

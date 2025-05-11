@@ -161,7 +161,7 @@ export function ExternalAdFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[700px]">
+      <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
             {ad ? "Sửa quảng cáo bên thứ 3" : "Thêm quảng cáo bên thứ 3 mới"}
@@ -344,10 +344,13 @@ export function ExternalAdFormDialog({
                   <FormControl>
                     <Textarea 
                       placeholder="Nhập mã script hoặc HTML quảng cáo"
-                      className="min-h-[120px] font-mono text-sm" 
+                      className="min-h-[150px] font-mono text-sm resize-y" 
                       {...field} 
                     />
                   </FormControl>
+                  <p className="text-xs text-muted-foreground">
+                    Mã script sẽ được nhúng vào trang web. Đối với Google AdSense, bạn có thể dán mã script từ AdSense.
+                  </p>
                   <FormMessage />
                 </FormItem>
               )}
@@ -383,20 +386,21 @@ export function ExternalAdFormDialog({
               />
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
               <FormField
                 control={form.control}
                 name="isActive"
                 render={({ field }) => (
-                  <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                  <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4 h-full">
                     <FormControl>
                       <Checkbox
                         checked={field.value}
                         onCheckedChange={field.onChange}
+                        className="mt-0.5"
                       />
                     </FormControl>
                     <div className="space-y-1 leading-none">
-                      <FormLabel>Kích hoạt</FormLabel>
+                      <FormLabel className="text-base font-medium">Kích hoạt</FormLabel>
                       <p className="text-sm text-muted-foreground">
                         Quảng cáo sẽ hiển thị cho người dùng.
                       </p>
@@ -409,15 +413,16 @@ export function ExternalAdFormDialog({
                 control={form.control}
                 name="isMobileEnabled"
                 render={({ field }) => (
-                  <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                  <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4 h-full">
                     <FormControl>
                       <Checkbox
                         checked={field.value}
                         onCheckedChange={field.onChange}
+                        className="mt-0.5"
                       />
                     </FormControl>
                     <div className="space-y-1 leading-none">
-                      <FormLabel>Hiển thị trên mobile</FormLabel>
+                      <FormLabel className="text-base font-medium">Hiển thị trên mobile</FormLabel>
                       <p className="text-sm text-muted-foreground">
                         Quảng cáo sẽ hiển thị trên thiết bị di động.
                       </p>

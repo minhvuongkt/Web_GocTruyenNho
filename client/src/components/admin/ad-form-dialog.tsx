@@ -152,7 +152,7 @@ export function AdFormDialog({ open, onOpenChange, ad, onSuccess }: AdFormDialog
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[550px]">
+      <DialogContent className="sm:max-w-[550px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{ad ? "Sửa quảng cáo" : "Thêm quảng cáo mới"}</DialogTitle>
           <DialogDescription>
@@ -217,7 +217,7 @@ export function AdFormDialog({ open, onOpenChange, ad, onSuccess }: AdFormDialog
               )}
             />
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <FormField
                 control={form.control}
                 name="width"
@@ -231,8 +231,10 @@ export function AdFormDialog({ open, onOpenChange, ad, onSuccess }: AdFormDialog
                         {...field}
                         value={field.value === null ? "" : field.value}
                         onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : null)}
+                        className="w-full"
                       />
                     </FormControl>
+                    <p className="text-xs text-muted-foreground">Để trống để tự động điều chỉnh</p>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -251,8 +253,10 @@ export function AdFormDialog({ open, onOpenChange, ad, onSuccess }: AdFormDialog
                         {...field}
                         value={field.value === null ? "" : field.value}
                         onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : null)}
+                        className="w-full"
                       />
                     </FormControl>
+                    <p className="text-xs text-muted-foreground">Để trống để tự động điều chỉnh</p>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -299,26 +303,30 @@ export function AdFormDialog({ open, onOpenChange, ad, onSuccess }: AdFormDialog
               )}
             />
 
-            <FormField
-              control={form.control}
-              name="isActive"
-              render={({ field }) => (
-                <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
-                  <FormControl>
-                    <Checkbox
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                    />
-                  </FormControl>
-                  <div className="space-y-1 leading-none">
-                    <FormLabel>Kích hoạt</FormLabel>
-                    <p className="text-sm text-muted-foreground">
-                      Quảng cáo sẽ hiển thị cho người dùng.
-                    </p>
-                  </div>
-                </FormItem>
-              )}
-            />
+            <div className="bg-muted/20 rounded-lg p-4 mt-4">
+              <h3 className="text-sm font-medium mb-3">Trạng thái quảng cáo</h3>
+              <FormField
+                control={form.control}
+                name="isActive"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4 bg-background">
+                    <FormControl>
+                      <Checkbox
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                        className="mt-0.5"
+                      />
+                    </FormControl>
+                    <div className="space-y-1 leading-none">
+                      <FormLabel className="text-base font-medium">Kích hoạt</FormLabel>
+                      <p className="text-sm text-muted-foreground">
+                        Quảng cáo sẽ hiển thị cho người dùng.
+                      </p>
+                    </div>
+                  </FormItem>
+                )}
+              />
+            </div>
 
             <div className="space-y-2">
               <FormLabel>Hình ảnh quảng cáo</FormLabel>
@@ -326,14 +334,18 @@ export function AdFormDialog({ open, onOpenChange, ad, onSuccess }: AdFormDialog
                 type="file"
                 accept="image/*"
                 onChange={handleImageChange}
+                className="file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
               />
               {(imagePreview || ad?.imageUrl) && (
-                <div className="mt-2 max-w-[300px] mx-auto">
-                  <img
-                    src={imagePreview || ad?.imageUrl}
-                    alt="Ad preview"
-                    className="max-w-full h-auto rounded-md border"
-                  />
+                <div className="mt-4 w-full max-w-sm mx-auto">
+                  <div className="relative aspect-video rounded-md border overflow-hidden bg-muted/20">
+                    <img
+                      src={imagePreview || ad?.imageUrl}
+                      alt="Ad preview"
+                      className="object-contain w-full h-full"
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground text-center mt-1">Xem trước hình ảnh quảng cáo</p>
                 </div>
               )}
             </div>

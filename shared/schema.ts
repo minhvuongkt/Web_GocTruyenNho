@@ -197,8 +197,8 @@ export const paymentSettings = pgTable("payment_settings", {
 export const advertisements = pgTable("advertisements", {
   id: serial("id").primaryKey(),
   title: text("title").notNull(),
-  imageUrl: text("image_url").notNull(),
-  targetUrl: text("target_url").notNull(),
+  imageUrl: text("image_url").notNull().default(""),
+  targetUrl: text("target_url").notNull().default("#"),
   position: adPositionEnum("position").notNull(),
   displayOrder: integer("display_order").notNull().default(0),
   startDate: timestamp("start_date").notNull(),
@@ -212,6 +212,7 @@ export const advertisements = pgTable("advertisements", {
   lastDisplayedAt: timestamp("last_displayed_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   provider: adProviderEnum("provider").notNull().default("internal"),
+  metadata: jsonb("metadata"), // Thêm trường metadata để lưu thông tin của external ads
 });
 
 // Bảng lưu trữ cấu hình quảng cáo bên thứ 3
@@ -354,6 +355,8 @@ export const insertAdvertisementSchema = createInsertSchema(advertisements)
     startDate: true,
     endDate: true,
     isActive: true,
+    provider: true,
+    metadata: true,
   })
   .extend({
     startDate: z.preprocess(
@@ -367,6 +370,10 @@ export const insertAdvertisementSchema = createInsertSchema(advertisements)
     displayFrequency: z.number().min(15).max(60).optional(),
     width: z.number().positive().optional(),
     height: z.number().positive().optional(),
+    imageUrl: z.string().optional().default(""),
+    targetUrl: z.string().optional().default("#"),
+    provider: z.enum(["internal", "google", "facebook", "other"]).optional().default("internal"),
+    metadata: z.any().optional(),
   });
 
 // TypeScript types for the tables

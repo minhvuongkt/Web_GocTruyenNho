@@ -81,7 +81,7 @@ export function AdManagementPage() {
     isLoading: isLoadingExternalAds, 
     refetch: refetchExternalAds 
   } = useQuery({
-    queryKey: ['/api/external-ads', externalPage, externalLimit, externalStatus, externalPosition, externalProvider, externalSearchTerm],
+    queryKey: ['/api/ads/external', externalPage, externalLimit, externalStatus, externalPosition, externalProvider, externalSearchTerm],
     queryFn: async () => {
       const params = new URLSearchParams();
       params.append('page', externalPage.toString());
@@ -90,8 +90,9 @@ export function AdManagementPage() {
       if (externalPosition && externalPosition !== 'all') params.append('position', externalPosition);
       if (externalProvider && externalProvider !== 'all') params.append('provider', externalProvider);
       if (externalSearchTerm) params.append('search', externalSearchTerm);
+      params.append('type', 'external'); // Mark as external ads only
       
-      const response = await apiRequest('GET', `/api/external-ads?${params.toString()}`);
+      const response = await apiRequest('GET', `/api/ads?${params.toString()}`);
       return response.json();
     },
     enabled: activeTab === 'external'
@@ -124,7 +125,7 @@ export function AdManagementPage() {
   // Mutation for deleting external ads
   const deleteExternalAdMutation = useMutation({
     mutationFn: (id: number) => {
-      return apiRequest('DELETE', `/api/external-ads/${id}`);
+      return apiRequest('DELETE', `/api/ads/${id}`);
     },
     onSuccess: () => {
       toast({
@@ -132,8 +133,8 @@ export function AdManagementPage() {
         description: 'Quảng cáo đã được xóa khỏi hệ thống.',
         variant: 'success'
       });
-      queryClient.invalidateQueries({ queryKey: ['/api/external-ads'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/external-ads/active'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/ads'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/ads/active'] });
     },
     onError: (error) => {
       toast({
@@ -520,8 +521,8 @@ export function AdManagementPage() {
               ad={selectedExternalAd}
               onSuccess={() => {
                 setExternalDialogOpen(false);
-                queryClient.invalidateQueries({ queryKey: ['/api/external-ads'] });
-                queryClient.invalidateQueries({ queryKey: ['/api/external-ads/active'] });
+                queryClient.invalidateQueries({ queryKey: ['/api/ads'] });
+                queryClient.invalidateQueries({ queryKey: ['/api/ads/active'] });
               }}
             />
           </TabsContent>

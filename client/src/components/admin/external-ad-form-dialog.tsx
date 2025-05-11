@@ -425,6 +425,29 @@ export function ExternalAdFormDialog({
               />
             </div>
 
+            <FormField
+              control={form.control}
+              name="displayOrder"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Thứ tự hiển thị</FormLabel>
+                  <FormControl>
+                    <Input 
+                      type="number" 
+                      placeholder="Thứ tự hiển thị (0 = mặc định)"
+                      {...field}
+                      value={field.value === null ? "0" : field.value}
+                      onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : 0)}
+                    />
+                  </FormControl>
+                  <p className="text-xs text-muted-foreground">
+                    Số càng nhỏ thì quảng cáo càng được ưu tiên hiển thị
+                  </p>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
             {watchProvider === "google" && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField

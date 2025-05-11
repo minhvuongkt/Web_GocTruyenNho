@@ -28,8 +28,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Trash2, Edit, Plus, RefreshCw, Search } from 'lucide-react';
 import { AdminLayout } from '@/components/layouts/admin-layout';
 import { format } from 'date-fns';
-import { ExternalAdConfig } from '@/components/ads/external-ad';
-import { Advertisement } from '@/components/ads/ad-context';
+import { Advertisement } from '@shared/schema';
 
 export function AdManagementPage() {
   const { toast } = useToast();
@@ -52,7 +51,7 @@ export function AdManagementPage() {
   const [externalPosition, setExternalPosition] = useState<string | null>(null);
   const [externalProvider, setExternalProvider] = useState<string | null>(null);
   const [externalSearchTerm, setExternalSearchTerm] = useState('');
-  const [selectedExternalAd, setSelectedExternalAd] = useState<ExternalAdConfig | null>(null);
+  const [selectedExternalAd, setSelectedExternalAd] = useState<Advertisement | null>(null);
   const [externalDialogOpen, setExternalDialogOpen] = useState(false);
 
   // Query for regular ads

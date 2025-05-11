@@ -49,8 +49,8 @@ export function ExternalAdManagementPage() {
       params.append('page', page.toString());
       params.append('limit', limit.toString());
       if (status) params.append('status', status);
-      if (position) params.append('position', position);
-      if (provider) params.append('provider', provider);
+      if (position && position !== 'all') params.append('position', position);
+      if (provider && provider !== 'all') params.append('provider', provider);
       if (searchTerm) params.append('search', searchTerm);
       
       return apiRequest('GET', `/api/external-ads?${params.toString()}`);
@@ -177,7 +177,7 @@ export function ExternalAdManagementPage() {
                       <SelectValue placeholder="Vị trí" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Tất cả vị trí</SelectItem>
+                      <SelectItem value="all">Tất cả vị trí</SelectItem>
                       <SelectItem value="top">Trên đầu</SelectItem>
                       <SelectItem value="bottom">Dưới chân</SelectItem>
                       <SelectItem value="left">Bên trái</SelectItem>
@@ -193,7 +193,7 @@ export function ExternalAdManagementPage() {
                       <SelectValue placeholder="Nhà cung cấp" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Tất cả nhà cung cấp</SelectItem>
+                      <SelectItem value="all">Tất cả nhà cung cấp</SelectItem>
                       <SelectItem value="google">Google AdSense</SelectItem>
                       <SelectItem value="facebook">Facebook</SelectItem>
                       <SelectItem value="tiktok">TikTok</SelectItem>

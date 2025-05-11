@@ -339,7 +339,7 @@ export function registerAdRoutes(app: express.Express) {
           )
         )
         // Order by displayOrder field
-        .orderBy((eb) => eb.asc(externalAdConfigs.displayOrder))
+        .orderBy({ column: externalAdConfigs.displayOrder, order: 'asc' })
       
       res.status(200).json(activeExternalAds);
     } catch (error) {

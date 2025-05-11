@@ -31,18 +31,35 @@ import {
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
-import { ExternalAdConfig } from "@/components/ads/external-ad";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { cn } from "@/lib/utils";
+import { CalendarIcon } from "lucide-react";
+import { format } from "date-fns";
+import { Advertisement } from "@shared/schema";
 
 // Schema for external ad validation
 const externalAdSchema = z.object({
-  name: z.string().min(1, "Tên quảng cáo là bắt buộc"),
-  provider: z.string().min(1, "Nhà cung cấp là bắt buộc"),
-  position: z.string().min(1, "Vị trí là bắt buộc"),
-  scriptContent: z.string().min(1, "Nội dung script là bắt buộc"),
+  title: z.string().min(1, "Tiêu đề là bắt buộc"),
+  provider: z.enum(["google", "facebook", "other"], {
+    required_error: "Vui lòng chọn nhà cung cấp",
+  }),
+  position: z.enum(["top", "bottom", "left", "right", "popup", "overlay", "custom"], {
+    required_error: "Vui lòng chọn vị trí",
+  }),
   width: z.number().nullable().optional(),
   height: z.number().nullable().optional(),
-  containerId: z.string().optional(),
+  displayOrder: z.number().min(0).default(0),
   isActive: z.boolean().default(true),
+  startDate: z.date({
+    required_error: "Vui lòng chọn ngày bắt đầu",
+  }),
+  endDate: z.date({
+    required_error: "Vui lòng chọn ngày kết thúc",
+  }),
+  // Các thuộc tính cho metadata
+  scriptContent: z.string().min(1, "Nội dung script là bắt buộc"),
+  containerId: z.string().optional(),
   isMobileEnabled: z.boolean().default(true),
   adUnitId: z.string().optional(),
   slotId: z.string().optional(),
@@ -57,7 +74,7 @@ type ExternalAdFormValues = z.infer<typeof externalAdSchema>;
 interface ExternalAdFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  ad: ExternalAdConfig | null;
+  ad: Advertisement | null;
   onSuccess: () => void;
 }
 
@@ -69,26 +86,37 @@ export function ExternalAdFormDialog({
 }: ExternalAdFormDialogProps) {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // Extract metadata from ad if it exists
+  const metadata = ad?.metadata ? (typeof ad.metadata === 'string' ? JSON.parse(ad.metadata) : ad.metadata) : {};
 
   // Initialize form with ad data or defaults
   const form = useForm<ExternalAdFormValues>({
     resolver: zodResolver(externalAdSchema),
     defaultValues: {
-      name: ad?.name || "",
-      provider: ad?.provider || "google",
-      position: ad?.position || "top",
-      scriptContent: ad?.scriptContent || "",
+      title: ad?.title || "",
+      provider: (ad?.provider as any) || "google",
+      position: ad?.position || "custom",
       width: ad?.width || null,
       height: ad?.height || null,
-      containerId: ad?.containerId || "",
+      displayOrder: ad?.displayOrder || 0,
       isActive: ad?.isActive ?? true,
-      isMobileEnabled: ad?.isMobileEnabled ?? true,
-      adUnitId: ad?.adUnitId || "",
-      slotId: ad?.slotId || "",
-      publisherId: ad?.publisherId || "",
-      cssSelector: ad?.cssSelector || "",
-      cssStyles: ad?.cssStyles || "",
-      format: ad?.format || "",
+      startDate: ad?.startDate ? new Date(ad.startDate) : new Date(),
+      endDate: ad?.endDate ? new Date(ad.endDate) : (() => {
+        const date = new Date();
+        date.setFullYear(date.getFullYear() + 1);
+        return date;
+      })(),
+      // Metadata fields
+      scriptContent: metadata.scriptContent || "",
+      containerId: metadata.containerId || "",
+      isMobileEnabled: metadata.isMobileEnabled ?? true,
+      adUnitId: metadata.adUnitId || "",
+      slotId: metadata.slotId || "",
+      publisherId: metadata.publisherId || "",
+      cssSelector: metadata.cssSelector || "",
+      cssStyles: metadata.cssStyles || "",
+      format: metadata.format || "",
     },
   });
 
@@ -97,13 +125,40 @@ export function ExternalAdFormDialog({
     setIsSubmitting(true);
 
     try {
+      // Create metadata object from form data
+      const metadata = {
+        scriptContent: data.scriptContent,
+        containerId: data.containerId,
+        isMobileEnabled: data.isMobileEnabled,
+        adUnitId: data.adUnitId,
+        slotId: data.slotId,
+        publisherId: data.publisherId,
+        cssSelector: data.cssSelector,
+        cssStyles: data.cssStyles,
+        format: data.format,
+      };
+
+      // Create payload for API request
+      const payload = {
+        title: data.title,
+        provider: data.provider,
+        position: data.position,
+        width: data.width,
+        height: data.height,
+        displayOrder: data.displayOrder,
+        isActive: data.isActive,
+        startDate: data.startDate.toISOString(),
+        endDate: data.endDate.toISOString(),
+        metadata: metadata
+      };
+
       let response;
       if (ad) {
         // Update existing ad
-        response = await apiRequest("PATCH", `/api/external-ads/${ad.id}`, data);
+        response = await apiRequest("PATCH", `/api/ads/${ad.id}`, payload);
       } else {
         // Create new ad
-        response = await apiRequest("POST", "/api/external-ads", data);
+        response = await apiRequest("POST", "/api/ads", payload);
       }
 
       // Show success message
@@ -112,7 +167,7 @@ export function ExternalAdFormDialog({
         description: ad
           ? "Quảng cáo bên thứ 3 đã được cập nhật."
           : "Quảng cáo bên thứ 3 mới đã được thêm vào hệ thống.",
-        variant: "success",
+        variant: "default",
       });
 
       // Call success callback

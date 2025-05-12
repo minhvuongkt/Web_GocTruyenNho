@@ -95,9 +95,36 @@ export function ExternalAdFormDialog({
       : ad.metadata) 
     : {};
     
+  // Giải quyết vấn đề metadata từ server
+  // Kiểm tra xem ad có đầy đủ thông tin script mà không có trong metadata không
+  if (ad && ad.scriptContent && !metadata.scriptContent) {
+    metadata.scriptContent = ad.scriptContent;
+  }
+  if (ad && ad.adUnitId && !metadata.adUnitId) {
+    metadata.adUnitId = ad.adUnitId;
+  }
+  if (ad && ad.slotId && !metadata.slotId) {
+    metadata.slotId = ad.slotId;
+  }
+  if (ad && ad.publisherId && !metadata.publisherId) {
+    metadata.publisherId = ad.publisherId;
+  }
+  if (ad && ad.cssSelector && !metadata.cssSelector) {
+    metadata.cssSelector = ad.cssSelector;
+  }
+  if (ad && ad.cssStyles && !metadata.cssStyles) {
+    metadata.cssStyles = ad.cssStyles;
+  }
+  if (ad && ad.format && !metadata.format) {
+    metadata.format = ad.format;
+  }
+  if (ad && ad.isMobileEnabled !== undefined && metadata.isMobileEnabled === undefined) {
+    metadata.isMobileEnabled = ad.isMobileEnabled;
+  }
+  
   // Log để debug
   console.log('ExternalAdFormDialog - Ad Data:', ad);
-  console.log('ExternalAdFormDialog - Metadata:', metadata);
+  console.log('ExternalAdFormDialog - Metadata sau khi xử lý:', metadata);
 
   // Initialize form with ad data or defaults
   const form = useForm<ExternalAdFormValues>({

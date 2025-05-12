@@ -363,7 +363,23 @@ export function OverlayAd() {
     return (
       <div 
         className="fixed inset-0 z-40 cursor-default"
-        onClick={() => clickAd(externalAd.id, 'overlay')}
+        onClick={(e) => {
+          // Ngăn chặn event bubbling
+          e.stopPropagation();
+          e.preventDefault();
+          
+          // Ngay lập tức update state để đóng overlay
+          closeAd('overlay');
+          
+          // Ghi nhận click và chuyển hướng nếu có targetUrl
+          clickAd(externalAd.id, 'overlay');
+          if (externalAd.targetUrl) {
+            window.open(externalAd.targetUrl, '_blank');
+          }
+          
+          // Đảm bảo component biến mất ngay lập tức
+          return false;
+        }}
         style={{ backgroundColor: 'transparent' }}
         aria-hidden="true"
       >
@@ -383,9 +399,22 @@ export function OverlayAd() {
   return (
     <div 
       className="fixed inset-0 z-40 cursor-default"
-      onClick={() => {
+      onClick={(e) => {
+        // Ngăn chặn event bubbling
+        e.stopPropagation();
+        e.preventDefault();
+        
+        // Ngay lập tức update state để đóng overlay
+        closeAd('overlay');
+        
+        // Ghi nhận click
         clickAd(ad.id, 'overlay');
+        
+        // Mở trang đích trong tab mới
         window.open(ad.targetUrl, '_blank');
+        
+        // Đảm bảo component sẽ biến mất ngay lập tức
+        return false;
       }}
       style={{ backgroundColor: 'transparent' }}
       aria-hidden="true"

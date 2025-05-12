@@ -139,6 +139,16 @@ export function AdProvider({ children }: { children: ReactNode }) {
           groupedAds[ad.position].push(ad);
         });
         
+        // Shuffle each position's ads to get random selection
+        Object.keys(groupedAds).forEach(position => {
+          // Simple Fisher-Yates shuffle algorithm
+          const ads = groupedAds[position];
+          for (let i = ads.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [ads[i], ads[j]] = [ads[j], ads[i]];
+          }
+        });
+        
         setAds(groupedAds);
       }
       return true;
@@ -206,6 +216,16 @@ export function AdProvider({ children }: { children: ReactNode }) {
             }
             
             groupedExternalAds[ad.position].push(externalAd);
+          }
+        });
+        
+        // Shuffle each position's external ads for random selection
+        Object.keys(groupedExternalAds).forEach(position => {
+          // Simple Fisher-Yates shuffle algorithm
+          const ads = groupedExternalAds[position];
+          for (let i = ads.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [ads[i], ads[j]] = [ads[j], ads[i]];
           }
         });
         

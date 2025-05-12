@@ -165,9 +165,10 @@ export function registerAdRoutes(app: express.Express) {
         conditions.push(eq(advertisements.provider, 'internal'));
       }
       
+      // Truy vấn quảng cáo đang hoạt động
       const activeAds = await db.select().from(advertisements)
         .where(and(...conditions))
-        .orderBy(asc(advertisements.displayOrder), desc(advertisements.id));
+        .orderBy(asc(advertisements.displayOrder), sql`random()`); // Thêm random() để trộn ngẫu nhiên
       
       // Chuyển đổi kết quả thành JSON thuần để tránh lỗi cấu trúc vòng
       const plainResults = JSON.parse(JSON.stringify(activeAds));

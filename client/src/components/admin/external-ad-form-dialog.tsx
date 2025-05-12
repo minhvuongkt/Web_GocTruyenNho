@@ -47,6 +47,7 @@ const externalAdSchema = z.object({
   position: z.enum(["top", "bottom", "left", "right", "popup", "overlay", "custom"], {
     required_error: "Vui lòng chọn vị trí",
   }),
+  targetUrl: z.string().default("https://example.com"),
   width: z.number().nullable().optional(),
   height: z.number().nullable().optional(),
   displayOrder: z.number().min(0).default(0),
@@ -105,6 +106,7 @@ export function ExternalAdFormDialog({
       title: ad?.title || "",
       provider: (ad?.provider as any) || "google",
       position: ad?.position || "custom",
+      targetUrl: ad?.targetUrl || "https://example.com",
       width: ad?.width || null,
       height: ad?.height || null,
       displayOrder: ad?.displayOrder || 0,
@@ -157,8 +159,11 @@ export function ExternalAdFormDialog({
         isActive: data.isActive,
         startDate: data.startDate.toISOString(),
         endDate: data.endDate.toISOString(),
-        metadata: metadata
+        metadata: metadata,
+        targetUrl: ad?.targetUrl || "https://example.com" // Đảm bảo có targetUrl để tránh lỗi null
       };
+      
+      console.log("Sending payload to API:", payload);
 
       let response;
       if (ad) {
@@ -287,6 +292,20 @@ export function ExternalAdFormDialog({
                         <SelectItem value="other">Khác</SelectItem>
                       </SelectContent>
                     </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={form.control}
+                name="targetUrl"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Target URL</FormLabel>
+                    <FormControl>
+                      <Input placeholder="https://example.com" {...field} />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}

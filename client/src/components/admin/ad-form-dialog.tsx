@@ -20,6 +20,7 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
+  FormDescription,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import {
@@ -33,9 +34,11 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
-import { CalendarIcon } from "lucide-react";
+import { CalendarIcon, Upload, Link, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import { Advertisement } from "@shared/schema";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 // Schema for ad validation
 const adSchema = z.object({
@@ -56,6 +59,7 @@ const adSchema = z.object({
     required_error: "Vui lòng chọn ngày kết thúc",
   }),
   provider: z.enum(["internal", "google", "facebook", "other"]).default("internal"),
+  imageUrl: z.string().optional(),
 });
 
 type AdFormValues = z.infer<typeof adSchema>;
@@ -72,6 +76,8 @@ export function AdFormDialog({ open, onOpenChange, ad, onSuccess }: AdFormDialog
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string>(ad?.imageUrl || "");
+  const [imageInputType, setImageInputType] = useState<"file" | "url">(ad?.imageUrl?.startsWith("http") ? "url" : "file");
+  const [isUploading, setIsUploading] = useState(false);
 
   // Initialize form with ad data or defaults
   const form = useForm<AdFormValues>({
@@ -91,7 +97,8 @@ export function AdFormDialog({ open, onOpenChange, ad, onSuccess }: AdFormDialog
         date.setFullYear(date.getFullYear() + 1);
         return date;
       })(),
-      provider: ad?.provider || "internal"
+      provider: ad?.provider || "internal",
+      imageUrl: ad?.imageUrl || "",
     },
   });
 
@@ -100,11 +107,61 @@ export function AdFormDialog({ open, onOpenChange, ad, onSuccess }: AdFormDialog
     const file = e.target.files?.[0];
     if (file) {
       setImageFile(file);
+      // Reset the imageUrl field
+      form.setValue("imageUrl", "");
       const reader = new FileReader();
       reader.onloadend = () => {
         setImagePreview(reader.result as string);
       };
       reader.readAsDataURL(file);
+    }
+  };
+  
+  // Handle image URL input
+  const handleImageUrlChange = (url: string) => {
+    // Clear the file input when URL is used
+    setImageFile(null);
+    setImagePreview(url);
+  };
+
+  // Handle direct file upload for preview
+  const handleUploadImage = async () => {
+    if (!imageFile) return;
+    
+    setIsUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("adImage", imageFile);
+      
+      const response = await fetch('/api/upload/ad-image', {
+        method: 'POST',
+        body: formData,
+        credentials: 'include'
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to upload image');
+      }
+      
+      const data = await response.json();
+      
+      // Update the form with the image URL
+      form.setValue("imageUrl", data.imageUrl);
+      setImagePreview(data.imageUrl);
+      toast({
+        title: "Upload successful",
+        description: "Image has been uploaded successfully",
+      });
+      
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      toast({
+        title: "Upload failed",
+        description: error instanceof Error ? error.message : "Failed to upload image",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -144,9 +201,13 @@ export function AdFormDialog({ open, onOpenChange, ad, onSuccess }: AdFormDialog
       formData.append("startDate", data.startDate.toISOString());
       formData.append("endDate", data.endDate.toISOString());
 
-      // Add image file if selected
-      if (imageFile) {
+      // Handle image source: either a file or URL
+      if (imageFile && imageInputType === "file") {
+        // If direct file upload without pre-upload
         formData.append("image", imageFile);
+      } else if (data.imageUrl) {
+        // If URL input or pre-uploaded image
+        formData.append("imageUrl", data.imageUrl);
       }
 
       let response;
@@ -182,6 +243,8 @@ export function AdFormDialog({ open, onOpenChange, ad, onSuccess }: AdFormDialog
 
       // Call success callback
       onSuccess();
+      // Close the dialog
+      onOpenChange(false);
     } catch (error) {
       console.error("Error saving ad:", error);
       toast({
@@ -486,17 +549,91 @@ export function AdFormDialog({ open, onOpenChange, ad, onSuccess }: AdFormDialog
               />
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-4">
               <FormLabel>Hình ảnh quảng cáo</FormLabel>
-              <Input
-                type="file"
-                accept="image/*"
-                onChange={handleImageChange}
-                className="file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
-              />
-              <p className="text-sm text-muted-foreground">
-                Định dạng: JPG, PNG, GIF. Kích thước tối đa: 2MB.
-              </p>
+              
+              <RadioGroup 
+                defaultValue={imageInputType} 
+                onValueChange={(value) => setImageInputType(value as "file" | "url")}
+                className="flex space-x-4 mb-2"
+              >
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="file" id="file-upload" />
+                  <label htmlFor="file-upload" className="cursor-pointer flex items-center">
+                    <Upload className="h-4 w-4 mr-1" />
+                    Tải lên từ máy
+                  </label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="url" id="url-input" />
+                  <label htmlFor="url-input" className="cursor-pointer flex items-center">
+                    <Link className="h-4 w-4 mr-1" />
+                    Nhập URL
+                  </label>
+                </div>
+              </RadioGroup>
+              
+              {imageInputType === "file" ? (
+                <div className="space-y-4">
+                  <Input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageChange}
+                    className="file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
+                  />
+                  
+                  <p className="text-sm text-muted-foreground">
+                    Định dạng: JPG, PNG, GIF. Kích thước tối đa: 5MB.
+                  </p>
+                  
+                  {imageFile && (
+                    <div className="flex items-center space-x-2">
+                      <Button 
+                        type="button" 
+                        size="sm" 
+                        onClick={handleUploadImage}
+                        disabled={isUploading}
+                      >
+                        {isUploading ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Đang tải lên...
+                          </>
+                        ) : (
+                          <>Tải lên</> 
+                        )}
+                      </Button>
+                      <p className="text-xs text-muted-foreground">
+                        Tải lên trước để lưu ảnh vào máy chủ
+                      </p>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <FormField
+                  control={form.control}
+                  name="imageUrl"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormControl>
+                        <Input 
+                          placeholder="Nhập URL hình ảnh (https://...)" 
+                          type="url"
+                          {...field}
+                          onChange={(e) => {
+                            field.onChange(e);
+                            handleImageUrlChange(e.target.value);
+                          }}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Nhập URL đầy đủ của hình ảnh (bắt đầu bằng https://)
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
 
               {(imagePreview || ad?.imageUrl) && (
                 <div className="mt-4 border rounded-md p-2 bg-muted/10">

@@ -36,6 +36,7 @@ function transformAdData(ad: any) {
         return {
           ...ad,
           name: ad.title,
+          metadata: metadata, // Thêm metadata trước khi chuyển đổi để đảm bảo nó có sẵn trong form
           scriptContent: metadata.scriptContent || '',
           adUnitId: metadata.adUnitId || '',
           slotId: metadata.slotId || '',

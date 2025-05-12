@@ -88,7 +88,15 @@ export function ExternalAdFormDialog({
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   // Extract metadata from ad if it exists
-  const metadata = ad?.metadata ? (typeof ad.metadata === 'string' ? JSON.parse(ad.metadata) : ad.metadata) : {};
+  const metadata = ad?.metadata 
+    ? (typeof ad.metadata === 'string' 
+      ? JSON.parse(ad.metadata) 
+      : ad.metadata) 
+    : {};
+    
+  // Log để debug
+  console.log('ExternalAdFormDialog - Ad Data:', ad);
+  console.log('ExternalAdFormDialog - Metadata:', metadata);
 
   // Initialize form with ad data or defaults
   const form = useForm<ExternalAdFormValues>({

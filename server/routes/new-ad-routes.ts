@@ -13,6 +13,10 @@ import {
 } from 'drizzle-orm';
 import { advertisements } from '@shared/schema';
 import { ensureAdmin } from '../auth-middleware';
+import multer from 'multer';
+import path from 'path';
+import { v4 as uuidv4 } from 'uuid';
+import fs from 'fs';
 
 // Chuyển đổi dữ liệu quảng cáo dựa trên provider
 function transformAdData(ad: any) {
@@ -178,8 +182,44 @@ export function registerAdRoutes(app: express.Express) {
     }
   });
 
-  // Tạo quảng cáo mới
-  app.post('/api/ads', ensureAdmin, async (req: Request, res: Response) => {
+  // Middleware to handle file uploads for ads
+  
+  // Create uploads dir if not exists
+  const adUploadDir = path.join(process.cwd(), 'public', 'uploads', 'ads');
+  if (!fs.existsSync(adUploadDir)) {
+    fs.mkdirSync(adUploadDir, { recursive: true });
+  }
+  
+  // Configure storage for ad images
+  const adImageStorage = multer.diskStorage({
+    destination: (req: any, file: any, cb: Function) => {
+      cb(null, adUploadDir);
+    },
+    filename: (req: any, file: any, cb: Function) => {
+      const uniqueSuffix = uuidv4();
+      const ext = path.extname(file.originalname);
+      cb(null, 'ad-image-' + uniqueSuffix + ext);
+    }
+  });
+  
+  // Filter for ad images
+  const adImageFilter = (req: any, file: any, cb: Function) => {
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only image files are allowed!'), false);
+    }
+  };
+  
+  // Create multer uploader
+  const uploadAdImage = multer({
+    storage: adImageStorage,
+    fileFilter: adImageFilter,
+    limits: { fileSize: 5 * 1024 * 1024 } // 5MB
+  });
+  
+  // Tạo quảng cáo mới - supports both direct file upload and imageUrl
+  app.post('/api/ads', ensureAdmin, uploadAdImage.single('image'), async (req: Request, res: Response) => {
     try {
       const { 
         title, imageUrl, targetUrl, position, 
@@ -187,7 +227,16 @@ export function registerAdRoutes(app: express.Express) {
         startDate, endDate, isActive, provider = 'internal', metadata
       } = req.body;
       
-      console.log('Received data:', { title, imageUrl, targetUrl, position, startDate, endDate });
+      // Determine image source - from file upload or URL
+      let finalImageUrl = imageUrl;
+      
+      // If a file was uploaded, use its path
+      if (req.file) {
+        finalImageUrl = `/uploads/ads/${req.file.filename}`;
+        console.log('Image uploaded:', finalImageUrl);
+      }
+      
+      console.log('Received data:', { title, imageUrl: finalImageUrl, targetUrl, position, startDate, endDate });
       
       // Validate required fields
       if (!title || !position) {
@@ -225,7 +274,7 @@ export function registerAdRoutes(app: express.Express) {
       
       const newAd = {
         title,
-        imageUrl,
+        imageUrl: finalImageUrl,
         targetUrl,
         position,
         displayOrder: displayOrder || 0,
@@ -254,7 +303,7 @@ export function registerAdRoutes(app: express.Express) {
   });
 
   // Cập nhật quảng cáo
-  app.put('/api/ads/:id', ensureAdmin, async (req: Request, res: Response) => {
+  app.put('/api/ads/:id', ensureAdmin, uploadAdImage.single('image'), async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
       const { 
@@ -262,6 +311,15 @@ export function registerAdRoutes(app: express.Express) {
         displayOrder, width, height, displayFrequency,
         startDate, endDate, isActive, metadata, provider
       } = req.body;
+      
+      // Determine image source - from file upload or URL
+      let finalImageUrl = imageUrl;
+      
+      // If a file was uploaded, use its path
+      if (req.file) {
+        finalImageUrl = `/uploads/ads/${req.file.filename}`;
+        console.log('Image uploaded in update:', finalImageUrl);
+      }
       
       console.log('Update - Received dates:', { startDate, endDate });
       
@@ -296,7 +354,7 @@ export function registerAdRoutes(app: express.Express) {
       
       const updateData = {
         title,
-        imageUrl,
+        imageUrl: finalImageUrl,
         targetUrl,
         position,
         displayOrder: displayOrder || 0,

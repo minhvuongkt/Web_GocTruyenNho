@@ -160,7 +160,7 @@ export function ExternalAdFormDialog({
         startDate: data.startDate.toISOString(),
         endDate: data.endDate.toISOString(),
         metadata: metadata,
-        targetUrl: ad?.targetUrl || "https://example.com" // Đảm bảo có targetUrl để tránh lỗi null
+        targetUrl: data.targetUrl // Sử dụng targetUrl từ form
       };
       
       console.log("Sending payload to API:", payload);
@@ -185,6 +185,39 @@ export function ExternalAdFormDialog({
 
       // Call success callback
       onSuccess();
+      
+      // Reset form nếu là thêm mới (không phải edit)
+      if (!ad) {
+        form.reset({
+          title: "",
+          provider: "google",
+          position: "top",
+          targetUrl: "https://example.com",
+          width: null,
+          height: null,
+          displayOrder: 0,
+          isActive: true,
+          startDate: new Date(),
+          endDate: (() => {
+            const date = new Date();
+            date.setFullYear(date.getFullYear() + 1);
+            return date;
+          })(),
+          scriptContent: "",
+          containerId: "",
+          isMobileEnabled: true,
+          adUnitId: "",
+          slotId: "",
+          publisherId: "",
+          cssSelector: "",
+          cssStyles: "",
+          format: "",
+        });
+        // Thông báo cho user và giữ dialog mở
+        return;
+      }
+      // Close the dialog nếu là edit
+      onOpenChange(false);
     } catch (error) {
       console.error("Error saving external ad:", error);
       toast({
@@ -192,6 +225,35 @@ export function ExternalAdFormDialog({
         description: error instanceof Error ? error.message : "Không thể lưu quảng cáo bên thứ 3",
         variant: "destructive",
       });
+      
+      // Nếu là thêm mới, reset form ngay cả khi lỗi (để user có thể thử lại)
+      if (!ad) {
+        form.reset({
+          title: "",
+          provider: "google",
+          position: "top",
+          targetUrl: "https://example.com",
+          width: null,
+          height: null,
+          displayOrder: 0,
+          isActive: true,
+          startDate: new Date(),
+          endDate: (() => {
+            const date = new Date();
+            date.setFullYear(date.getFullYear() + 1);
+            return date;
+          })(),
+          scriptContent: "",
+          containerId: "",
+          isMobileEnabled: true,
+          adUnitId: "",
+          slotId: "",
+          publisherId: "",
+          cssSelector: "",
+          cssStyles: "",
+          format: "",
+        });
+      }
     } finally {
       setIsSubmitting(false);
     }

@@ -243,7 +243,32 @@ export function AdFormDialog({ open, onOpenChange, ad, onSuccess }: AdFormDialog
 
       // Call success callback
       onSuccess();
-      // Close the dialog
+      // Reset form nếu là thêm mới (không phải edit)
+      if (!ad) {
+        form.reset({
+          title: "",
+          targetUrl: "",
+          position: "top",
+          displayOrder: 0,
+          width: null,
+          height: null,
+          displayFrequency: 30,
+          isActive: true,
+          startDate: new Date(),
+          endDate: (() => {
+            const date = new Date();
+            date.setFullYear(date.getFullYear() + 1);
+            return date;
+          })(),
+          imageUrl: "",
+        });
+        // Clear uploaded image
+        setImageFile(null);
+        setImagePreview("");
+        // Thông báo cho user và giữ dialog mở
+        return;
+      }
+      // Close the dialog nếu là edit
       onOpenChange(false);
     } catch (error) {
       console.error("Error saving ad:", error);
@@ -252,6 +277,30 @@ export function AdFormDialog({ open, onOpenChange, ad, onSuccess }: AdFormDialog
         description: error instanceof Error ? error.message : "Không thể lưu quảng cáo",
         variant: "destructive",
       });
+      
+      // Nếu là thêm mới, reset form ngay cả khi lỗi (để user có thể thử lại)
+      if (!ad) {
+        form.reset({
+          title: "",
+          targetUrl: "",
+          position: "top",
+          displayOrder: 0,
+          width: null,
+          height: null,
+          displayFrequency: 30,
+          isActive: true,
+          startDate: new Date(),
+          endDate: (() => {
+            const date = new Date();
+            date.setFullYear(date.getFullYear() + 1);
+            return date;
+          })(),
+          imageUrl: "",
+        });
+        // Clear uploaded image
+        setImageFile(null);
+        setImagePreview("");
+      }
     } finally {
       setIsSubmitting(false);
     }

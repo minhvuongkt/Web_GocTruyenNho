@@ -341,7 +341,7 @@ export function PopupAd() {
   );
 }
 
-// Component for overlay ads
+// Component for overlay ads - invisible version that only captures clicks
 export function OverlayAd() {
   const { ads, externalAds, positions, isReading, clickAd, closeAd } = useAds();
   const overlayAds = ads.overlay || [];
@@ -356,67 +356,40 @@ export function OverlayAd() {
   if (overlayExternalAds.length > 0) {
     const externalAd = overlayExternalAds[0];
     
+    // For script-based ads, we need a container to execute scripts
+    const needsScriptExecution = externalAd.metadata && externalAd.metadata.scriptContent;
+    
+    // Completely invisible - just tracks clicks and executes scripts
     return (
-      <div className="fixed inset-0 z-40 flex items-center justify-center pointer-events-none animate-in fade-in duration-300 backdrop-blur-sm">
-        <div className="pointer-events-auto max-w-[320px] relative animate-in slide-in-from-top-4 duration-300">
-          <div className="absolute -top-6 left-0 right-0 text-center">
-            <span className="text-xs bg-black/70 text-white px-2 py-1 rounded">Xuất hiện lại sau 5 phút khi đóng</span>
-          </div>
-          <div className="relative rounded-lg overflow-hidden shadow-lg bg-background/90">
+      <div 
+        className="fixed inset-0 z-40 cursor-default"
+        onClick={() => clickAd(externalAd.id, 'overlay')}
+        style={{ backgroundColor: 'transparent' }}
+        aria-hidden="true"
+      >
+        {needsScriptExecution && externalAd.metadata && (
+          <div className="sr-only" aria-hidden="true">
             <ExternalAd config={externalAd} />
-            <div className="absolute top-0 left-0 bg-primary/80 text-primary-foreground px-2 py-1 text-xs">
-              Quảng cáo {externalAd.provider}
-            </div>
           </div>
-          <button 
-            onClick={() => closeAd('overlay')} 
-            className="absolute -top-2 -right-2 bg-white shadow-md p-1 rounded-full text-gray-700 hover:bg-gray-200 z-10"
-            aria-label="Close advertisement"
-          >
-            <X size={16} />
-          </button>
-        </div>
+        )}
       </div>
     );
   }
   
-  // Display the first ad in the internal ads array if no external ads
+  // Get the first regular ad
   const ad = overlayAds[0];
   
+  // Invisible overlay that just captures clicks and redirects
   return (
-    <div className="fixed inset-0 z-40 flex items-center justify-center pointer-events-none animate-in fade-in duration-300">
-      <div className="pointer-events-auto max-w-[320px] relative animate-in slide-in-from-top-4 duration-300">
-        <div className="absolute -top-6 left-0 right-0 text-center">
-          <span className="text-xs bg-black/70 text-white px-2 py-1 rounded">Xuất hiện lại sau 5 phút khi đóng</span>
-        </div>
-        <a 
-          href={ad.targetUrl} 
-          target="_blank" 
-          rel="noopener noreferrer"
-          onClick={() => clickAd(ad.id, 'overlay')}
-          className="block relative rounded-lg overflow-hidden shadow-lg ad-overlay-bg"
-        >
-          <img 
-            src={ad.imageUrl} 
-            alt={ad.title} 
-            className="w-full object-contain"
-          />
-          <div className="absolute top-0 left-0 bg-primary/80 text-primary-foreground px-2 py-1 text-xs">
-            Quảng cáo
-          </div>
-          <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-white p-2 text-center text-sm font-medium">
-            {ad.title}
-          </div>
-        </a>
-        <button 
-          onClick={() => closeAd('overlay')} 
-          className="absolute -top-2 -right-2 bg-white shadow-md p-1 rounded-full text-gray-700 hover:bg-gray-200 z-10"
-          aria-label="Close advertisement"
-        >
-          <X size={16} />
-        </button>
-      </div>
-    </div>
+    <div 
+      className="fixed inset-0 z-40 cursor-default"
+      onClick={() => {
+        clickAd(ad.id, 'overlay');
+        window.open(ad.targetUrl, '_blank');
+      }}
+      style={{ backgroundColor: 'transparent' }}
+      aria-hidden="true"
+    />
   );
 }
 

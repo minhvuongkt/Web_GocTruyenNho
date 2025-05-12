@@ -43,6 +43,20 @@ const mediaStorage = multer.diskStorage({
   }
 });
 
+// Cấu hình lưu trữ cho hình ảnh quảng cáo
+const adImageStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'ads');
+    createUploadsDir(uploadDir);
+    cb(null, uploadDir);
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = uuidv4();
+    const ext = path.extname(file.originalname);
+    cb(null, 'ad-image-' + uniqueSuffix + ext);
+  }
+});
+
 // Custom error for file type validation
 class FileTypeError extends Error {
   constructor(message: string) {
@@ -76,6 +90,15 @@ const mediaFilter = (req: any, file: Express.Multer.File, cb: Function) => {
   }
 };
 
+// Filter cho hình ảnh quảng cáo
+const adImageFilter = (req: any, file: Express.Multer.File, cb: Function) => {
+  if (file.mimetype.startsWith('image/')) {
+    cb(null, true);
+  } else {
+    cb(new FileTypeError('Unsupported file type! Only images are allowed for advertisements.'), false);
+  }
+};
+
 // Tạo multer uploader
 const uploadDocument = multer({
   storage: documentStorage,
@@ -87,6 +110,12 @@ const uploadMedia = multer({
   storage: mediaStorage,
   fileFilter: mediaFilter,
   limits: { fileSize: 20 * 1024 * 1024 } // 20MB
+});
+
+const uploadAdImage = multer({
+  storage: adImageStorage,
+  fileFilter: adImageFilter,
+  limits: { fileSize: 5 * 1024 * 1024 } // 5MB
 });
 
 /**
@@ -423,6 +452,33 @@ export function registerUploadRoutes(app: express.Express) {
       console.error('Error uploading media:', error);
       res.status(500).json({ 
         error: 'Failed to upload media', 
+        details: error.message 
+      });
+    }
+  });
+  
+  // Route cho upload hình ảnh quảng cáo
+  app.post('/api/upload/ad-image', ensureAuthenticated, ensureAdmin, uploadAdImage.single('adImage'), async (req: express.Request, res: express.Response) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: 'No image file uploaded' });
+      }
+      
+      // Tạo URL cho hình ảnh quảng cáo
+      const imageUrl = `/uploads/ads/${req.file.filename}`;
+      
+      // Trả về URL hình ảnh
+      res.json({
+        success: true,
+        imageUrl,
+        originalName: req.file.originalname,
+        mimeType: req.file.mimetype
+      });
+      
+    } catch (error: any) {
+      console.error('Error uploading ad image:', error);
+      res.status(500).json({ 
+        error: 'Failed to upload advertisement image', 
         details: error.message 
       });
     }

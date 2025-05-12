@@ -187,7 +187,18 @@ export function registerAdRoutes(app: express.Express) {
         startDate, endDate, isActive, provider = 'internal', metadata
       } = req.body;
       
-      console.log('Received dates:', { startDate, endDate });
+      console.log('Received data:', { title, imageUrl, targetUrl, position, startDate, endDate });
+      
+      // Validate required fields
+      if (!title || !position) {
+        return res.status(400).json({ 
+          error: 'Missing required fields',
+          details: {
+            title: !title ? 'Title is required' : null,
+            position: !position ? 'Position is required' : null
+          }
+        });
+      }
       
       // Validate and parse dates
       let parsedStartDate, parsedEndDate;
@@ -392,6 +403,13 @@ export function registerAdRoutes(app: express.Express) {
     }
   });
 
+  // === IMAGE UPLOAD REDIRECT ROUTE ===
+  // This route redirects to the shared upload route in document-upload-routes.ts
+  app.post('/api/ads/upload-image', ensureAdmin, async (req: Request, res: Response) => {
+    // Redirect to the centralized upload route
+    res.redirect(307, '/api/upload/ad-image');
+  });
+  
   // === EXTERNAL ADS ROUTES (Quảng cáo bên ngoài) ===
   // Legacy endpoints that redirect to the new consolidated API
   
@@ -454,8 +472,9 @@ export function registerAdRoutes(app: express.Express) {
       // Chuyển request tới API tạo quảng cáo thống nhất
       req.body = newAdRequest;
       
-      // Forward to the main ad creation endpoint
-      return app.handle(req, res);
+      // Change the URL and redirect to main API
+      req.url = '/api/ads';
+      return app._router.handle(req, res);
     } catch (error) {
       console.error('Error creating external ad:', error);
       res.status(500).json({ error: 'Không thể tạo quảng cáo bên ngoài' });
@@ -467,7 +486,7 @@ export function registerAdRoutes(app: express.Express) {
     try {
       // Forward the request to the main ad update endpoint
       req.url = `/api/ads/${req.params.id}`;
-      return app.handle(req, res);
+      return app._router.handle(req, res);
     } catch (error) {
       console.error('Error updating external ad:', error);
       res.status(500).json({ error: 'Không thể cập nhật quảng cáo bên ngoài' });
@@ -479,7 +498,7 @@ export function registerAdRoutes(app: express.Express) {
     try {
       // Forward the request to the main ad deletion endpoint
       req.url = `/api/ads/${req.params.id}`;
-      return app.handle(req, res);
+      return app._router.handle(req, res);
     } catch (error) {
       console.error('Error deleting external ad:', error);
       res.status(500).json({ error: 'Không thể xóa quảng cáo bên ngoài' });

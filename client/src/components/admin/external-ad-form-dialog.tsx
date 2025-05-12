@@ -191,13 +191,23 @@ export function ExternalAdFormDialog({
     // Set placeholder for script content based on provider
     if (value === "google") {
       form.setValue("scriptContent", `
-<div style="width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; background-color: #f0f0f0; border: 1px solid #ccc; border-radius: 4px; padding: 10px; text-align: center;">
-  <div>
-    <div style="font-weight: bold; color: #4285f4;">Google AdSense Mockup</div>
-    <div style="margin-top: 5px; font-size: 12px; color: #666;">Ad will appear here - 728x90</div>
-  </div>
-</div>
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-XXXXXXXXXXXXXXXX"
+     crossorigin="anonymous"></script>
+<!-- Ad unit name -->
+<ins class="adsbygoogle"
+     style="display:block"
+     data-ad-client="ca-pub-XXXXXXXXXXXXXXXX"
+     data-ad-slot="XXXXXXXXXX"
+     data-ad-format="auto"
+     data-full-width-responsive="true"></ins>
+<script>
+     (adsbygoogle = window.adsbygoogle || []).push({});
+</script>
       `.trim());
+      
+      // Also update related fields for Google AdSense
+      form.setValue("adUnitId", "ca-pub-XXXXXXXXXXXXXXXX");
+      form.setValue("slotId", "XXXXXXXXXX");
     } else if (value === "facebook") {
       form.setValue("scriptContent", `
 <div style="width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; background-color: #f0f0f0; border: 1px solid #ccc; border-radius: 4px; padding: 10px; text-align: center;">

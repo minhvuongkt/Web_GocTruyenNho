@@ -69,25 +69,44 @@ export function OverlayAd({ onClose }: OverlayAdProps) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
-      <div className="relative max-w-3xl w-full bg-white rounded-lg overflow-hidden shadow-xl">
+    <div className="fixed bottom-4 right-4 z-40 flex items-center justify-center" 
+         onClick={handleAdClick}>
+      <div 
+        className="relative max-w-xs w-full rounded-lg overflow-hidden shadow-md cursor-pointer hover:shadow-lg transition-shadow"
+        title={ad.title}
+      >
+        {/* Close button */}
         <button 
-          onClick={onClose}
-          className="absolute top-2 right-2 p-1 rounded-full bg-white text-gray-700 hover:bg-gray-200 transition-colors z-10"
+          onClick={(e) => {
+            e.stopPropagation(); // Prevent triggering the parent click
+            onClose();
+          }}
+          className="absolute top-1 right-1 p-1 rounded-full bg-white/80 text-gray-700 hover:bg-white transition-colors z-10"
           aria-label="Close advertisement"
         >
-          <X className="h-6 w-6" />
+          <X className="h-4 w-4" />
         </button>
         
-        <div onClick={handleAdClick} className="cursor-pointer">
+        {/* If image URL exists, show the image */}
+        {ad.imageUrl && (
           <img 
             src={ad.imageUrl} 
             alt={ad.title} 
-            className="w-full h-auto" 
+            className="w-full h-auto max-h-24" 
           />
-          <div className="absolute bottom-0 left-0 right-0 bg-black/30 text-white text-xs p-1 text-center">
-            Quảng cáo
+        )}
+        
+        {/* If no image, show a simple text-based ad */}
+        {!ad.imageUrl && (
+          <div className="p-3 bg-gradient-to-br from-blue-500 to-purple-600 text-white text-center">
+            <div className="font-medium">{ad.title}</div>
+            <div className="text-xs mt-1 opacity-80">Click để xem thêm</div>
           </div>
+        )}
+        
+        {/* Ad indicator badge */}
+        <div className="absolute top-0 left-0 bg-black/50 text-white text-[10px] px-1.5 py-0.5">
+          Quảng cáo
         </div>
       </div>
     </div>
